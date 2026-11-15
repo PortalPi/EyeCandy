@@ -92,12 +92,12 @@ check('groundEffectDist = 320 (default 100)  *changed' in ft and 'Ground effect 
 lua3.execute('SlashCmdList.EYECANDY("find")')
 check('Usage' in lua3.eval('EyeCandyExportFrame.text'), "find with no word shows usage")
 
-# 9. Distant Detail row at Cinematic, and backup merge for an older backup
-lua4 = boot(svdb='EyeCandyDB = { tiers = { clarity = 5 }, keepApplied = true, backup = { values = { RenderScale = "1" }, time = "old" } }')
+# 9. Distant Detail row at Cinematic, and backup merge for an older Original
+lua4 = boot(svdb='EyeCandyDB = { tiers = { clarity = 5 }, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "old", stamp = 5, character = "", values = { RenderScale = "1" } } } }')
 lua4.execute('SlashCmdList.EYECANDY("preset cinematic")')
 g4 = lambda n: lua4.eval('GetCVar("%s")' % n)
 check(g4("doodadLodScale") == "300" and g4("lodObjectCullSize") == "7" and g4("TerrainLodDiv") == "1024" and g4("dynamicLod") == "0" and g4("maxLightDist") == "2048", "Distant Detail Cinematic values applied, maxLightDist left alone")
-check(lua4.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and lua4.eval('NS.OriginalBackup().values.RenderScale') == "1" and lua4.eval('NS.OriginalBackup().time') == "old", "old backup kept, new CVars merged with pre-apply values")
+check(lua4.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and lua4.eval('NS.OriginalBackup().values.RenderScale') == "1" and lua4.eval('NS.OriginalBackup().time') == "old", "an older Original is kept, and new CVars are merged in with pre-apply values")
 lua4.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); SetCVar("terrainLodDist", 650); SettingsPanel.hooks.OnHide(); RUNTIMERS()')
 check(g4("terrainLodDist") == "1000", "terrain LOD re-applied after Options closes")
 lua4.execute('SlashCmdList.EYECANDY("restore")')
@@ -137,12 +137,12 @@ lua5.execute('SlashCmdList.EYECANDY("preset ultra")')
 check(lua5.eval('next(EyeCandyDB.extras)') is None, "presets never touch extras")
 
 # 11. Backup fix for a tester's case: backup captured hand-tested LOD values
-lua7 = boot(svdb='EyeCandyDB = { tiers = { distant = 5 }, keepApplied = true, backup = { time = "x", values = { RenderScale = "1.5", doodadLodScale = "300", lodObjectFadeScale = "300", lodObjectCullSize = "7", terrainLodDist = "1000", TerrainLodDiv = "1024", wmoLodDist = "800", dynamicLod = "0", maxLightDist = "4096" } } }')
+lua7 = boot(svdb='EyeCandyDB = { tiers = { distant = 5 }, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { RenderScale = "1.5", doodadLodScale = "300", lodObjectFadeScale = "300", lodObjectCullSize = "7", terrainLodDist = "1000", TerrainLodDiv = "1024", wmoLodDist = "800", dynamicLod = "0", maxLightDist = "4096" } } } }')
 bv = lambda n: lua7.eval('NS.OriginalBackup().values.%s' % n)
 check([bv(k) for k in ["doodadLodScale","lodObjectFadeScale","lodObjectCullSize","terrainLodDist","TerrainLodDiv","wmoLodDist","dynamicLod"]] == ["150","150","14","650","768","400","1"], "backup corrected to Graphics-menu values")
 check(bv("RenderScale") == "1.5", "unrelated backup values untouched")
 check(any("corrected your Restore backup" in x for x in chat(lua7)), "user told about the correction")
-lua8 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, backup = { time = "x", values = { doodadLodScale = "150" } } }')
+lua8 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { doodadLodScale = "150" } } } }')
 check(not any("corrected" in x for x in chat(lua8)), "no message when the backup is already fine")
 
 # 12. Showcase
@@ -295,7 +295,7 @@ end""")()
 check(bad == "", "preset values in range and on-step: " + bad)
 
 # A tester's maxed-out dials (from an export), then Cinematic
-MAXED = "EyeCandyDB = { tiers = { clarity=5, lighting=5, atmosphere=5, water=5, textures=5, world=5, distant=5, foliage=5, effects=5 }, extras = { renderScale = 2, resample = 2, entityLod = 20 }, keepApplied = true, advanced = { animFrameSkipLOD=1, assaoAdaptiveQualityLimit=1, assaoBlurPassCount=6, assaoDetailShadowStrength=5, assaoFadeOutFrom=500, assaoFadeOutTo=1000, assaoHorizonAngleThresh=1, assaoRadius=4, assaoShadowMult=2.5, assaoShadowPower=3, assaoSharpness=1, cameraDistanceMaxZoomFactor=4, CMAA2ExtraSharpness=1, doodadLodScale=500, entityLodOffset=50, entityShadowFadeScale=200, groundEffectFade=500, lodObjectCullDist=100, lodObjectCullSize=30, lodObjectFadeScale=500, lodObjectMinSize=40, lodObjectSizeScale=3, preloadStreamingDistObject=256, preloadStreamingDistTerrain=1024, terrainLodDist=1500, TerrainLodDiv=2048, wmoDoodadDist=5000, wmoLodDist=1500, wmoLodDistScale=3 }, backup = { time = 'x', values = { assaoRadius='1.85', assaoShadowMult='1.1', assaoShadowPower='1.34', assaoSharpness='.98', assaoBlurPassCount='2', assaoDetailShadowStrength='0', assaoHorizonAngleThresh='0.4', assaoAdaptiveQualityLimit='.45', entityLodOffset='10', lodObjectMinSize='20', animFrameSkipLOD='0', groundEffectFade='370', doodadLodScale='150', lodObjectFadeScale='150', lodObjectCullSize='14', terrainLodDist='650', TerrainLodDiv='768', wmoLodDist='400' } } }"
+MAXED = "EyeCandyDB = { tiers = { clarity=5, lighting=5, atmosphere=5, water=5, textures=5, world=5, distant=5, foliage=5, effects=5 }, extras = { renderScale = 2, resample = 2, entityLod = 20 }, keepApplied = true, advanced = { animFrameSkipLOD=1, assaoAdaptiveQualityLimit=1, assaoBlurPassCount=6, assaoDetailShadowStrength=5, assaoFadeOutFrom=500, assaoFadeOutTo=1000, assaoHorizonAngleThresh=1, assaoRadius=4, assaoShadowMult=2.5, assaoShadowPower=3, assaoSharpness=1, cameraDistanceMaxZoomFactor=4, CMAA2ExtraSharpness=1, doodadLodScale=500, entityLodOffset=50, entityShadowFadeScale=200, groundEffectFade=500, lodObjectCullDist=100, lodObjectCullSize=30, lodObjectFadeScale=500, lodObjectMinSize=40, lodObjectSizeScale=3, preloadStreamingDistObject=256, preloadStreamingDistTerrain=1024, terrainLodDist=1500, TerrainLodDiv=2048, wmoDoodadDist=5000, wmoLodDist=1500, wmoLodDistScale=3 }, nextBackupId = 2, backups = { { id = 1, kind = 'original', label = 'Original settings', time = 'x', stamp = 5, character = '', values = { assaoRadius='1.85', assaoShadowMult='1.1', assaoShadowPower='1.34', assaoSharpness='.98', assaoBlurPassCount='2', assaoDetailShadowStrength='0', assaoHorizonAngleThresh='0.4', assaoAdaptiveQualityLimit='.45', entityLodOffset='10', lodObjectMinSize='20', animFrameSkipLOD='0', groundEffectFade='370', doodadLodScale='150', lodObjectFadeScale='150', lodObjectCullSize='14', terrainLodDist='650', TerrainLodDiv='768', wmoLodDist='400' } } } }"
 luaD2 = boot(svdb=MAXED)
 luaD2.execute(ADV)
 luaD2.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); CHAT = {}')
@@ -432,17 +432,9 @@ luaK.execute('SlashCmdList.EYECANDY("")')
 check(luaK.eval('EyeCandyMainFrame.shown') == True, "main window builds with the Looks row")
 luaK.execute('INCOMBAT = true; SlashCmdList.EYECANDY("look crisp"); INCOMBAT = false')
 check(luaK.eval('EyeCandyDB.look') is None, "no Look changes in combat")
-# Rename (1.0.0): Vista -> Eye Candy
-luaR = boot(svdb='VistaDB = { tiers = { foliage = 4 }, extras = {}, advanced = { assaoRadius = 1.5 }, keepApplied = false, backup = { time = "old", values = { RenderScale = "1" } } }')
-check(luaR.eval('EyeCandyDB.tiers.foliage') == 4 and luaR.eval('EyeCandyDB.advanced.assaoRadius') == 1.5
-      and luaR.eval('EyeCandyDB.keepApplied') == False and luaR.eval('NS.OriginalBackup().time') == "old", "VistaDB settings and backup move to EyeCandyDB")
-check(luaR.eval('VistaDB') is None, "VistaDB is cleared so it is never saved again")
-check(any("Vista" in x for x in chat(luaR)), "chat says the Vista settings came over")
-luaR2 = boot(svdb='EyeCandyDB = { tiers = { water = 2 }, keepApplied = true }; VistaDB = { tiers = { water = 5 } }')
-check(luaR2.eval('EyeCandyDB.tiers.water') == 2 and luaR2.eval('VistaDB') is None, "an existing EyeCandyDB is never overwritten by VistaDB")
-luaR3 = boot(svdb='C_CVar.RegisterCVar("vistaTiersMirror", ""); C_CVar.SetCVar("vistaTiersMirror", "foliage=3;keep=1;ex=")')
-check(luaR3.eval('EyeCandyDB.tiers.foliage') == 3, "tiers recovered from the old Vista mirror CVar")
-check(luaR3.eval('SLASH_EYECANDY1') == "/ec" and luaR3.eval('SLASH_EYECANDY2') == "/graphics" and luaR3.eval('SLASH_EYECANDY3') == "/vista" and luaR3.eval('SLASH_EYECANDY4') == "/eyecandy", "slash commands /ec, /graphics, the old /vista and the spare /eyecandy")
+# Slash commands, numbered with no gap (the game stops reading at the first missing number)
+luaR3 = boot()
+check(luaR3.eval('SLASH_EYECANDY1') == "/ec" and luaR3.eval('SLASH_EYECANDY2') == "/graphics" and luaR3.eval('SLASH_EYECANDY3') == "/eyecandy" and luaR3.eval('SLASH_EYECANDY4') is None, "slash commands /ec, /graphics and the spare /eyecandy, with no gap")
 luaR3.execute('SlashCmdList.EYECANDY("")')
 check(luaR3.eval('EyeCandyMainFrame.shown') == True and "Eye Candy" in luaR3.eval('EyeCandyMainFrame.titleText.text'), "main window opens under the new name")
 

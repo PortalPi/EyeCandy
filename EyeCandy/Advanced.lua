@@ -1,5 +1,5 @@
 -- Eye Candy: the Hidden tab. Per-system tiers, Extras and fine control over hidden CVars the Graphics menu doesn't expose.
--- Every CVar here was confirmed present in the Forever client (build 70862) from a /vista export.
+-- Every CVar here was confirmed present in the Forever client (build 70862) from an in-game export.
 -- Groups are systems, in the order the Hidden tab shows them. tier = the ns.CATEGORIES key whose tier row heads the group.
 -- Row: { cvar, label, min, max, step, note = "...", kind = "toggle" }
 -- p = { Performance, Balanced, High, Ultra, Cinematic, Showcase }: what each preset sets.

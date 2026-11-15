@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## 1.0.1
+
+- **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.
+
 ## 1.0.0
 
 ### What's new

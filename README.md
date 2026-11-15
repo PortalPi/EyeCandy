@@ -2,7 +2,7 @@
 
 Graphics presets, curated looks, hidden graphics settings and dated backups for World of Warcraft: Forever.
 
-Version 1.0.0. Open it with `/ec` or `/graphics`.
+Version 1.0.1. Open it with `/ec` or `/graphics`.
 
 CurseForge and Wago: coming with the first release.
 

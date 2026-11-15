@@ -1,7 +1,7 @@
 -- Eye Candy: the main window (four tabs and a bottom bar), shared widgets, popups and the export box.
 -- Tabs: Presets (opens first), Standard (Standard.lua), Hidden (Advanced.lua), Backups.
 -- The Presets and Backups tabs use the presets and backups API (Presets.lua, Backups.lua) when it is
--- loaded, and fall back to the Vista 1.x tier and Look buttons and the single backup when it is not.
+-- loaded, and fall back to plain tier and Look buttons and a single backup when it is not.
 
 local _, ns = ...
 
@@ -1269,8 +1269,8 @@ local function RefreshPresetList(page)
 	page.content:SetHeight(math.max(y, 1))
 end
 
--- Before the presets list exists: the Vista 1.x tier and Look buttons.
--- The Showcase button's tooltip on the Vista 1.x fallback page. Render scale is asked for, but the game
+-- Without the presets list: plain tier and Look buttons.
+-- The Showcase button's tooltip on that fallback page. Render scale is asked for, but the game
 -- won't go above its highest, so its line says so.
 function ns.ShowcaseTooltip()
 	local lines = { "The best-looking setup Eye Candy knows about. Sets every system to Cinematic, the Hidden tab's settings to their Showcase values (the furthest far detail, terrain and building detail), then:" }
@@ -1494,7 +1494,7 @@ end
 
 local KIND_LABEL = { original = "Original, kept for good", manual = "Manual" }
 
--- How many backed-up values differ from the current ones (for the Vista 1.x single backup).
+-- How many backed-up values differ from the current ones (for the fallback's single backup).
 local function CountDiffer(values)
 	local n = 0
 	for cvar, value in pairs(values or {}) do
