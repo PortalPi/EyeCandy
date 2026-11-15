@@ -22,7 +22,8 @@ CurseForge and Wago: coming with the first release.
 - **Back to before.** After a preset, one click puts back your settings from just before it. One step back, and only until you change something else.
 - **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
 - **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
-- **Autotune (experimental).** Pick a frame rate. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
+- **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
+- **Easy to find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window. Right-click the minimap button to open Backups.
 
 ## The tabs
 
@@ -67,8 +68,8 @@ Coming from Vista: before starting the game, copy `WTF\Account\<account>\SavedVa
 | `/ec minimap` | Show or hide the minimap button |
 | `/ec fade` | Turn off (or on) the window fading a little when the mouse is away |
 | `/ec find <word>` | Search the game's settings, with the game's own descriptions |
-| `/ec export [all]` | Copy box with your settings |
-| `/ec report` | Copy box with a bug report |
+| `/ec export [all]` | Open a box with your settings, to copy |
+| `/ec report` | Open a box with a bug report, to copy |
 
 ## Report a bug
 
