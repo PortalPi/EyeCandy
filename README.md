@@ -98,4 +98,4 @@ Nothing in the game itself can be tested this way. Try changes in game with `/re
 
 ## Licence
 
-Not chosen yet.
+MIT. See `LICENSE`.
