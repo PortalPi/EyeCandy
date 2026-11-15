@@ -11,6 +11,10 @@ on:
       tag:
         description: "The released tag to upload, for example v1.0.0"
         required: true
+      changelog-from-main:
+        description: "Use main's CHANGELOG.md instead of the tag's, when the notes were fixed after the release"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,6 +39,11 @@ jobs:
         with:
           ref: refs/tags/${{ inputs.tag }}
           fetch-depth: 0 # the packager reads tags and history
+
+      - name: Use main's changelog
+        if: ${{ inputs.changelog-from-main }}
+        # The packager reads CHANGELOG.md from the working folder, for the zip and the Wago notes.
+        run: git show origin/main:CHANGELOG.md > CHANGELOG.md
 
       - name: Package and upload to Wago
         # The same pinned packager commit as release.yml (v2.7.0).
