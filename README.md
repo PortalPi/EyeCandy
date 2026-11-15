@@ -4,7 +4,7 @@ Graphics presets, curated looks, hidden graphics settings and dated backups for 
 
 Version 1.0.1. Open it with `/ec` or `/graphics`.
 
-CurseForge and Wago: coming with the first release.
+Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting for its moderators to approve it.
 
 | Before | After the Moody look |
 | --- | --- |
