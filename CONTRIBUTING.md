@@ -1,6 +1,6 @@
 # Contributing to Eye Candy
 
-Eye Candy is a World of Warcraft: Forever addon. It exposes the game's standard and hidden graphics settings, curated presets ("Looks"), shareable named presets and dated backups. It was called Vista up to Vista 1.9.0. Eye Candy starts again at 1.0.0.
+Eye Candy is a World of Warcraft: Forever addon. It exposes the game's standard and hidden graphics settings, curated presets ("Looks"), shareable named presets and dated backups.
 
 ## Layout
 
