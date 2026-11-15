@@ -1,0 +1,44 @@
+# Eye Candy changelog
+
+## 1.0.0
+
+Vista is now Eye Candy. Same addon, new name (the old one was too close to another Forever addon), and a lot more in it.
+
+### What's new
+
+- **One window, five tabs.** Presets, Standard, Hidden, Backups and Experimental. Presets opens first.
+- **Standard tab.** The game's own Graphics menu, in one place, with the game's own names and help text. Each value shows once, settings you can only change in the game's menu are grey and say so, and a line explains the gold dot.
+- **Presets.** Save your own, rename, duplicate and delete them. Four new built-in presets for a job: Raid & PvP, Laptop, Screenshot and Capital city. They sit in their own group, Situations.
+- **Steadier frames in cities, by itself.** Tick "Switch in cities by itself" under Capital city on the Presets tab, or type `/ec city`. In a capital city Eye Candy lowers view distance, environment detail, fog and far-away character detail, on top of your own settings and only where yours are higher. When you leave they go back. Anything you change yourself while in the city stays as you set it. It never switches in combat, and it takes no backup. Off until you turn it on.
+- **Share a preset.** Share makes a short code. A friend pastes it into Import a preset on the Presets tab and sees what it changes. Import saves it as a new preset, marked New, and changes nothing until they press Apply on it. Only graphics settings from Eye Candy's own list can be set by a code. Anything else is skipped and shown.
+- **See what you are on.** The top of the Presets tab and the window's title show the preset you are on, and how many settings you have changed since. They also say when Autotune or the city switch has your settings. Back and Restore say what they did right where you clicked, not in chat.
+- **Backups.** A dated list instead of one slot. Original (your settings from before Eye Candy, kept for good) and your own named backups. Eye Candy never adds one by itself, so the list holds only what you chose to keep. On the Backups tab the Original is listed first, each row shows your character's name and how many settings differ from now, and Restore shows how many settings change and asks first.
+- **Back to before.** After a preset, a "Back to before <name>" button on the Presets tab undoes it. `/ec back` does the same. It goes back one step, and only until you change something else.
+- **Sliders** for every number setting, with a typed box, arrows, a tick at the game's default and a reset arrow. Hold Shift for fine steps. Render scale runs in 1% steps from 33% up to the most the game allows (the game has held it at 100% since its 14 November patch). Sharpness has an Off position.
+- **Autotune (experimental),** on its own Experimental tab. Pick a goal (30, 60, 75, 120, 144, 165, 180 or 240 FPS, or Best balance), then what to tune for: Best look, Raid ready (a lot more spare FPS, so your goal holds in a big fight), Smooth (judged by your slowest frames), Sharpest picture (render scale, textures, anti-aliasing, sharpening and view distance first) or Cool and quiet (FPS capped at your goal, for less heat and noise). Then where to start: the lowest settings, or any preset (a quality level, a Look or your own). From a preset, it keeps what makes that preset itself, like Moody's fog and ambient occlusion, and lowers the rest one step at a time until your goal holds. Press Start. It measures your FPS, tries settings one at a time, and keeps only what holds the goal, the slowest frames included. It notices when Vertical Sync holds FPS at your screen's rate, or your CPU sets the limit, and measures the result again at the end. Stand still for about 3 to 7 minutes (Smooth takes 4 to 10). Moving, turning, dragging or zooming the camera, a loading screen or opening Options stops it and puts your settings back. A fight stops it too, and your settings come back when the fight ends. At the end, Save as preset keeps the result as your own preset, with where it was tested and your field of view and camera distance in its tooltip, or Back to before Autotune undoes it.
+- **Search box** for the Standard and Hidden tabs, and a gold dot on any setting you have changed from the game default.
+- **Minimap button** (right-click opens Backups) and an Eye Candy entry in the game's Options > AddOns list. `/ec minimap` hides or shows the button.
+- **Truer tooltips.** Each tooltip quotes Blizzard's own help text first, then says it in plain words. Where Blizzard has none, it says so. Eight descriptions were wrong or incomplete and are fixed. The big one: Depth Effects is soft particles, not depth of field. Resample filter says when the game ignores it.
+- **Peek and Compare.** `/ec peek` hides the game's UI and Eye Candy's windows so you can see the picture, with one small Back button (Esc also brings it back). `/ec compare` flips the world between the settings from before your last preset and now, so you can judge a change in the same spot. `/ec compare stop` ends it on "now". Both have buttons on the window's bottom bar too. While comparing, the button says what a click shows next, and the window's title says what is on screen. Right-click Compare, or close Eye Candy, to end on "now". While peeking, the small bar has its own Show before / Show now button, so you can flip with the UI hidden. Compare needs a preset to compare against, so apply one first. Both end on their own if combat starts, and neither starts in combat. Compare also ends on "now" if you reload.
+- **Move and resize every window.** Drag a window to move it. Drag the grip in its bottom-right corner to make it bigger or smaller, from 60% to 130%. Right-click the grip to go back to 100%. Eye Candy remembers where each window is and how big, for each account.
+- **Shrink the window.** The minus button next to close rolls the main window up to a small bar with Apply, Compare and Peek. The plus opens it again.
+- **The window fades a little** when the mouse is away, so more of the world shows. It comes back as soon as the mouse does. `/ec fade` turns this off.
+- **`/ec` opens the window.** If another addon also uses `/ec`, the game may open that one instead. Eye Candy then says so once when you log in, and `/eyecandy` always opens Eye Candy.
+- **`/ec report`** opens a box with a bug report. Copy it and paste it into the bug form on GitHub.
+
+### What changed from Vista 1.9.0
+
+- The slash commands are `/ec` and `/graphics`. `/vista` still works for this one release, then it goes.
+- The addon folder is `EyeCandy`, not `Vista`.
+- Your settings and old backup now live in `EyeCandy.lua` in your `SavedVariables` folder. If you copied the file (see below), the old backup becomes your Original backup.
+- The old single "Restore" is now Restore on the Original backup. `/ec restore` still does that. To restore a different backup use `/ec restore <number>` (see `/ec backups`).
+
+### Bringing your Vista settings across
+
+1. Quit the game.
+2. In `World of Warcraft\_forever_\WTF\Account\<your account>\SavedVariables`, copy `Vista.lua` and name the copy `EyeCandy.lua`.
+3. Delete the old `Vista` folder from your AddOns folder, then start the game.
+4. Eye Candy says it brought your settings and backup across.
+
+If you skip step 2, your level and setting choices should still come back, from a copy the game keeps. Your fine-tuned hidden settings and your old backup do not.
+

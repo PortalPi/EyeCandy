@@ -1,0 +1,56 @@
+name: release
+
+# Packages the addon and uploads it when a version tag is pushed, for example `git tag v1.0.0`.
+# Only the maintainer pushes tags.
+#
+# Uploads go where the .toc has an ID and the repo has the matching secret:
+#   CurseForge: `## X-Curse-Project-ID` in EyeCandy.toc + secret CF_API_TOKEN
+#   Wago:       `## X-Wago-ID` in EyeCandy.toc + secret WAGO_API_TOKEN
+#   GitHub:     a release is made with the built-in token, always
+# With no ID in the .toc (today) the packager skips that site and says so in the log.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write # needed to create the GitHub release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Keep CF_API_TOKEN and WAGO_API_TOKEN as secrets of this GitHub Environment, with the
+    # maintainer as a required reviewer (Settings > Environments > release). Then a tag
+    # cannot reach the tokens until the maintainer approves the run.
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the packager reads tags and history
+
+      - name: Tag must match the .toc version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          toc=$(sed -n 's/^## Version: *//p' EyeCandy/EyeCandy.toc | tr -d '\r' | head -n1)
+          if [ "$tag" != "$toc" ]; then
+            echo "::error::Tag is '$GITHUB_REF_NAME' but EyeCandy.toc says '## Version: $toc'. Bump the .toc first."
+            exit 1
+          fi
+          case "$tag" in
+            *-dev*)
+              echo "::error::'$tag' is a development version. Bump the .toc to a release number first."
+              exit 1
+              ;;
+          esac
+
+      - name: Package and upload
+        # Pinned to the commit of v2.7.0 (checked 15 Nov 2026), because this step gets the upload tokens.
+        # To update: look up the commit behind the newest v2.x tag of BigWigsMods/packager.
+        uses: BigWigsMods/packager@01e8631a69c69d7654c788d152630d5fed9e3812
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          GH_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

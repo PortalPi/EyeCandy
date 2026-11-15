@@ -1,0 +1,22 @@
+## Read by BigWigsMods/packager when a version tag is pushed (.github/workflows/release.yml).
+## The addon lives in the EyeCandy/ folder, one level down, so it is moved up to be the package root.
+package-as: EyeCandy
+
+move-folders:
+  EyeCandy/EyeCandy: EyeCandy
+
+## Our own notes for players, not the commit log (which has internal detail).
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+## Nothing below ships to players.
+ignore:
+  - tests
+  - docs
+  - media
+  - CONTRIBUTING.md
+  - README.md
+  - .github
+  - .gitattributes
+  - .gitignore

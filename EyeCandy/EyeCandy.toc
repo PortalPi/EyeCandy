@@ -1,0 +1,25 @@
+## Interface: 16001
+## Title: Eye Candy |cff9d9d9dGraphics Presets & Hidden Settings|r
+## Notes: Graphics presets, curated looks and hidden graphics settings, with backups. Type /ec to open it.
+## Author: PortalPi
+## Version: 1.0.0
+## SavedVariables: EyeCandyDB, VistaDB
+## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## AddonCompartmentFunc: EyeCandy_OnAddonCompartmentClick
+## X-Curse-Project-ID: 1806597
+## X-Wago-ID: nKWw5oKE
+
+Report.lua
+Data.lua
+Core.lua
+UI.lua
+Advanced.lua
+Presets.lua
+Backups.lua
+Standard.lua
+Minimap.lua
+Peek.lua
+Compare.lua
+Situations.lua
+Autotune.lua
+AutotuneTab.lua

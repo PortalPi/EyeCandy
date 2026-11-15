@@ -1,0 +1,68 @@
+name: tests
+
+# Runs every test file: the old full suite (tests/run.py) and each tests/test_*.py.
+#
+# A pull request runs only its own test file, by hand. The full run follows on main: it runs on
+# every push to main, and can be started from the Actions tab with "Run workflow". A red run on
+# main stops new landings until it is fixed.
+#
+# tests/run.py prints "ALL PASS" on success but does not set a failing exit code, so this job
+# checks for that line. The test_*.py files exit non-zero when a check fails.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  # A run on main is never cancelled once started. If several pushes land while one runs, only
+  # the newest waits, which tests the latest main. A hand-started run on another branch is
+  # cancelled by a newer one on that branch.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: tests/requirements.txt
+
+      - name: Install lupa
+        run: pip install -r tests/requirements.txt
+
+      - name: Run the full suite (tests/run.py)
+        shell: bash
+        run: |
+          set -o pipefail
+          python tests/run.py | tee test-output.txt
+          if ! grep -qx "ALL PASS" test-output.txt; then
+            echo "::error::tests/run.py did not print ALL PASS"
+            grep "^FAIL" test-output.txt || true
+            exit 1
+          fi
+
+      - name: Run each tests/test_*.py
+        shell: bash
+        run: |
+          failed=0
+          for f in tests/test_*.py; do
+            echo "=== $f"
+            if python "$f" > file-output.txt 2>&1; then
+              tail -n 1 file-output.txt
+            else
+              grep -E "^FAIL|Error" file-output.txt || tail -n 20 file-output.txt
+              echo "::error::$f failed"
+              failed=1
+            fi
+          done
+          exit $failed
