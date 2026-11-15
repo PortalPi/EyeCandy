@@ -1,4 +1,4 @@
-"""Backups (1.0.0 step 4): the Original, manual and automatic backups, restore, migration from Vista 1.x.
+"""Backups (1.0.0 step 4): the Original, manual and automatic backups, restore.
 
 Run alone: python tests/test_backups.py
 """
@@ -35,7 +35,7 @@ o = evU('NS.OriginalBackup()')
 check(kinds() == ["original"] and o['label'] == "Original settings" and o['character'] == "Tester-Testrealm" and o['values']['groundEffectDensity'] == "48", "first login saves the Original, with the character")
 check(any("/reload" in x for x in c), "first install asks for a /reload so the Original is saved")
 check(o['time'] == "2026-11-06 10:40" and isinstance(o['stamp'], (int, float)), "backups have a date and a time stamp")
-check(evU('NS.OriginalBackup().values.groundEffectDensity') == "48" and evU('rawget(EyeCandyDB, "backup")') is None, "the Original holds the value from before; no old Vista 1.x slot is saved")
+check(evU('NS.OriginalBackup().values.groundEffectDensity') == "48" and evU('rawget(EyeCandyDB, "backup")') is None, "the Original holds the value from before; no single-backup slot is saved")
 luaU.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS()')
 check(kinds() == ["original"] and not any("/reload" in x for x in chat(luaU)), "the Original is made once, and asked about once")
 
@@ -149,24 +149,21 @@ check(gU("farclip") == raid['values']['farclip'] and evU('EyeCandyDB.tiers.clari
 luaU.execute('CHAT = {}; SlashCmdList.EYECANDY("restore 9999")')
 check(any("no backup number" in x for x in chat(luaU)), "/ec restore with a bad number says so")
 
-# migration from the Vista 1.x single backup
-luaM = boot(svdb='EyeCandyDB = { tiers = { foliage = 5 }, keepApplied = true, backup = { time = "2026-11-01 09:00", values = { groundEffectDensity = "32", farclip = "6000" } } }')
+# a saved Original that holds only some settings
+luaM = boot(svdb='EyeCandyDB = { tiers = { foliage = 5 }, keepApplied = true, backups = { { id = 1, kind = "original", label = "Original settings", time = "2026-11-01 09:00", stamp = 5, character = "Tester-Testrealm", values = { groundEffectDensity = "32", farclip = "6000" } } }, nextBackupId = 2 }')
 om = luaM.eval('NS.OriginalBackup()')
-check(om['values']['groundEffectDensity'] == "32" and om['time'] == "2026-11-01 09:00" and om['kind'] == "original", "the Vista 1.x backup becomes the Original")
-check(luaM.eval('rawget(EyeCandyDB, "backup")') is None and luaM.eval('NS.OriginalBackup().values.farclip') == "6000", "the old slot is gone from saved data and became the Original")
-check(not any("/reload" in x for x in chat(luaM)), "no /reload ask when the Original came from Vista 1.x")
+check(om['values']['groundEffectDensity'] == "32" and om['time'] == "2026-11-01 09:00" and om['kind'] == "original", "a saved Original loads as it was")
+check(not any("/reload" in x for x in chat(luaM)), "no /reload ask when the Original is already saved")
 luaM.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); SlashCmdList.EYECANDY("apply")')
-check(luaM.eval('NS.OriginalBackup().values.doodadLodScale') is not None and luaM.eval('NS.OriginalBackup().values.farclip') == "6000", "settings the Vista 1.x backup didn't hold are merged in; its own values are kept")
+check(luaM.eval('NS.OriginalBackup().values.doodadLodScale') is not None and luaM.eval('NS.OriginalBackup().values.farclip') == "6000", "settings the Original didn't hold are merged in; its own values are kept")
 luaM.execute('SlashCmdList.EYECANDY("restore")')
-check(luaM.eval('GetCVar("groundEffectDensity")') == "32" and luaM.eval('GetCVar("farclip")') == "6000", "restoring the migrated Original works")
-luaM2 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "Other-Realm", values = { farclip = "6500" } } }, nextBackupId = 2, backup = { time = "y", values = { farclip = "1" } } }')
-check(luaM2.eval('NS.OriginalBackup().values.farclip') == "6500" and luaM2.eval('#EyeCandyDB.backups') == 1 and luaM2.eval('rawget(EyeCandyDB, "backup")') is None, "an existing Original is never replaced by a leftover Vista 1.x backup")
+check(luaM.eval('GetCVar("groundEffectDensity")') == "32" and luaM.eval('GetCVar("farclip")') == "6000", "restoring that Original works")
+luaM2 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "Other-Realm", values = { farclip = "6500" } } }, nextBackupId = 2 }')
+check(luaM2.eval('NS.OriginalBackup().values.farclip') == "6500" and luaM2.eval('#EyeCandyDB.backups') == 1, "another character's Original loads as it was")
 luaM2.execute('NS.CreateBackup("manual", "Here"); SlashCmdList.EYECANDY("restore")')
 check(luaM2.eval('GetCVar("farclip")') == "6500" and luaM2.eval('NS.ListBackups()[1].character') == "Tester-Testrealm" and luaM2.eval('NS.OriginalBackup().character') == "Other-Realm", "backups are account-wide: another character's backup restores here")
-luaM3 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, backup = { time = "x", values = { doodadLodScale = "300", lodObjectFadeScale = "300", lodObjectCullSize = "7", terrainLodDist = "1000", TerrainLodDiv = "1024", wmoLodDist = "800", dynamicLod = "0" } } }')
-check(luaM3.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and any("corrected your Restore backup" in x for x in chat(luaM3)), "a Vista 1.x backup holding hand-tested Distant Detail values is still corrected")
-luaR = boot(svdb='VistaDB = { tiers = {}, keepApplied = true, backup = { time = "old", values = { farclip = "6000" } } }')
-check(luaR.eval('NS.OriginalBackup().time') == "old" and luaR.eval('NS.OriginalBackup().values.farclip') == "6000", "a Vista backup becomes the Original too")
+luaM3 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { doodadLodScale = "300", lodObjectFadeScale = "300", lodObjectCullSize = "7", terrainLodDist = "1000", TerrainLodDiv = "1024", wmoLodDist = "800", dynamicLod = "0" } } } }')
+check(luaM3.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and any("corrected your Restore backup" in x for x in chat(luaM3)), "an Original holding hand-tested Distant Detail values is corrected")
 
 # Automatic backups saved by test builds are removed at load. Back's old record pointed at one by id:
 # its settings move into the record, so Back still works after the update.
@@ -219,7 +216,7 @@ saved_before = evU('EyeCandyDB.lastBefore.values.farclip')
 text = luaU.eval('SER(EyeCandyDB)')
 check('["backup"]' not in text and '["backups"]' in text, "the saved file has the backups list and no old backup slot")
 luaV = boot(svdb='EyeCandyDB = ' + text)
-check(luaV.eval('#NS.ListBackups()') == len(bl()) and luaV.eval('NS.OriginalBackup().id') == evU('NS.OriginalBackup().id') and luaV.eval('NS.OriginalBackup().values.farclip') == "7000" and luaV.eval('EyeCandyDB.backup') is None, "after a reload the same backups are there, and the old Vista 1.x slot is gone")
+check(luaV.eval('#NS.ListBackups()') == len(bl()) and luaV.eval('NS.OriginalBackup().id') == evU('NS.OriginalBackup().id') and luaV.eval('NS.OriginalBackup().values.farclip') == "7000" and luaV.eval('EyeCandyDB.backup') is None, "after a reload the same backups are there, and there is no single-backup slot")
 check(luaV.eval('EyeCandyDB.lastBefore.name') == "Ultra" and luaV.eval('EyeCandyDB.lastBefore.values.farclip') == saved_before and not any("automatic backups" in x for x in chat(luaV)), "Back's record is saved with the file and survives a reload")
 luaV.execute('SlashCmdList.EYECANDY("restore")')
 check(luaV.eval('GetCVar("farclip")') == "7000", "the Original restores after a reload")

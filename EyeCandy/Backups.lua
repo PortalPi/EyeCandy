@@ -298,7 +298,7 @@ function ns.DeleteBackup(id)
 	return true
 end
 
--- /ec restore: put back the settings from before Eye Candy (as in Vista 1.x).
+-- /ec restore: put back the settings from before Eye Candy (the Original).
 function ns.RestoreBackup()
 	local original = ns.OriginalBackup()
 	if not original then
@@ -346,21 +346,11 @@ local function DropAutomatic(db)
 	return n
 end
 
--- Called from ns.LoadDB. Vista 1.x kept one backup in EyeCandyDB.backup: it becomes the Original.
+-- Called from ns.LoadDB.
 function ns.LoadBackups()
 	local db = ns.db
 	db.backups = db.backups or {}
 	db.nextBackupId = db.nextBackupId or 1
-	local old = rawget(db, "backup")
-	if type(old) == "table" and type(old.values) == "table" and not ns.OriginalBackup() then
-		local id = db.nextBackupId
-		db.nextBackupId = id + 1
-		table.insert(db.backups, {
-			id = id, kind = "original", label = "Original settings", time = old.time or "before Eye Candy", stamp = 0,
-			character = "", values = old.values, state = { tiers = {}, extras = {}, advanced = {} },
-		})
-	end
-	rawset(db, "backup", nil)
 	DropAutomatic(db)
 	local original = ns.OriginalBackup()
 	if original and ns.FixDistantBackup(original.values) > 0 then

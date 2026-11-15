@@ -4,7 +4,6 @@ local ADDON, ns = ...
 
 local PREFIX = "|cffffd100Eye Candy:|r "
 local MIRROR_CVAR = "eyeCandyMirror"
-local OLD_MIRROR_CVAR = "vistaTiersMirror" -- the name before Eye Candy 1.0.0 (the addon was called Vista)
 
 function ns.Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. tostring(msg))
@@ -183,18 +182,9 @@ end
 ns.FixDistantBackup = FixDistantBackup
 
 function ns.LoadDB()
-	local migrated = false
 	if type(EyeCandyDB) ~= "table" then
-		-- Before Eye Candy 1.0.0 the addon was called Vista. The .toc still lists VistaDB for one release,
-		-- so a Vista.lua saved-variables file copied to EyeCandy.lua carries everything over.
-		if type(VistaDB) == "table" then
-			EyeCandyDB = VistaDB
-			migrated = true
-		else
-			EyeCandyDB = DefaultDB()
-		end
+		EyeCandyDB = DefaultDB()
 	end
-	VistaDB = nil -- never saved again under the old name
 	EyeCandyDB.tiers = EyeCandyDB.tiers or {}
 	EyeCandyDB.extras = EyeCandyDB.extras or {}
 	EyeCandyDB.advanced = EyeCandyDB.advanced or {} -- SavedVariables only (too long for the mirror CVar)
@@ -202,20 +192,13 @@ function ns.LoadDB()
 	EyeCandyDB.presets = EyeCandyDB.presets or {} -- your own presets (Presets.lua)
 	EyeCandyDB.nextPresetId = EyeCandyDB.nextPresetId or 1
 	ns.db = EyeCandyDB
-	if migrated then
-		ns.Print("brought over your settings and backup from Vista, this addon's old name.")
-	end
 
 	-- Mirror CVar: survives even if SavedVariables fail to load (seen on the Forever beta).
 	if C_CVar and C_CVar.RegisterCVar then
 		pcall(C_CVar.RegisterCVar, MIRROR_CVAR, "")
-		pcall(C_CVar.RegisterCVar, OLD_MIRROR_CVAR, "")
 	end
 	if next(ns.db.tiers) == nil and next(ns.db.extras) == nil then
 		local mirror = GetCVar(MIRROR_CVAR)
-		if not mirror or mirror == "" then
-			mirror = GetCVar(OLD_MIRROR_CVAR)
-		end
 		if mirror and mirror ~= "" then
 			local tiers, keep, extras = ParseMirror(mirror)
 			ns.db.tiers, ns.db.extras = tiers, extras
@@ -226,7 +209,7 @@ function ns.LoadDB()
 		end
 	end
 
-	-- Backups (Backups.lua): the Vista 1.x single backup becomes the Original.
+	-- Backups (Backups.lua): the backups list, and the Original's Distant Detail correction.
 	if ns.LoadBackups then ns.LoadBackups() end
 end
 
@@ -719,11 +702,10 @@ end)
 ----------------------------------------------------------------------
 
 -- /ec is the one every message names. /eyecandy is a quiet spare in case another addon takes /ec.
--- /vista is the old name, kept for one release.
+-- The numbers must run on with no gap: the game stops reading at the first missing one.
 SLASH_EYECANDY1 = "/ec"
 SLASH_EYECANDY2 = "/graphics"
-SLASH_EYECANDY3 = "/vista"
-SLASH_EYECANDY4 = "/eyecandy"
+SLASH_EYECANDY3 = "/eyecandy"
 
 -- Another addon that also claims /ec (Easy Controller Forever does): WoW then picks one of the
 -- two at random, so Eye Candy says at login, and in help, that /eyecandy always opens it.
