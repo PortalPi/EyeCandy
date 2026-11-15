@@ -2,8 +2,6 @@
 
 ## 1.0.0
 
-Vista is now Eye Candy. Same addon, new name (the old one was too close to another Forever addon), and a lot more in it.
-
 ### What's new
 
 - **One window, five tabs.** Presets, Standard, Hidden, Backups and Experimental. Presets opens first.
@@ -25,20 +23,3 @@ Vista is now Eye Candy. Same addon, new name (the old one was too close to anoth
 - **The window fades a little** when the mouse is away, so more of the world shows. It comes back as soon as the mouse does. `/ec fade` turns this off.
 - **`/ec` opens the window.** If another addon also uses `/ec`, the game may open that one instead. Eye Candy then says so once when you log in, and `/eyecandy` always opens Eye Candy.
 - **`/ec report`** opens a box with a bug report. Copy it and paste it into the bug form on GitHub.
-
-### What changed from Vista 1.9.0
-
-- The slash commands are `/ec` and `/graphics`. `/vista` still works for this one release, then it goes.
-- The addon folder is `EyeCandy`, not `Vista`.
-- Your settings and old backup now live in `EyeCandy.lua` in your `SavedVariables` folder. If you copied the file (see below), the old backup becomes your Original backup.
-- The old single "Restore" is now Restore on the Original backup. `/ec restore` still does that. To restore a different backup use `/ec restore <number>` (see `/ec backups`).
-
-### Bringing your Vista settings across
-
-1. Quit the game.
-2. In `World of Warcraft\_forever_\WTF\Account\<your account>\SavedVariables`, copy `Vista.lua` and name the copy `EyeCandy.lua`.
-3. Delete the old `Vista` folder from your AddOns folder, then start the game.
-4. Eye Candy says it brought your settings and backup across.
-
-If you skip step 2, your level and setting choices should still come back, from a copy the game keeps. Your fine-tuned hidden settings and your old backup do not.
-

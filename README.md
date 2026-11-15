@@ -2,7 +2,7 @@
 
 Graphics presets, curated looks, hidden graphics settings and dated backups for World of Warcraft: Forever.
 
-Version 1.0.0, the first under this name. Up to its version 1.9.0 this addon was called **Vista**. Open it with `/ec` or `/graphics` (`/vista` still works for one release).
+Version 1.0.0. Open it with `/ec` or `/graphics`.
 
 CurseForge and Wago: coming with the first release.
 
@@ -38,8 +38,6 @@ CurseForge and Wago: coming with the first release.
 ## Install
 
 Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` and start the game.
-
-Coming from Vista: before starting the game, copy `WTF\Account\<account>\SavedVariables\Vista.lua` to `EyeCandy.lua` in the same folder, and delete the old `Vista` addon folder. Eye Candy picks up your settings and backup from it.
 
 ## Slash commands
 
