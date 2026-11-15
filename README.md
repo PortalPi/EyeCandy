@@ -4,17 +4,36 @@ Graphics presets, curated looks, hidden graphics settings and dated backups for 
 
 Version 1.0.0, the first under this name. Up to its version 1.9.0 this addon was called **Vista**. Open it with `/ec` or `/graphics` (`/vista` still works for one release).
 
-CurseForge: not published yet.
+CurseForge and Wago: coming with the first release.
+
+| Before | After the Moody look |
+| --- | --- |
+| ![The same dock before Eye Candy](media/screenshots/moody-before.jpg) | ![The same dock with the Moody look](media/screenshots/moody-after.jpg) |
+
+![The Presets tab](media/screenshots/presets.png)
 
 ## What it does
 
 - **Presets in one click.** Six quality levels (Performance to Showcase), five Looks (Beautiful, Painterly, Crisp, Moody, Classic) and four for a job (Raid & PvP, Laptop, Screenshot, Capital city).
-- **Your own presets.** Save, rename, duplicate and delete. Export one as a short text string. A friend imports it and sees what it changes before it saves.
-- **Hidden settings.** About 55 settings the game's menu does not show, each with a plain description. Every number setting is a slider with a typed box.
+- **Your own presets.** Save, rename, duplicate and delete. Share one as a short code. A friend imports it and sees what it changes before it saves.
+- **Hidden settings.** About 60 settings the game's menu does not show, each with a plain description. Every number setting is a slider with a typed box.
 - **Standard tab.** The game's own Graphics menu in one place.
 - **Dated backups.** Your Original settings (made once and kept for good) and backups you name. Eye Candy makes no other backup by itself. On the Backups tab, Restore shows what will change first.
 - **Back to before.** After a preset, one click puts back your settings from just before it. One step back, and only until you change something else.
+- **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
 - **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
+- **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
+- **Easy to find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window. Right-click the minimap button to open Backups.
+
+## The tabs
+
+| Standard | Hidden |
+| --- | --- |
+| ![The Standard tab](media/screenshots/standard.png) | ![The Hidden tab](media/screenshots/hidden.png) |
+
+| Backups | Experimental |
+| --- | --- |
+| ![The Backups tab](media/screenshots/backups.png) | ![The Experimental tab, with Autotune](media/screenshots/experimental.png) |
 
 ## Install
 
@@ -24,7 +43,7 @@ Coming from Vista: before starting the game, copy `WTF\Account\<account>\SavedVa
 
 ## Slash commands
 
-`/ec` and `/graphics` do the same thing. `/ec help` lists these in game.
+`/ec` and `/graphics` do the same thing. `/ec help` lists these in game. If another addon also uses `/ec`, the game may open that one instead: `/eyecandy` always opens Eye Candy.
 
 | Command | What it does |
 | --- | --- |
@@ -47,9 +66,10 @@ Coming from Vista: before starting the game, copy `WTF\Account\<account>\SavedVa
 | `/ec city` | Turn the city switch on or off (`city on`, `city off`) |
 | `/ec apply` | Apply your settings again |
 | `/ec minimap` | Show or hide the minimap button |
+| `/ec fade` | Turn off (or on) the window fading a little when the mouse is away |
 | `/ec find <word>` | Search the game's settings, with the game's own descriptions |
-| `/ec export [all]` | Copy box with your settings |
-| `/ec report` | Copy box with a bug report |
+| `/ec export [all]` | Open a box with your settings, to copy |
+| `/ec report` | Open a box with a bug report, to copy |
 
 ## Report a bug
 
@@ -75,6 +95,7 @@ Nothing in the game itself can be tested this way. Try changes in game with `/re
 
 - `CONTRIBUTING.md`: layout, dev loop, game facts and rules.
 - `docs/cvar_audit.txt`: Blizzard's help text and defaults for each setting.
+- `media/`: the logo and the screenshots for this page and the CurseForge and Wago pages. They don't ship with the addon.
 - `CHANGELOG.md`: what changed, for players.
 
 ## Licence
