@@ -247,18 +247,37 @@ end
 
 -- Why Best balance: the game tells addons nothing about the screen's refresh rate, so a fixed FPS goal
 -- could sit under it. Best balance raises a setting only while it is worth its cost, never under 60 FPS.
-local AUTO_LINE = "Eye Candy picked Best balance and Best look for you. Stand somewhere quiet, then press Start. It takes about 3 to 7 minutes. Nothing changes until you press it."
+-- It replaces the goal, way of tuning and start point picked before: the player asked Eye Candy to pick,
+-- and the line names all three.
+-- Where to stand and how long is the tab's own text (HowText in AutotuneTab.lua); this line only says
+-- what was picked. It goes once the goal is changed on the tab, so it never names an old pick.
+H.AUTO_LINE = "Help me pick chose Best balance and Best look, from the lowest settings. Press Start when you're ready."
+
+local picked -- the goal table Let Eye Candy pick set, while its line is showing
 
 function H.LetEyeCandyPick()
 	local AT = ns.Autotune
 	local running = AT and AT.IsRunning and AT.IsRunning()
 	if not running then
-		ns.db.autotuneGoal = { mode = "balance", style = "look" }
+		picked = { mode = "balance", style = "look" }
+		ns.db.autotuneGoal = picked
 	end
 	ns.ShowTab("autotune")
 	if AT and AT.Say and not running then
-		AT.Say("done", AUTO_LINE)
+		AT.Say("done", H.AUTO_LINE)
 		ns.RefreshUI()
+	end
+end
+
+-- The tab's Pick() saves a new goal table, so a goal changed since is a different table: the line goes.
+local tabRefresh = ns.TAB_REFRESH and ns.TAB_REFRESH.autotune
+if tabRefresh then
+	ns.TAB_REFRESH.autotune = function(page, ...)
+		local AT = ns.Autotune
+		if AT and AT.message == H.AUTO_LINE and ns.db.autotuneGoal ~= picked then
+			AT.message, AT.messageKind = nil, nil
+		end
+		return tabRefresh(page, ...)
 	end
 end
 
@@ -292,7 +311,9 @@ local function Applied(page, p)
 	if on and on.id == p.id then
 		H.Set(page, "done", p, "Back to before " .. p.name .. ", at the top of this tab, undoes it.")
 	else
-		H.Set(page, "none", p, RED .. p.name .. " didn't go on.|r")
+		-- The row's Apply puts a refusal's reason on the card; say it here too, where it was pressed.
+		local why = page and page.cardMsg and page.cardMsg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+		H.Set(page, "none", p, RED .. p.name .. " didn't go on." .. (why and why ~= "" and (" " .. why) or "") .. "|r")
 	end
 end
 

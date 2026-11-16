@@ -191,7 +191,39 @@ check(E('EyeCandyMainFrame.tab') == "autotune", "it opens the Experimental tab")
 check(E('NS.db.autotuneGoal.mode') == "balance" and E('NS.db.autotuneGoal.style') == "look" and E('NS.db.autotuneGoal.from') is None, "with Best balance and Best look from the lowest settings picked")
 check(E('NS.Autotune.IsRunning()') is False and E('(NS.OnPreset()).id') == before, "it starts nothing and changes no setting")
 msg = E('NS.Autotune.message') or ""
-check("press Start" in msg and E('NS.Autotune.messageKind') == "done", "the tab's line says to press Start (%r)" % msg)
+check("Press Start" in msg and "lowest settings" in msg and E('NS.Autotune.messageKind') == "done", "the tab's line names all three picks and says to press Start (%r)" % msg)
+how = open(addon + 'AutotuneTab.lua', encoding='utf-8').read()
+check("quiet" not in msg and "somewhere busy" in how, "where to stand is left to the tab's own text (Best look: somewhere busy)")
+# The line goes once the goal is changed on the tab (its Pick() saves a new table).
+X('NS.db.autotuneGoal = { mode = "target", goal = 60, style = "look" }; NS.RefreshUI()')
+check(E('NS.Autotune.message') is None, "changing the goal on the tab takes the line away")
+
+# While Autotune runs: the tab opens, the goal stays.
+X('NS.ShowTab("presets"); REALRUN = NS.Autotune.IsRunning; NS.Autotune.IsRunning = function() return true end')
+X('NS.db.autotuneGoal = { mode = "target", goal = 144, style = "smooth" }')
+click(B)
+click(S + '.auto')
+check(E('EyeCandyMainFrame.tab') == "autotune" and E('NS.db.autotuneGoal.goal') == 144 and E('NS.db.autotuneGoal.style') == "smooth", "while Autotune runs it only opens the tab, the goal untouched")
+X('NS.Autotune.IsRunning = REALRUN; NS.ShowTab("presets")')
+
+# A refused Apply says why in the strip, in red.
+on("tier3")
+X('REALAPPLY = NS.ApplyPresetById; NS.ApplyPresetById = function() return false, "The game said no." end')
+click(B)
+click(S + '.prettier')
+click(S + '.apply')
+body = E(S + '.body.text')
+check("|cffff4040" in body and "Ultra didn't go on. The game said no." in body, "a refused Apply says why in the strip, in red (%r)" % body)
+X('NS.ApplyPresetById = REALAPPLY')
+click(S + '.close')
+
+# Every body the strip showed above, built from pieces, has no em-dash.
+X('NS.Helper.Set(EyeCandyMainFrame.pages.presets, "ask")')
+for state in ("prettier", "faster"):
+    click(S + '.again')
+    click(S + '.' + state)
+    check('—' not in E(S + '.body.text') and '—' not in E(S + '.title.text'), "no em-dash in the %s strip" % state)
+click(S + '.close')
 
 # 6. Words (docs/ui-rules.md): no em-dash, no tier, CVar or LOD in anything the strip says.
 for word in ("—", "tier", "CVar", "LOD", "profile", "revert"):
