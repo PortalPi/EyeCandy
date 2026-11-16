@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   tag:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -46,22 +47,39 @@ jobs:
           fi
           tag="v$version"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag already exists; nothing to do."
-            exit 0
+            # A release run for a tag has the tag as its branch, whether a push or a start by name.
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?branch=$tag" --jq .total_count)
+            if [ "$runs" -gt 0 ]; then
+              echo "$tag already exists and has a release run; nothing to do."
+              exit 0
+            fi
+            echo "$tag exists but has no release run (an earlier start failed); starting it."
+          else
+            git tag "$tag" "$GITHUB_SHA"
+            if ! git push origin "refs/tags/$tag"; then
+              if [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
+                echo "$tag was pushed by hand meanwhile; that push starts the release."
+                exit 0
+              fi
+              echo "::error::Could not push $tag."
+              exit 1
+            fi
           fi
-          git tag "$tag" "$GITHUB_SHA"
-          git push origin "refs/tags/$tag"
           gh workflow run release.yml --ref "$tag"
-          echo "Made $tag and started the release. It waits for the maintainer's approval."
+          echo "Started the release for $tag. It waits for the maintainer's approval."
 
       - name: Delete merged fix branches
+        if: success() || failure() # tidy even when tagging failed
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           owner="${GITHUB_REPOSITORY%%/*}"
           for b in $(git for-each-ref --format='%(refname:strip=3)' 'refs/remotes/origin/claude/fix-issue-*'); do
-            merged=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&head=$owner:$b" --jq '[.[] | select(.merged_at != null)] | length')
+            if ! merged=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&head=$owner:$b" --jq '[.[] | select(.merged_at != null)] | length'); then
+              echo "Could not check $b; left for the next push."
+              continue
+            fi
             if [ "$merged" -gt 0 ] && git merge-base --is-ancestor "origin/$b" "$GITHUB_SHA"; then
               git push origin --delete "$b"
               echo "Deleted $b (merged)."
