@@ -493,6 +493,21 @@ function ns.ExperimentPart()
 end
 
 -- Shows a part of the Experimental tab, and the tab if the window is open on another.
+-- Help me pick (Helper.lua, which loads after this file) opens this tab for Autotune: it shows Autotune's
+-- part, not the last part looked at. Its button looks the function up when clicked, so a wrap at login works.
+local helperHook = CreateFrame("Frame")
+helperHook:RegisterEvent("PLAYER_LOGIN")
+helperHook:SetScript("OnEvent", function(self)
+	self:UnregisterAllEvents()
+	local H = ns.Helper
+	local pick = H and H.LetEyeCandyPick
+	if not pick then return end
+	H.LetEyeCandyPick = function(...)
+		if ns.db then ns.db.experimentPart = "autotune" end
+		return pick(...)
+	end
+end)
+
 function ns.ShowExperiment(key)
 	if not PART[key] then return end
 	ns.db.experimentPart = key

@@ -68,6 +68,10 @@ check("1 or 2" in E(EP + ".why.text") and "puts your settings back" in E(EP + ".
       "it says what it is, and what ends it")
 check(E(EP + ".start.shown") and not E(EP + ".roundHead.shown") and not E(EP + ".resultHead.shown"),
       "before it starts: only Start")
+X("NS.Helper.LetEyeCandyPick()")
+check(E("EyeCandyDB.experimentPart") == "autotune" and E(P + ".parts.autotune.shown") and not E(P + ".parts.eye.shown"),
+      "Help me pick's Let Eye Candy pick shows Autotune's part, not the last one looked at")
+X(P + ".partButtons[2].scripts.OnClick()")
 
 # --- Refusals show in red under Start --------------------------------------------------------------
 X("INCOMBAT = true; " + EP + ".start.scripts.OnClick(); INCOMBAT = false")
@@ -169,7 +173,12 @@ check("eye test" in (E("STOPPED") or "") and E("AT_OK") is False and "eye test" 
       "Compare and Autotune don't start during the test")
 X("NS.ApplyAll()")
 check(not E("ET.IsOn()") and "another setting" in E(EP + ".status.text"), "another Eye Candy apply ends it first")
+check(E("NS.FPS.Still({})") is True, "standing still with no test on, the FPS reader may measure a preset")
 begin()
+check(E("NS.FPS.Still({})") is False, "during the test it doesn't, so no preset's FPS is measured on the test's values")
+X("NS.PatchWatchLogout()")
+check(cv("graphicsShadowQuality") == "1" and E("EyeCandyDB.patchWatch.snap.values.graphicsShadowQuality") == "5",
+      "the patch warning's copy at logout holds your settings, not the test's")
 X(EP + ".stop.scripts.OnClick()")
 check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5", "Stop eye test puts your settings back")
 

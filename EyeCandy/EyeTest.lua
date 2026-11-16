@@ -366,6 +366,26 @@ if ns.Autotune then
 	end
 end
 
+-- The patch warning (PatchWatch.lua) copies your settings at logout, maybe before the test puts them back, and
+-- the FPS reader (FPS.lua) measures a preset you just put on. Neither takes the test's values for yours.
+if ns.PatchWatch and ns.PatchWatch.Own then
+	local own = ns.PatchWatch.Own
+	ns.PatchWatch.Own = function(cvar, value)
+		local saved = ns.db and ns.db.eyeTest
+		if value ~= nil and saved and type(saved.before) == "table" and saved.before[cvar] ~= nil then
+			value = saved.before[cvar]
+		end
+		return own(cvar, value)
+	end
+end
+if ns.FPS and ns.FPS.Still then
+	local still = ns.FPS.Still
+	ns.FPS.Still = function(...)
+		if test and test.live then return false end
+		return still(...)
+	end
+end
+
 -- Closing the window ends the test (Peek hides it too, and that doesn't). Options can change settings.
 local hookedWindow, hookedOptions = false, false
 function ET.HookWindow()
