@@ -180,17 +180,19 @@ end
 function SF.IsOn() return state ~= nil end
 function SF.State() return state end
 
--- Why it holds back now, or nil.
+-- What holds it back now, as words for "Waiting: ...", or nil. fight: true when that is a fight.
 function SF.HeldBy()
-	if InCombatLockdown() then return "a fight" end
+	if InCombatLockdown() then return "you are in a fight", true end
 	local AT = ns.Autotune
-	if AT and AT.IsRunning and AT.IsRunning() then return "Autotune" end
-	if ns.IsComparing and ns.IsComparing() then return "Compare" end
-	if ns.PhotoMode and ns.PhotoMode.IsOn() then return "photo mode" end
-	if ns.EyeTest and ns.EyeTest.IsOn() then return "the eye test" end
-	if ns.IsPeeking and ns.IsPeeking() then return "Peek" end
+	if AT and AT.IsRunning and AT.IsRunning() then return "Autotune is running" end
+	if ns.IsComparing and ns.IsComparing() then return "Compare is on" end
+	if ns.PhotoMode and ns.PhotoMode.IsOn() then return "photo mode is on" end
+	if ns.EyeTest and ns.EyeTest.IsOn() then return "the eye test is on" end
+	if ns.IsPeeking and ns.IsPeeking() then return "Peek is on" end
 	local db = ns.db or {}
-	if db.photo or db.eyeTest or db.autotune then return "another Eye Candy change" end
+	if db.autotune then return "Autotune has your settings until you keep or undo its result" end
+	if db.photo then return "photo mode has your settings" end
+	if db.eyeTest then return "the eye test has your settings" end
 	return nil
 end
 
@@ -202,19 +204,52 @@ local function Set(to)
 	return Scale() or to
 end
 
+local function Is(a, b)
+	a, b = tonumber(a), tonumber(b)
+	return a ~= nil and b ~= nil and math.abs(a - b) < 0.001
+end
+
+-- Autotune, photo mode, the eye test and Compare saved the settings to put back when they end. Where
+-- they saved the lowered render scale, they put back your own instead.
+local function MendSaved(set, own)
+	local db = ns.db or {}
+	for _, saved in ipairs({ db.autotune and db.autotune.before, db.photo and db.photo.before,
+		db.eyeTest and db.eyeTest.before, db.compare and db.compare.now }) do
+		if type(saved) == "table" and Is(saved.RenderScale, set) then saved.RenderScale = tostring(own) end
+	end
+end
+
+local PutBack
+
+-- Your own goes back once what held it puts the lowered value back (Compare keeps its own copy).
+local function WaitToPutBack()
+	if ns.FPS then ns.FPS.Watch("steadyBack", function()
+		if SF.HeldBy() then return end
+		ns.FPS.Unwatch("steadyBack")
+		PutBack()
+	end) end
+end
+
 -- Your own render scale back. Not in a fight. Returns true when it is back (or was never lowered).
-local function PutBack()
+PutBack = function()
 	local db = ns.db and ns.db.steady
 	if not (type(db) == "table" and db.set) then return true end
 	if InCombatLockdown() then
 		db.afterCombat = true
 		return false
 	end
-	local own = tonumber(db.own)
-	local now = Scale()
-	if own and now and math.abs(now - tonumber(db.set)) < 0.001 then Set(own) end
+	local own, set, cur = tonumber(db.own), tonumber(db.set), Scale()
+	if own then MendSaved(set, own) end
+	if Is(cur, set) then
+		if own then Set(own) end
+	elseif SF.HeldBy() then
+		-- Autotune, photo mode or another has render scale for now: the value is theirs. Wait for them.
+		WaitToPutBack()
+		return false
+	end
+	-- Otherwise someone set another value since: that one is yours.
 	db.set, db.afterCombat = nil, nil
-	if state and own then state.scale = own end
+	if state and own then state.scale = Scale() or own end
 	return true
 end
 
@@ -254,16 +289,31 @@ local function OnReading(now, raw, frames, seconds, long)
 	Refresh()
 end
 
-function SF.TurnOn()
+-- atLogin: turning itself back on at login, when it can't wait to be asked again.
+function SF.TurnOn(atLogin)
 	if state then return true end
 	local cur = Scale()
 	if not cur then return nil, "This game has no render scale setting." end
+	local held, fight = SF.HeldBy()
+	-- Their render scale isn't yours: it would be taken as yours.
+	if held and not fight and not atLogin then return nil, "Can't turn on while " .. held .. ". Try again after." end
 	local db = DB()
-	db.on = true
-	-- Still lowered from last time: that wasn't yours.
-	if db.set and tonumber(db.own) and math.abs(cur - tonumber(db.set)) < 0.001 then cur = tonumber(db.own) end
-	db.own = cur
-	state = SF.New(cur)
+	db.on, db.afterCombat = true, nil
+	if ns.FPS then ns.FPS.Unwatch("steadyBack") end
+	local own = cur
+	if db.set and Is(cur, db.set) and tonumber(db.own) then
+		-- Still lowered from before: that isn't yours. Yours goes back, or, in a fight, it carries on from there.
+		own = tonumber(db.own)
+		if not InCombatLockdown() then
+			cur = Set(own)
+			db.set = nil
+		end
+	else
+		db.set = nil
+	end
+	db.own = own
+	state = SF.New(own)
+	state.scale = cur
 	ns.FPS.Watch("steady", OnReading)
 	Refresh()
 	return true
@@ -293,6 +343,22 @@ ns.SituationValue = function(cvar, value)
 	return value
 end
 
+-- A preset that sets render scale sets yours, even to the very value it had lowered to.
+local noteOnPreset = ns.NoteOnPreset
+if noteOnPreset then
+	ns.NoteOnPreset = function(p, ...)
+		noteOnPreset(p, ...)
+		local values = state and type(p) == "table" and p.id and ns.PresetValues and ns.PresetValues(p.id)
+		local cur = Scale()
+		if type(values) == "table" and values.RenderScale ~= nil and cur and not SF.HeldBy() then
+			SF.Adopt(state, cur)
+			local db = DB()
+			db.own, db.set = cur, nil
+			Refresh()
+		end
+	end
+end
+
 -- The FPS a preset gave isn't measured while render scale is lowered, or just after a change.
 if ns.FPS and ns.FPS.Still then
 	local still = ns.FPS.Still
@@ -316,14 +382,11 @@ events:SetScript("OnEvent", function(_, event, isLogin, isReload)
 		if db.afterCombat and not state then PutBack() end
 	elseif event == "PLAYER_ENTERING_WORLD" and (isLogin or isReload) then
 		-- Still lowered at login (a crash, or a logout in a fight): your own back first.
-		if db.set and not InCombatLockdown() then
-			local cur, own = Scale(), tonumber(db.own)
-			if cur and own and math.abs(cur - tonumber(db.set)) < 0.001 then Set(own) end
-			db.set = nil
-		end
+		state = nil
 		if db.on then
-			state = nil
-			SF.TurnOn()
+			SF.TurnOn(true)
+		elseif db.set then
+			PutBack()
 		end
 	end
 end)
@@ -336,7 +399,7 @@ end
 ----------------------------------------------------------------------
 
 local W = ns.ROW_W - 16
-local GREY, GOLD, WHITE = "|cff9d9d9d", "|cffffd100", "|cffffffff"
+local GREY, GOLD, WHITE, RED = "|cff9d9d9d", "|cffffd100", "|cffffffff", "|cffff4040"
 local ROW = 4
 
 local function Text(c, font)
@@ -366,7 +429,7 @@ SF.HOW = "It waits for 5 seconds under or well over the goal, changes 5% at a ti
 
 -- The lines under the button.
 function SF.Status()
-	if not state then return "Off." end
+	if not state then return "Off." .. (SF.refused and ("\n" .. RED .. SF.refused .. "|r") or "") end
 	local s = state
 	local lines = {}
 	local now = s.scale
@@ -383,10 +446,15 @@ function SF.Status()
 			or "Lowering didn't help here, so it stopped. It tries again after a loading screen."
 	end
 	if s.ceiling then
-		lines[#lines + 1] = "Raising past " .. Pct(s.ceiling) .. " dropped FPS too far here, so it stays at most there."
+		lines[#lines + 1] = "Raising past " .. Pct(s.ceiling) .. " dropped FPS too far here, so it won't go above that here."
 	end
 	local held = SF.HeldBy()
-	if held then lines[#lines + 1] = GREY .. "Waiting: " .. held .. " is on.|r" end
+	if held then lines[#lines + 1] = GREY .. "Waiting: " .. held .. ".|r" end
+	-- It can't tell FPS held by Vertical Sync from FPS held by the graphics card, so it would lower once for
+	-- nothing (and put it back) with a goal over the screen's refresh rate.
+	if Num("vsync") == 1 then
+		lines[#lines + 1] = "Vertical Sync is on, so FPS stops at your screen's refresh rate. Pick a goal at or under it."
+	end
 	local hitch = session.biggest
 	local hitchText = hitch and string.format(" Biggest hitch from a change: %d ms", math.floor(hitch * 1000 + 0.5))
 		.. (session.normal and string.format(" (a normal frame then: %d ms).", math.floor(session.normal * 1000 + 0.5)) or ".")
@@ -423,7 +491,16 @@ local function Build(page, holder)
 		e.goals[i], prev = b, b
 	end
 	e.toggle = ns.Button(c, "Turn on", 110, function()
-		if state then SF.TurnOff() else SF.TurnOn() end
+		SF.refused = nil
+		if state then
+			SF.TurnOff()
+		else
+			local ok, err = SF.TurnOn()
+			if not ok then
+				SF.refused = err
+				Refresh()
+			end
+		end
 	end)
 	Under(e.toggle, e.goals[1], 0, 8)
 	ns.Tooltip(e.toggle, "Steady FPS", "Off until you turn it on. Turning it off puts your own render scale back.")

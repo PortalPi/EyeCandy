@@ -13,6 +13,7 @@ lua = boot(PRE)
 E, X = lua.eval, lua.execute
 X('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); CHAT = {}')
 X("SF = NS.SteadyFPS")
+RED = "|cffff4040"
 
 # --- The steps (pure) -------------------------------------------------------------------------------
 # RUN(s, seconds, fps, opts): readings every half second at fps. opts: goal (60), free (true), long (a normal
@@ -148,7 +149,7 @@ tick(2, 50)
 check(abs(float(cv("RenderScale")) - 0.95) < 1e-6 and abs(E("EyeCandyDB.steady.set") - 0.95) < 1e-6,
       "after 5 seconds it lowers render scale one step, and saves what it set")
 st = E(SP + ".status.text")
-check("95%" in st and "100%" in st and "1" in st, "the page shows the render scale now and your own (%r)" % st)
+check("95% now" in st and "Yours is 100%" in st,"the page shows the render scale now and your own (%r)" % st)
 
 # Backups, presets and Back see your own render scale, not the lowered one.
 check(E("NS.SituationValue('RenderScale', GetCVar('RenderScale'))") in ("1", 1), "your own value for backups and Back is 100%")
@@ -166,8 +167,10 @@ X("INCOMBAT = false")
 X("SetCVar('RenderScale', 0.8)")
 tick(1, 60)
 check(E("EyeCandyDB.steady.own") == 0.8 and E("EyeCandyDB.steady.set") is None, "you set 80% yourself: that is your own now")
-tick(60, 120)
-check(abs(float(cv("RenderScale")) - 0.8) < 1e-6, "and it never raises past it")
+tick(31, 40)
+check(abs(float(cv("RenderScale")) - 0.75) < 1e-6, "low FPS: it lowers from your new own, after the 30 second gap")
+tick(70, 120)
+check(abs(float(cv("RenderScale")) - 0.8) < 1e-6, "FPS back: it raises to your 80%, never past it")
 
 # Turn off puts your own back.
 X("SetCVar('RenderScale', 1)")
@@ -188,7 +191,8 @@ X("SetCVar('RenderScale', 0.85); EyeCandyDB.steady.set = 0.85; EyeCandyDB.steady
 X('FIRE("PLAYER_ENTERING_WORLD", true, false)')
 check(cv("RenderScale") == "1" and E("NS.FPS.IsWatching('steady')"), "a login with it still lowered (a crash) puts your own back, and it carries on")
 
-# Autotune and the others hold it back.
+# Autotune and the others hold it back, even after FPS was already low for 4 seconds.
+tick(4, 30)
 X("NS.Autotune.IsRunning = function() return true end")
 tick(60, 30)
 check(cv("RenderScale") == "1", "while Autotune runs it never changes anything")
@@ -204,5 +208,64 @@ check("Biggest hitch from a change:" in st and "Changes this session:" in st, "a
 tick(30, 30)
 check(cv("RenderScale") == "1", "once the gap is over, that step goes back")
 X(SP + ".toggle.scripts.OnClick()")
+
+
+def lowered():
+    # Off, then on at 100%, then low FPS until it lowers one step (95%).
+    X("if NS.SteadyFPS.IsOn() then NS.SteadyFPS.TurnOff() end; SetCVar('RenderScale', 1); NS.SteadyFPS.TurnOn()")
+    tick(6, 40)
+    return abs(float(cv("RenderScale")) - 0.95) < 1e-6
+
+
+# Turned off in a fight, then on again in it: the lowered value never becomes yours.
+check(lowered(), "lowered to 95%")
+X("INCOMBAT = true; " + SP + ".toggle.scripts.OnClick()")
+check(cv("RenderScale") == "0.95" and E("EyeCandyDB.steady.afterCombat"), "Turn off in a fight: render scale waits for the fight to end")
+X(SP + ".toggle.scripts.OnClick()")
+check(E("NS.SteadyFPS.IsOn()") and E("EyeCandyDB.steady.set") == 0.95, "on again in the fight: it carries on from 95%")
+X("INCOMBAT = false")
+tick(2, 60)
+check(E("EyeCandyDB.steady.own") == 1, "after the fight your own is still 100%, not 95%")
+X(SP + ".toggle.scripts.OnClick()")
+check(cv("RenderScale") == "1", "and Turn off puts it back")
+
+# Turned off while Autotune has render scale: what Autotune puts back is your own.
+check(lowered(), "lowered again")
+X("RUNNING = true; NS.Autotune.IsRunning = function() return RUNNING end")
+X("EyeCandyDB.autotune = { before = { RenderScale = '0.95' } }; SetCVar('RenderScale', 0.6)")
+X("NS.SteadyFPS.TurnOff()")
+check(E("EyeCandyDB.autotune.before.RenderScale") == "1" and cv("RenderScale") == "0.6",
+      "Turn off during Autotune: Autotune will put back your own, and its test value stays for now")
+X("SetCVar('RenderScale', EyeCandyDB.autotune.before.RenderScale); EyeCandyDB.autotune = nil; RUNNING = false")
+tick(1, 60)
+check(cv("RenderScale") == "1" and E("EyeCandyDB.steady.set") is None, "Autotune ends: yours, and nothing left to put back")
+
+# Turned off while Compare shows its own copy: once Compare puts the lowered value back, yours goes back.
+check(lowered(), "lowered again")
+X("CMP = true; local c = NS.IsComparing; NS.IsComparing = function() return CMP end; ORIG_CMP = c")
+X("SetCVar('RenderScale', 1); NS.SteadyFPS.TurnOff()")
+check(cv("RenderScale") == "1" and E("EyeCandyDB.steady.set") == 0.95, "Turn off during Compare: it waits")
+X("SetCVar('RenderScale', 0.95); CMP = false; NS.IsComparing = ORIG_CMP")
+tick(1, 60)
+check(cv("RenderScale") == "1" and E("EyeCandyDB.steady.set") is None, "Compare ends on the lowered value: your own goes back")
+
+# Turn on is refused while something else has your settings.
+X("EyeCandyDB.photo = { before = {} }; " + SP + ".toggle.scripts.OnClick()")
+st = E(SP + ".status.text")
+check(not E("NS.SteadyFPS.IsOn()") and RED in st and "photo mode has your settings" in st, "Turn on while photo mode has your settings: refused, in red (%r)" % st)
+X("EyeCandyDB.photo = nil")
+
+# A preset that sets the very value it had lowered to: that is yours now.
+check(lowered(), "lowered again")
+X("local pv = NS.PresetValues; NS.PresetValues = function() return { RenderScale = '0.95' } end; NS.NoteOnPreset({ id = 'x' }); NS.PresetValues = pv")
+check(E("EyeCandyDB.steady.own") == 0.95 and E("EyeCandyDB.steady.set") is None, "a preset setting 95% makes 95% yours")
+X("NS.SteadyFPS.TurnOff()")
+check(cv("RenderScale") == "0.95", "so Turn off leaves it")
+
+# The waiting line names what holds it back.
+X("SetCVar('RenderScale', 1); NS.SteadyFPS.TurnOn(); EyeCandyDB.eyeTest = { before = {} }")
+tick(1, 60)
+check("Waiting: the eye test has your settings." in E(SP + ".status.text"), "the page says what it waits for")
+X("EyeCandyDB.eyeTest = nil; NS.SteadyFPS.TurnOff()")
 
 done()
