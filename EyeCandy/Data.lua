@@ -86,7 +86,7 @@ ns.CATEGORIES = {
 	{
 		key = "distant",
 		name = "Distant Detail (exp.)",
-		desc = "How far trees, props, terrain and buildings keep full detail before they swap to simpler models or vanish.\nThe menu's View Distance and Environment Detail also set some of these. Eye Candy sets them again after you close Options.",
+		desc = "How far trees, props, terrain and buildings keep full detail before they swap to simpler models or vanish.\nThe menu's View Distance and Environment Detail also set some of these. Eye Candy sets them again after you close Options.\nUnconfirmed: not checked by eye at long range.",
 		cvars = {
 			{ "doodadLodScale",     "Tree/prop detail distance",          { nil, nil, nil, 200, 300 },  hidden = true },
 			{ "lodObjectFadeScale", "Small object fade distance",         { nil, nil, nil, 200, 300 },  hidden = true },
@@ -176,7 +176,7 @@ ns.LOOKS = {
 	},
 	{
 		key = "painterly", name = "Painterly", base = 5,
-		desc = "Leans into WoW's hand-painted art. Little sharpening, and sparser grass so the ground textures show.",
+		desc = "Leans into WoW's hand-painted art. Little sharpening, sparser grass so the ground textures show, and a slightly narrower view.",
 		extras = { renderScale = 1.5, resample = 2, sharpness = 1, entityLod = 20 },
 		dials = {
 			groundEffectDensity = 128, groundEffectDist = 300, groundEffectFade = 250,
@@ -248,7 +248,7 @@ ns.EXPORT_EXTRA = {
 ns.SITUATIONS = {
 	{
 		key = "raid", situation = true, name = "Raid & PvP", base = 3,
-		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off, less glow, the widest view and a further camera zoom.\nIf the game's own Raid and Battleground settings are on, the game uses those in raids and battlegrounds instead.",
+		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off, less glow, the widest view and a further camera zoom.\nIf the game's own Raid and Battleground settings are on, the game uses those in raids and battlegrounds instead.\nThe tick box under it switches to these in dungeons, raids, battlegrounds and arenas, and back when you leave.",
 		dials = {
 			graphicsParticleDensity = 1, graphicsDepthEffects = 0, weatherDensity = 0,
 			bloomUserMult = 0.4, cameraFov = 90, cameraDistanceMaxZoomFactor = 2.6,
@@ -279,7 +279,7 @@ ns.SITUATIONS = {
 		-- compute effects next. Shadows and SSAO are graphics card costs, so High keeps them.
 		-- Reports from players and guides, not measured here. Measure in Stormwind or Orgrimmar.
 		key = "city", situation = true, name = "Capital city", base = 3,
-		desc = "Steadier frames in a busy city. High, with lower view distance, environment detail, fog and far-away character detail. Players say these help most in cities. Unconfirmed: not measured by Eye Candy.",
+		desc = "Steadier frames in a busy city. High, with lower view distance, environment detail, fog and far-away character detail. Players say these help most in cities. Unconfirmed: not measured by Eye Candy.\nThe tick box under it lowers just those four in capital cities, and puts them back when you leave.",
 		extras = { entityLod = 10 },
 		dials = { graphicsViewDistance = 7, graphicsEnvironmentDetail = 7, graphicsComputeEffects = 2 },
 		-- The switch by itself (Situations.lua): only these, only where yours are higher.
