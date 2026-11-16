@@ -1,5 +1,6 @@
 """The Presets tab: the "On now" card, the gold row for the preset you are on, section headings,
-one Apply and a "..." menu per row, the Import strip, and the "Back to before <name>" button.
+one Apply and a "..." menu per row, the Import strip, and what Back on one of today's steps says
+on the card (tests/test_back_history.py has the Today list itself).
 Run: python tests/test_presets_tab.py"""
 from lib import boot, check, done
 
@@ -137,7 +138,7 @@ X('NS.ApplyPresetById("tier1")')
 # Long names are cut, never wrapped, on the card and in a row.
 X('LONG = NS.SaveCurrentAsPreset("A very long preset name that goes on and"); NS.ApplyPresetById(LONG.id)')
 check(E(P + '.card.name.text') == "A very long preset name tha..." and E(row("A very long preset name that goes on and") + '.name.text') == "A very long preset name t...", "a long name is cut with ... on the card and in its row")
-check('c.name:SetWordWrap(false)' in src and 'c.detail:SetWordWrap(false)' in src and 'c.detail:SetPoint("RIGHT", c, "RIGHT", -(BACK_W_MAX + 24), 0)' in src, "the card's name and detail stop short of Back and never wrap")
+check('c.name:SetWordWrap(false)' in src and 'c.detail:SetWordWrap(false)' in src and 'c.detail:SetPoint("RIGHT", c, "RIGHT", -16, 0)' in src, "the card's name and detail run to its right edge and never wrap")
 X('NS.DeletePreset(LONG.id); NS.ApplyPresetById("tier1")')
 check(row("A very long preset name that goes on and") is None, "a deleted preset's row is hidden when the list gets shorter")
 
@@ -150,20 +151,28 @@ X('GameTooltip.AddLine = nil; %s.scripts.OnClick(%s)' % (box, box))
 check(E('NS.IsAutoSituationOn("city")') == True, "ticking the box turns the city switch on")
 X('NS.SetAutoSituation("city", false)')
 
-# Back to before: on the card, named after the last preset.
-check(E(P + '.backButton') is not None, "the card has a Back button")
+# Back on one of today's steps (its row in the Today list): click it, then Back on the question.
+A = 'EyeCandyAskFrame'
+
+
+def back_newest():
+    n = E('#(%s.stepRows or {})' % P)
+    r = next('%s.stepRows[%d]' % (P, i) for i in range(1, n + 1) if E('%s.stepRows[%d].shown' % (P, i)))
+    X('%s.back.scripts.OnClick(%s.back); %s.accept.scripts.OnClick(%s.accept)' % (r, r, A, A))
+
+
+check(E(P + '.backButton') is None, "the card has no Back button: Back lives on today's steps")
 X('NS.DeletePreset(MINE.id); NS.RefreshUI()')
 X('CHAT = {}')
 weather = E('GetCVar("weatherDensity")')
 apply("Raid & PvP")
-check(E(P + '.backButton.shown') == True and E(P + '.backButton.text') == "Back to before Raid & PvP", "after applying Raid & PvP the Back button says \"Back to before Raid & PvP\"")
+check(E('NS.BackSteps()[1].name') == "Raid & PvP", "applying Raid & PvP makes it today's newest step")
 check(E(P + '.card.name.text') == "Raid & PvP" and E(P + '.card.detail.text') == "Situation.", "the card calls a Situation a Situation")
 check(E('GetCVar("weatherDensity")') == "0", "Raid & PvP set no weather")
 
-# Click Back: the settings from before come back, and the button goes away.
-X('%s.backButton.scripts.OnClick(%s.backButton)' % (P, P))
+# Back on it: the settings from before come back, and the card says so.
+back_newest()
 check(weather != "0" and E('GetCVar("weatherDensity")') == weather, "Back puts the settings back as they were before Raid & PvP")
-check(E(P + '.backButton.shown') == False, "after going back the Back button goes away")
 note = E(P + '.card.note.text')
 check(note.startswith("|cff7cff7cBack to before Raid & PvP: ") and note.endswith(" put back.|r"), "the card says what Back put back, in green (%r)" % note)
 check(not any("Back to before" in x or "estored" in x for x in E('CHAT').values()), "and Back from the window prints nothing to chat")
@@ -181,61 +190,39 @@ check(E(P + '.card.note.text') == "|cffffd100In a city: some settings lowered|r"
 X('NS.ActiveSituationName = REAL_ASN; NS.RefreshUI()')
 check(E(P + '.card.note.text') == "" and "In a city" not in E(M + '.titleText.text'), "out of the city the note goes")
 
-# A change after the preset means Back can't go back in one step: the button hides, so it never lies.
-apply("Laptop")
-check(E(P + '.backButton.shown') == True, "Back shows again after another preset")
 # A red line goes once what it said stops being true: a fight ends, or Autotune takes the line.
-X('INCOMBAT = true; %s.backButton.scripts.OnClick(%s.backButton)' % (P, P))
+apply("Laptop")
+X('INCOMBAT = true')
+back_newest()
 refused = E(P + '.card.note.text')
 check(refused.startswith("|cffff4040") and "combat" in refused, "Back in a fight says why not on the card, in red (%r)" % refused)
 X('NS.MainTick(%s, NS.BACK_CHECK_EVERY)' % M)
 check(E(P + '.card.note.text') == refused, "the red line stays while the fight goes on")
 X('INCOMBAT = false; NS.MainTick(%s, NS.BACK_CHECK_EVERY)' % M)
 check(E(P + '.card.note.text') == "", "once the fight is over the red line goes by itself")
-X('INCOMBAT = true; %s.backButton.scripts.OnClick(%s.backButton)' % (P, P))
+X('INCOMBAT = true')
+back_newest()
 X('NS.AutotuneNote = function() return "Autotune is testing settings" end; NS.RefreshUI()')
 check(E(P + '.card.note.text') == "|cffffd100Autotune is testing settings|r", "once Autotune starts, its note takes the line from an old result, fight or not")
 X('INCOMBAT = false; NS.AutotuneNote = nil; NS.RefreshUI()')
-X('SetCVar("farclip", "1234"); NS.RefreshUI()')
-check(E(P + '.backButton.shown') == False, "after a later change the Back button hides")
 
-# A long name is cut on the button, by whole characters.
+# A long name is cut by whole characters.
 check(E('NS.ShortName("Raid & PvP", 18)') == "Raid & PvP", "a short name is left whole")
 check(E('NS.ShortName("My very long preset name here", 18)') == "My very long pres...", "a long name is cut to 18 characters with ...")
 cut = E('NS.ShortName("Caf\\195\\169 \\195\\169t\\195\\169 \\195\\169t\\195\\169 \\195\\169t\\195\\169 \\195\\169t\\195\\169", 10)')
 check(cut == "Café été ...", "a name with accents is cut between characters, never inside one")
-X('PID = NS.SaveCurrentAsPreset("A really long preset name for raids at night")')
-X('NS.ApplyPresetById(PID.id); NS.RefreshUI()')
-check(E(P + '.backButton.text') == "Back to before A really long pre...", "the Back button shows the cut name")
-check(E(P + '.backButton.shown') == True, "and stays shown for your own preset")
 
-# A setting changed while the tab is open (straight on the CVar, as the game's menu would) hides
-# Back within a second; putting it back brings Back back.
-was = E('GetCVar("farclip")')
-X('SetCVar("farclip", "%s")' % ("1000" if was != "1000" else "2000"))
-check(E(P + '.backButton.shown') == True, "setup: right after the change, before a tick, Back is still up")
-TICK()
-check(E(P + '.backButton.shown') == False, "a change while the Presets tab is open hides Back within a second")
-X('SetCVar("farclip", "%s")' % was)
-TICK()
-check(E(P + '.backButton.shown') == True, "putting the setting back brings Back back")
-X('SetCVar("farclip", "%s"); NS.ShowTab("hidden")' % ("1235" if was != "1235" else "1236"))
-TICK()
-X('NS.ShowTab("presets")')
-check(E(P + '.backButton.shown') == False, "coming back to the Presets tab after a change, Back is gone")
-X('SetCVar("farclip", "%s"); NS.RefreshUI()' % was)
-
-# With no preset at all, the timed check reads no settings.
-X('EyeCandyDB.lastBefore = nil; EyeCandyDB.onPreset = nil; EyeCandyDB.look = nil; NS.RefreshUI(); CALLS = 0; local f = NS.LastPresetName; NS.LastPresetName = function() CALLS = CALLS + 1; return f() end; local g = NS.OnPreset; NS.OnPreset = function() CALLS = CALLS + 1; return g() end')
+# With no preset on and no steps today, the timed check reads no settings.
+X('EyeCandyDB.steps = {}; EyeCandyDB.onPreset = nil; EyeCandyDB.look = nil; NS.RefreshUI(); CALLS = 0; local f = NS.StepsKey; NS.StepsKey = function(...) CALLS = CALLS + 1; return f(...) end; local g = NS.OnPreset; NS.OnPreset = function() CALLS = CALLS + 1; return g() end')
 TICK()
 check(E('CALLS') == 0, "with no preset on and nothing to go back to, the timed check is skipped")
 
 # No tooltip runs off the window's right edge: the row's buttons open theirs to the left.
 check(src.count('"ANCHOR_LEFT")') >= 6 and 'GameTooltip:SetOwner(self, "ANCHOR_CURSOR")' in src, "row buttons anchor tooltips to the left, rows at the cursor")
 
-# Without the Back API (an older Presets.lua), the tab still builds with no button.
+# Without today's steps (an older Steps.lua missing), the tab still builds, with no Today list.
 lua2 = boot()
 lua2.execute(REG)
-lua2.execute('NS.UndoLastPreset = nil; FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); SlashCmdList.EYECANDY("")')
-check(lua2.eval('EyeCandyMainFrame.pages.presets.usesList') == True and lua2.eval('EyeCandyMainFrame.pages.presets.backButton') is None, "without the Back API the Presets tab has no Back button")
+lua2.execute('NS.StepEntries = nil; FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); NS.ApplyPresetById("tier1"); SlashCmdList.EYECANDY("")')
+check(lua2.eval('EyeCandyMainFrame.pages.presets.usesList') == True and lua2.eval('EyeCandyMainFrame.pages.presets.stepRows') is None, "without today's steps the Presets tab builds with no Today rows")
 done()

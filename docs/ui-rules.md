@@ -20,7 +20,7 @@ feature must pass the checklist at the end before its pull request merges.
    | preset | anything in the Presets list | profile |
    | share code | the text that carries a preset | share string, export string |
    | far detail | level of detail at distance | LOD |
-   | Back to before | undo the last preset, or Autotune (Back to before Autotune) | revert, rollback |
+   | Back to before | undo one of today's steps (a preset, a restore, your own changes), or Autotune (Back to before Autotune) | revert, rollback |
    | Copy my settings | the box of your settings to copy | Export |
 
    The table is for words on screen. Slash commands (`/ec export`) keep their names.

@@ -27,4 +27,5 @@ PatchWatch.lua
 Helper.lua
 FPS.lua
 EyeTest.lua
+Steps.lua
 PhotoMode.lua

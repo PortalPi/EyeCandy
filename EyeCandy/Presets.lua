@@ -296,7 +296,7 @@ end
 -- (only a hand-edited saved file does that). A built-in's hidden rows come from your before-Eye-Candy
 -- values, else the game default. Applying it may land some lower: a menu setting is stepped down to
 -- what the GPU supports, and the game may keep less of others (render scale, zoom).
--- Autotune starts from one this way: applying it would take a Back to before record and trip
+-- Autotune starts from one this way: applying it would add a step to today's list and trip
 -- Autotune's stop-on-change guard.
 function ns.PresetValues(id)
 	local p = ns.FindPreset(id)
@@ -361,7 +361,7 @@ function ns.DeletePreset(id)
 	return true
 end
 
--- Applies straight away. Keeps a "before" record first (no backup row), so Back to before can undo it.
+-- Applies straight away. Keeps it as one of today's steps first (no backup row), so Back to before can undo it.
 function ns.ApplyPresetById(id)
 	local p = ns.FindPreset(id)
 	if not p then
@@ -369,7 +369,7 @@ function ns.ApplyPresetById(id)
 		return false
 	end
 	if p.builtin then
-		-- SetPreset and SetLook keep their own "before" record, refuse in combat, and (wrapped below)
+		-- SetPreset and SetLook add their own step to today's list, refuse in combat, and (wrapped below)
 		-- record the preset you are on.
 		local ok
 		if p.look then ok = ns.SetLook(p.look.key) == true
@@ -431,18 +431,10 @@ end
 -- ns.db.onPreset = { id, after = every managed setting as the preset left it }. The values the
 -- game kept are recorded, so a value the client refused (render scale above what it allows) never
 -- makes the preset look changed.
--- The record also keeps the stamp of the "before" record the preset made (Backups.lua). A restore
--- clears that record, so the preset is no longer the one you are on. .prev is the preset you were on
--- before, for Back to before.
-local function BeforeStamp()
-	local last = ns.BeforeRecord and ns.BeforeRecord()
-	return last and last.stamp or nil
-end
-
+-- A restore clears it (Backups.lua), so a backup is never the preset you are on. Each of today's
+-- steps keeps the one from before it, so Back puts it back.
 function ns.NoteOnPreset(p)
-	local prev = ns.db.onPreset
-	if type(prev) == "table" then prev.prev = nil else prev = nil end
-	ns.db.onPreset = { id = p.id, after = Snapshot(), beforeStamp = BeforeStamp(), prev = prev }
+	ns.db.onPreset = { id = p.id, after = Snapshot() }
 end
 
 -- A tier, Look or Showcase set from chat (/ec preset 3, /ec look moody) or the Hidden
@@ -475,7 +467,6 @@ function ns.OnPreset()
 		if p then return p, 0 end
 	end
 	if type(on) ~= "table" or not on.id then return nil end
-	if on.beforeStamp ~= nil and on.beforeStamp ~= BeforeStamp() then return nil end -- restored since
 	local p = ns.FindPreset(on.id)
 	if not p then return nil end -- deleted since
 	local changed = 0
@@ -710,50 +701,42 @@ end
 -- Slash commands: /ec presets, save <name>, use <name>, share <name>
 ----------------------------------------------------------------------
 
--- Can Back still return to before the last preset? Only while its "before" record is there (Backups.lua:
--- each preset replaces it, a restore clears it) and no setting has changed since the preset left them
--- (an Apply, a dial, a Standard row). Otherwise going back would quietly undo that too.
--- Returns the preset's name, or nil and a plain reason.
-local function BackTarget()
-	local last = ns.BeforeRecord and ns.BeforeRecord()
-	if not last then return nil, "Nothing to go back to. Apply a preset first." end
-	-- last.after is missing only for a record from an older test build. With no way to tell what changed
-	-- since, Back is not offered: it could quietly undo later changes. Compare can still use the record.
-	if type(last.after) ~= "table" or (ns.ChangedSince and ns.ChangedSince(last.after)) then
-		return nil, "Settings changed since " .. last.name .. ". Back only works until you change something."
-	end
-	return last.name
+-- What a step is called after "Back to before" and in Back's question: "Moody", "your own changes",
+-- "you restored "Raid night"".
+local function BackTarget(step)
+	if step.kind == "own" then return "your own changes" end
+	if step.kind == "restore" then return "you restored \"" .. tostring(step.name) .. "\"" end
+	return tostring(step.name or "your last preset")
+end
+ns.BackTarget = BackTarget
+
+-- A step's name on its row: what it was.
+function ns.StepName(step)
+	if step.kind == "restore" then return "Restored \"" .. tostring(step.name) .. "\"" end
+	return tostring(step.name or "")
 end
 
--- The preset applied last, if Back can still return to before it (nil otherwise). For a "Back" button.
-function ns.LastPresetName()
-	return (BackTarget())
+-- A step's grey line: what kind and when.
+function ns.StepLine(step)
+	local at = tostring(step.time or "")
+	if step.kind == "own" then return "Settings you changed yourself after " .. at .. "." end
+	if step.kind == "restore" then return "Backup restored at " .. at .. "." end
+	return "Preset applied at " .. at .. "."
 end
 
--- Puts back the settings from just before the last preset was applied. Returns the count restored,
--- or nil and a plain reason. One step only: it adds no backup, and afterwards there is nothing to go back to.
-function ns.UndoLastPreset()
-	local name, why = BackTarget()
-	if not name then return nil, why end
-	local on = ns.db.onPreset
-	local prev = type(on) == "table" and on.prev or nil
-	local n, err = ns.RestoreBefore()
-	-- Back puts you on the preset you were on before. Its stamp is gone with the record it had.
-	if n then
-		if type(prev) == "table" then prev.beforeStamp = nil end
-		ns.db.onPreset = prev
-		if ns.RefreshUI then ns.RefreshUI() end
-	end
-	return n, err
-end
-
--- Back to before, and one line saying what it did or why it couldn't (the Presets card and
--- /ec back both show it). Returns the change count or nil, then the line.
-function ns.GoBack()
-	local name = ns.LastPresetName and ns.LastPresetName()
-	local n, err = ns.UndoLastPreset()
+-- Back to before a step from today's list: a step from ns.BackSteps, its place there, or the newest
+-- when nil. Puts back the settings from just before it; it and every newer step leave the list
+-- (Backups.lua). You are back on the preset you were on before it. One line says what it did or why
+-- it couldn't (the Presets card and /ec back both show it). Returns the change count or nil, then the line.
+function ns.GoBack(step)
+	if type(step) ~= "table" then step = ns.BackSteps()[step or 1] end
+	if not step then return nil, "Nothing to go back to today. Apply a preset first." end
+	local n, err = ns.RestoreStep(step)
 	if not n then return nil, err end
-	return n, string.format("Back to before %s: %d %s put back.", tostring(name or "your last preset"), n, n == 1 and "setting" or "settings")
+	-- Your own changes undone: you are back where the newest step left you, so the preset you are on stays.
+	if not step.live then ns.db.onPreset = step.on end
+	if ns.RefreshUI then ns.RefreshUI() end
+	return n, string.format("Back to before %s: %d %s put back.", BackTarget(step), n, n == 1 and "setting" or "settings")
 end
 
 function ns.PresetSlash(msg, raw)

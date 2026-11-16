@@ -134,8 +134,8 @@ check("Lower:" in body and "of your settings change" in body and "Back to before
 check(E(S + '.apply.shown') is True and E(S + '.apply.text') == "Apply High", "Apply names the preset")
 check(E('(NS.OnPreset()).id') == "tier4", "nothing changes before Apply")
 click(S + '.apply')
-check(E('(NS.OnPreset()).id') == "tier3" and E('NS.LastPresetName()') == "High", "Apply puts High on, with Back to before High")
-check(E(S + '.title.text') == "Now on High" and "Back to before High" in E(S + '.body.text'), "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
+check(E('(NS.OnPreset()).id') == "tier3" and E('NS.BackSteps()[1].name') == "High", "Apply puts High on, as today's newest step")
+check(E(S + '.title.text') == "Now on High" and "Back on High under Today" in E(S + '.body.text'), "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
 check(E(S + '.apply.shown') is not True, "no Apply once it is on")
 
 # In a fight Apply waits, says so, and goes on when the fight ends.

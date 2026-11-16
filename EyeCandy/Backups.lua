@@ -1,7 +1,7 @@
 -- Eye Candy: dated backups of every setting the addon manages.
 -- Kinds: "original" (your settings before Eye Candy, kept forever) and "manual" (named by you).
--- Nothing else is listed. Back to before (Presets.lua) and Compare keep one record of their own,
--- EyeCandyDB.lastBefore, replaced by each preset (ns.NoteBeforePreset) and never shown as a backup.
+-- Nothing else is listed. Back to before (Presets.lua) and Compare keep today's steps of their own,
+-- EyeCandyDB.steps (ns.NoteBeforeStep), never shown as backups.
 -- Backups are account-wide (EyeCandyDB is account-wide) and record the character that made them.
 
 local ADDON, ns = ...
@@ -53,16 +53,19 @@ end
 -- The choices that were last applied. The tier buttons and Extras change ns.db before Apply is pressed,
 -- so ns.db is not "before" at that moment: a backup stores these instead.
 local applied
+local AppliedState -- below: the choices in force
 
 function ns.NoteApplied()
 	applied = CaptureState()
-	-- The first apply after a preset's "before" record (ns.NoteBeforePreset) is the preset itself:
-	-- keep what it left, so /ec back (Presets.lua) can tell when anything has changed since,
-	-- even a dial or a Standard row. Only that apply: a record loaded at login, or one from an older
-	-- version, is never filled with whatever the game is at now.
+	-- The first apply after a step's "before" (ns.NoteBeforeStep) is the step itself: keep what it
+	-- left, so the list can tell when you change anything since, even a dial or a Standard row.
+	-- Only that apply: a step loaded at login, or one from an older version, is never filled with
+	-- whatever the game is at now.
 	local last = ns.awaitingAfter
 	ns.awaitingAfter = nil
-	if last and last == ns.db.lastBefore then last.after = Capture() end
+	if last and type(ns.db.steps) == "table" and last == ns.db.steps[1] then
+		last.after, last.afterState = Capture(), AppliedState()
+	end
 end
 
 -- Has any managed setting changed from these values (a Capture())?
@@ -86,7 +89,7 @@ function ns.NoteAppliedExtra(key, value)
 end
 
 -- Dials apply the moment they move, so those come from now.
-local function AppliedState()
+function AppliedState()
 	local s = applied or CaptureState()
 	return { tiers = Copy(s.tiers), extras = Copy(s.extras), advanced = Copy(ns.db.advanced), look = s.look }
 end
@@ -208,18 +211,22 @@ function ns.CountBackupChanges(id)
 	return b and CountChanges(b) or 0
 end
 
--- Puts a backup, or the "before" record, back: settings and Eye Candy's own choices. Takes no
--- backup of where you are now, so a restore never adds a row. Returns how many settings changed,
--- or nil and a plain reason.
-local function Restore(b)
+-- Puts a backup, or a step's "before" (back = true), back: settings and Eye Candy's own choices.
+-- Takes no backup of where you are now, so a restore never adds a row. A backup's restore is a step
+-- of its own today, so Back can undo it; going back is not. Returns how many settings changed, or
+-- nil and a plain reason.
+local function Restore(b, back)
 	if type(b.values) ~= "table" then return nil, "That backup is damaged, so it can't be restored." end
 	-- No chat here: the window shows the result where you clicked, and the slash commands print it.
 	if InCombatLockdown() then
 		return nil, "Can't restore in combat. Try again after the fight."
 	end
-	-- One step back only: after any restore, Back has nothing to return to, so it never undoes this.
-	ns.db.lastBefore = nil
 	ns.awaitingAfter = nil
+	if not back then
+		ns.NoteBeforeStep("restore", b.label or "backup")
+		-- A backup is not a preset, so you are on none afterwards. Back puts the one from before back.
+		ns.db.onPreset = nil
+	end
 	ns.TakeBackup()
 	local changes = CountChanges(b)
 	-- In a city, what the restore raises past the switch's caps is lowered again (Situations.lua).
@@ -255,34 +262,147 @@ function ns.RestoreBackupById(id)
 end
 
 ----------------------------------------------------------------------
--- The one "before" record: Back to before and Compare
+-- Today's steps: Back to before and Compare
 ----------------------------------------------------------------------
 
--- Called just before a preset (built-in, your own or an import) changes anything. Replaces the
--- last record, so there is only ever one step back. The preset's own apply then fills in .after
--- (ns.NoteApplied). Saved with EyeCandyDB, so Back still works after a /reload.
+-- EyeCandyDB.steps, newest first. A step is each preset (built-in, yours, an import, Autotune's result
+-- once saved as a preset), each restore, and "your own changes" made between them. Each keeps the
+-- settings and choices from just before it (values, state), what it left (after, afterState, filled by
+-- its own apply in ns.NoteApplied), the preset you were on before it (on), and its day and time.
+-- Kept for the day and at most STEPS_MAX. Never a backup: not in ns.ListBackups, and /ec restore
+-- never uses one. Saved with EyeCandyDB, so Back still works after a /reload.
+local STEPS_MAX = 10
+ns.STEPS_MAX = STEPS_MAX
+
+-- Goes up each time the list itself changes, so the window can tell when to redraw it, even for two
+-- changes in the same second.
+local stepsChanged = 0
+function ns.StepsVersion() return stepsChanged end
+
+-- Today's date and the time now ("2026-11-16", "14:32"), from one clock reading.
+local function Today()
+	local now = tostring(date("%Y-%m-%d %H:%M"))
+	return now:sub(1, 10), now:sub(12, 16)
+end
+
+-- The saved steps, with any from another day, any damaged and any past the cap removed.
+local function Steps()
+	local db = ns.db
+	if type(db.steps) ~= "table" then db.steps = {} end
+	local list, day = db.steps, Today()
+	for i = #list, 1, -1 do
+		local s = list[i]
+		if type(s) ~= "table" or type(s.values) ~= "table" or s.day ~= day or i > STEPS_MAX then
+			table.remove(list, i)
+			stepsChanged = stepsChanged + 1
+		end
+	end
+	return list
+end
+
+-- The preset you were on, without its own links, for a step to put back.
+local function OnCopy(on)
+	if type(on) ~= "table" or not on.id then return nil end
+	return { id = on.id, after = on.after }
+end
+
+-- Have you changed settings yourself since the newest step left them? Not while Compare shows
+-- "before", or Autotune or the eye test holds your settings: those changes are theirs, and they put
+-- them back.
+local function OwnSince(top)
+	if not (top and type(top.after) == "table") then return false end
+	if ns.IsComparing and ns.IsComparing() then return false end
+	if ns.db.autotune or ns.db.eyeTest then return false end
+	return ns.ChangedSince(top.after)
+end
+
+-- The choices the newest step left. A step from before this version has none: then the ones in force.
+local function TopState(top)
+	return type(top.afterState) == "table" and top.afterState or AppliedState()
+end
+
+-- Called just before a step changes anything. kind: "preset" or "restore". Your own changes since
+-- the newest step are saved first, as their own step. The step's own apply fills in .after.
+function ns.NoteBeforeStep(kind, name)
+	local list = Steps()
+	local day, hm = Today()
+	local top = list[1]
+	if OwnSince(top) then
+		-- It started when the step before it ended, so its time is that step's.
+		table.insert(list, 1, { kind = "own", name = "Your own changes", day = day, time = top.time, stamp = time(),
+			values = top.after, state = TopState(top), on = OnCopy(ns.db.onPreset), after = Capture(), afterState = AppliedState() })
+	end
+	local step = { kind = kind, name = tostring(name), day = day, time = hm, stamp = time(),
+		values = Capture(), state = AppliedState(), on = OnCopy(ns.db.onPreset) }
+	table.insert(list, 1, step)
+	for i = #list, STEPS_MAX + 1, -1 do table.remove(list, i) end
+	stepsChanged = stepsChanged + 1
+	ns.awaitingAfter = step
+	return step
+end
+
+-- Called just before a preset (built-in, your own or an import) changes anything.
 function ns.NoteBeforePreset(name)
-	name = tostring(name or "your last preset")
-	ns.db.lastBefore = {
-		name = name, label = "Before " .. name, time = date("%Y-%m-%d %H:%M"), stamp = time(),
-		values = Capture(), state = AppliedState(),
-	}
-	ns.awaitingAfter = ns.db.lastBefore
-	return ns.db.lastBefore
+	return ns.NoteBeforeStep("preset", name or "your last preset")
 end
 
--- The record, if it can still be restored (nil otherwise).
+-- Today's steps, newest first, for the list and /ec back. The first may be your own changes since
+-- the newest step, not saved yet (live): its Back puts back what that step left.
+function ns.BackSteps()
+	if not ns.db then return {} end
+	local list = Steps()
+	local out, top = {}, list[1]
+	if OwnSince(top) then
+		out[1] = { kind = "own", live = true, name = "Your own changes", time = top.time, values = top.after, state = TopState(top) }
+	end
+	for _, s in ipairs(list) do out[#out + 1] = s end
+	return out
+end
+
+-- Compare's "before": the newest preset today (nil if none).
 function ns.BeforeRecord()
-	local last = ns.db and ns.db.lastBefore
-	if type(last) == "table" and type(last.values) == "table" then return last end
+	if not ns.db then return nil end
+	for _, s in ipairs(Steps()) do
+		if s.kind == "preset" then return s end
+	end
 end
 
--- Puts back the settings from just before the last preset. Presets.lua checks first that nothing
--- has changed since (BackTarget). Returns the count restored, or nil and a plain reason.
-function ns.RestoreBefore()
-	local last = ns.BeforeRecord()
-	if not last then return nil, "Nothing to go back to. Apply a preset first." end
-	return Restore(last)
+-- How many settings Back on a step would change.
+function ns.CountStepChanges(step)
+	return type(step) == "table" and CountChanges(step) or 0
+end
+
+-- Puts back the settings from just before a step (one from ns.BackSteps). That step and every newer
+-- one leave the list: your settings are as they were before all of them. Adds no step and no backup.
+-- Returns how many settings changed, or nil and a plain reason.
+function ns.RestoreStep(step)
+	local list = Steps()
+	-- Your own changes (live) are only still there while the step under them is still the newest: a
+	-- question left open while a preset went on must not put back what an older step left.
+	local at = type(step) == "table" and step.live and list[1] and step.values == list[1].after and 0 or nil
+	for i, s in ipairs(list) do
+		if s == step then at = i end
+	end
+	if not at then return nil, "That step is gone from today's list." end
+	local n, err = Restore(step, true)
+	if not n then return nil, err end
+	for i = at, 1, -1 do table.remove(list, i) end
+	if at > 0 then stepsChanged = stepsChanged + 1 end
+	return n
+end
+
+-- A single "before" record from an older version (EyeCandyDB.lastBefore) becomes today's first step,
+-- if it is from today. Called at load, after DropAutomatic.
+local function MoveOldRecord(db)
+	local last = db.lastBefore
+	db.lastBefore = nil
+	if type(last) ~= "table" or type(last.values) ~= "table" then return end
+	local stamp = tostring(last.time or "")
+	if stamp:sub(1, 10) ~= (Today()) then return end
+	if type(db.steps) ~= "table" then db.steps = {} end
+	if #db.steps > 0 then return end
+	db.steps[1] = { kind = "preset", name = tostring(last.name or "your last preset"), day = stamp:sub(1, 10),
+		time = stamp:sub(12, 16), stamp = last.stamp, values = last.values, state = last.state, after = last.after }
 end
 
 -- The Original can never be deleted.
@@ -352,6 +472,7 @@ function ns.LoadBackups()
 	db.backups = db.backups or {}
 	db.nextBackupId = db.nextBackupId or 1
 	DropAutomatic(db)
+	MoveOldRecord(db)
 	local original = ns.OriginalBackup()
 	if original and ns.FixDistantBackup(original.values) > 0 then
 		ns.Print("corrected your Restore backup: Distant Detail will now restore to the Graphics menu's values.")

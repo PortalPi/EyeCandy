@@ -40,14 +40,14 @@ luaU.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS()')
 check(kinds() == ["original"] and not any("/reload" in x for x in chat(luaU)), "the Original is made once, and asked about once")
 
 # No backup row is ever made by itself (in test builds every apply and restore made one, and the list filled up).
-# A preset keeps one "before" record for Back instead, outside the list.
+# A preset is one of today's steps for Back instead, outside the list.
 luaU.execute('REFRESHES = 0; local old = NS.RefreshUI; NS.RefreshUI = function() REFRESHES = REFRESHES + 1; if old then old() end end')
 luaU.execute('SlashCmdList.EYECANDY("preset cinematic"); CHAT = {}')
-lb = lambda: evU('EyeCandyDB.lastBefore')
+lb = lambda: evU('NS.BeforeRecord()')
 check(kinds() == ["original"], "a preset adds no backup row (%s)" % kinds())
-check(lb()['name'] == "Cinematic" and lb()['label'] == "Before Cinematic" and lb()['values']['farclip'] == "7000" and lb()['id'] is None, "it keeps one 'before' record of its own, holding the old values")
+check(lb()['name'] == "Cinematic" and lb()['values']['farclip'] == "7000" and lb()['id'] is None, "it is a step of its own, holding the old values")
 luaU.execute('SlashCmdList.EYECANDY("apply")')
-check(kinds() == ["original"] and lb()['name'] == "Cinematic", "Apply adds no backup row and leaves the preset's record alone")
+check(kinds() == ["original"] and lb()['name'] == "Cinematic", "Apply adds no backup row and leaves the preset's step alone")
 luaU.execute('SetCVar("weatherDensity", 1); SlashCmdList.EYECANDY("apply")')
 check(kinds() == ["original"], "a change, then Apply, adds no row either")
 luaU.execute('NS.SetAdvanced("assaoRadius", 2); NS.SetAdvanced("assaoRadius", 2.5)')
@@ -62,9 +62,9 @@ luaU.execute('SlashCmdList.EYECANDY("apply"); NS.RestoreBackupById(%d)' % tiered
 check(evU('EyeCandyDB.tiers.clarity') == 5 and gU("farclip") == "10000", "restoring it puts the old tiers back with the old settings")
 luaU.execute('NS.DeleteBackup(%d)' % tiered['id'])
 luaU.execute('SlashCmdList.EYECANDY("look moody")')
-check(lb()['name'] == "Moody", "a Look's record is named after it")
+check(lb()['name'] == "Moody", "a Look's step is named after it")
 luaU.execute('SlashCmdList.EYECANDY("showcase")')
-check(lb()['name'] == "Showcase" and kinds() == ["original"], "the next preset replaces it: one step back only, and still no rows")
+check(lb()['name'] == "Showcase" and evU('NS.BackSteps()[2].name') == "Moody" and kinds() == ["original"], "the next preset is a new step on top, and still no rows")
 
 # manual
 m = evU('NS.CreateBackup("manual", "Before raid night")')
@@ -85,7 +85,7 @@ luaU.execute('CHAT = {}')
 got = evU('NS.RestoreBackupById(NS.OriginalBackup().id)')
 check(got == cnt and gU("farclip") == "7000" and gU("groundEffectDensity") == "48" and evU('next(EyeCandyDB.tiers)') is None and evU('next(EyeCandyDB.advanced)') is None, "restore puts the Original back, clears choices, and reports the change count")
 check(len(bl()) == nrows and all(b['label'] != "Before restore" for b in bl()), "restore adds no backup row")
-check(evU('EyeCandyDB.lastBefore') is None, "and clears Back's record, so Back never undoes a restore")
+check(evU('NS.BackSteps()[1].kind') == "restore", "it is one of today's steps instead, so Back can undo it")
 check(not any('estored' in x for x in chat(luaU)), "a restore from the window prints nothing to chat (the window shows it)")
 check(evU('NS.RestoredLine(3, {label = "Raid", time = "today"})') == 'Restored 3 settings from "Raid" (today).' and evU('NS.RestoredLine(1, {label = "Raid", time = "today"})').startswith("Restored 1 setting from"), "the restore line counts settings, singular for one")
 check(evU('NS.CountBackupChanges(NS.OriginalBackup().id)') == 0, "after a restore nothing differs from that backup")
@@ -122,7 +122,7 @@ check(len(said) == 1 and "Restored " in said[0] and "Original" in said[0], "/ec 
 p = evU('NS.SaveCurrentAsPreset("Mine")')
 luaU.execute('SlashCmdList.EYECANDY("preset ultra"); SetCVar("weatherDensity", 2)')
 luaU.execute('NS.ApplyPresetById("%s")' % p['id'])
-check(lb()['label'] == "Before Mine" and lb()['values']['weatherDensity'] == "2" and lb()['state']['tiers']['clarity'] == 4 and [b['id'] for b in bl()] == before, "applying your own preset records the settings and choices from just before, and adds no row")
+check(lb()['name'] == "Mine" and lb()['values']['weatherDensity'] == "2" and lb()['state']['tiers']['clarity'] == 4 and [b['id'] for b in bl()] == before, "applying your own preset records the settings and choices from just before, and adds no row")
 s = evU('NS.ExportPreset("tier5")')
 was = lb()
 imp = evU('NS.ImportPreset("%s", "keep")' % s)
@@ -166,27 +166,27 @@ luaM3 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId =
 check(luaM3.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and any("corrected your Restore backup" in x for x in chat(luaM3)), "an Original holding hand-tested Distant Detail values is corrected")
 
 # Automatic backups saved by test builds are removed at load. Back's old record pointed at one by id:
-# its settings move into the record, so Back still works after the update.
+# its settings move into the record, which becomes today's first step, so Back still works after the update.
 OLD = ('EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 6, lastBefore = { id = 4, name = "Moody", after = {} }, backups = { "damaged",'
        ' { id = 1, kind = "original", label = "Original settings", time = "a", stamp = 1, character = "", values = { farclip = "6500" }, state = {} },'
        ' { id = 2, kind = "auto", label = "Before restore", time = "b", stamp = 2, character = "", values = { farclip = "1000" }, state = {} },'
        ' { id = 3, kind = "manual", label = "Raid night", time = "c", stamp = 3, character = "", values = { farclip = "5000" }, state = {} },'
-       ' { id = 4, kind = "auto", label = "Before Moody", time = "d", stamp = 4, character = "", values = { farclip = "4321" }, state = { tiers = { clarity = 2 } } },'
+       ' { id = 4, kind = "auto", label = "Before Moody", time = "2026-11-06 09:00", stamp = 4, character = "", values = { farclip = "4321" }, state = { tiers = { clarity = 2 } } },'
        ' { id = 5, kind = "auto", label = "Before Apply", time = "e", stamp = 5, character = "", values = { farclip = "2000" }, state = {} } } }')
 luaA = boot(svdb=OLD)
 check([b['kind'] for b in lst(luaA.eval('NS.ListBackups()'))] == ["manual", "original"], "saved automatic backups (and a damaged entry) are removed; the Original and named backups stay")
 check(any("removed 3 automatic backups" in x for x in chat(luaA)), "chat says how many were removed, once")
-la = luaA.eval('EyeCandyDB.lastBefore')
-check(la['values']['farclip'] == "4321" and la['state']['tiers']['clarity'] == 2 and la['label'] == "Before Moody" and la['id'] is None, "Back's record took the settings of the backup it pointed at")
-check(luaA.eval('NS.LastPresetName()') == "Moody", "so Back is still offered after the update")
+la = luaA.eval('NS.BackSteps()[1]')
+check(la['values']['farclip'] == "4321" and la['state']['tiers']['clarity'] == 2 and la['time'] == "09:00" and luaA.eval('EyeCandyDB.lastBefore') is None, "Back's record took the settings of the backup it pointed at, as today's step")
+check(la['name'] == "Moody", "so Back is still offered after the update")
 luaA.execute('SlashCmdList.EYECANDY("back")')
-check(luaA.eval('GetCVar("farclip")') == "4321" and luaA.eval('EyeCandyDB.tiers.clarity') == 2 and luaA.eval('EyeCandyDB.lastBefore') is None, "and going back restores it, then clears it")
+check(luaA.eval('GetCVar("farclip")') == "4321" and luaA.eval('EyeCandyDB.tiers.clarity') == 2 and luaA.eval('#NS.BackSteps()') == 0, "and going back restores it, then clears it")
 luaA2 = boot(svdb=OLD.replace('lastBefore = { id = 4,', 'lastBefore = { id = 99,'))
-check(luaA2.eval('EyeCandyDB.lastBefore') is None and luaA2.eval('NS.LastPresetName()') is None, "a record pointing at a backup already gone is dropped")
+check(luaA2.eval('EyeCandyDB.lastBefore') is None and luaA2.eval('#NS.BackSteps()') == 0, "a record pointing at a backup already gone is dropped")
 luaA4 = boot(svdb=OLD.replace(', after = {} }', ' }'))
-check(luaA4.eval('EyeCandyDB.lastBefore.values.farclip') == "4321" and luaA4.eval('NS.LastPresetName()') is None, "a folded record with no 'after' is kept for Compare, but doesn't offer Back")
+check(luaA4.eval('NS.BeforeRecord().values.farclip') == "4321" and luaA4.eval('NS.BeforeRecord().after') is None, "a folded record with no 'after' is kept, for Compare and Back")
 luaA5 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, lastBefore = "junk" }')
-check(luaA5.eval('EyeCandyDB.lastBefore') is None and luaA5.eval('NS.LastPresetName()') is None, "a damaged record is dropped at load")
+check(luaA5.eval('EyeCandyDB.lastBefore') is None and luaA5.eval('#NS.BackSteps()') == 0, "a damaged record is dropped at load")
 luaA3 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true }')
 check(not any("automatic backups" in x for x in chat(luaA3)), "with none saved, nothing is said")
 
@@ -212,12 +212,12 @@ end
 """
 luaU.execute(SER)
 luaU.execute('SlashCmdList.EYECANDY("preset ultra")')
-saved_before = evU('EyeCandyDB.lastBefore.values.farclip')
+saved_before = evU('NS.BeforeRecord().values.farclip')
 text = luaU.eval('SER(EyeCandyDB)')
 check('["backup"]' not in text and '["backups"]' in text, "the saved file has the backups list and no old backup slot")
 luaV = boot(svdb='EyeCandyDB = ' + text)
 check(luaV.eval('#NS.ListBackups()') == len(bl()) and luaV.eval('NS.OriginalBackup().id') == evU('NS.OriginalBackup().id') and luaV.eval('NS.OriginalBackup().values.farclip') == "7000" and luaV.eval('EyeCandyDB.backup') is None, "after a reload the same backups are there, and there is no single-backup slot")
-check(luaV.eval('EyeCandyDB.lastBefore.name') == "Ultra" and luaV.eval('EyeCandyDB.lastBefore.values.farclip') == saved_before and not any("automatic backups" in x for x in chat(luaV)), "Back's record is saved with the file and survives a reload")
+check(luaV.eval('NS.BeforeRecord().name') == "Ultra" and luaV.eval('NS.BeforeRecord().values.farclip') == saved_before and not any("automatic backups" in x for x in chat(luaV)), "Back's record is saved with the file and survives a reload")
 luaV.execute('SlashCmdList.EYECANDY("restore")')
 check(luaV.eval('GetCVar("farclip")') == "7000", "the Original restores after a reload")
 

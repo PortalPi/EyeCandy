@@ -309,7 +309,7 @@ end
 local function Applied(page, p)
 	local on = ns.OnPreset and ns.OnPreset()
 	if on and on.id == p.id then
-		H.Set(page, "done", p, "Back to before " .. p.name .. ", at the top of this tab, undoes it.")
+		H.Set(page, "done", p, "Back on " .. p.name .. " under Today, at the top of the list, undoes it.")
 	else
 		-- The row's Apply puts a refusal's reason on the card; say it here too, where it was pressed.
 		local why = page and page.cardMsg and page.cardMsg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
