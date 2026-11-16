@@ -113,10 +113,10 @@ X('for i = 1, 30 do FRAMES(30, 1/63) end')
 check(E('EyeCandyDB.presetFPS["look:moody"].fps') == 63 and E('EyeCandyDB.presetFPS["look:moody"].zone') == "Goldshire",
       "standing still, Moody remembers 63 FPS in Goldshire")
 check(E('NS.FPS.Measuring()') is None, "the measurement ends once it has a number")
-check(E('NS.FPS.PresetLine("look:moody")') == "Last time: 63 FPS in Goldshire.", "the line reads Last time: 63 FPS in Goldshire.")
+check(E('NS.FPS.PresetLine("look:moody")') == "Last time you used it: 63 FPS in Goldshire.", "the line reads Last time you used it: 63 FPS in Goldshire.")
 X('SUBZONE = ""')
 X('EyeCandyDB.presetFPS.x = { fps = 41, zone = NS.FPS.Where() }')
-check(E('NS.FPS.PresetLine("x")') == "Last time: 41 FPS in Elwynn Forest.", "with no subzone, the zone is named")
+check(E('NS.FPS.PresetLine("x")') == "Last time you used it: 41 FPS in Elwynn Forest.", "with no subzone, the zone is named")
 X('SUBZONE = "Goldshire"')
 
 # In a fight, it never measures.
@@ -164,7 +164,7 @@ NS.ShowTab("presets")
 local rows = EyeCandyMainFrame.pages.presets.rows
 for _, r in ipairs(rows) do if r.p and r.p.id == MINE.id then ROW = r end end
 ROW.scripts.OnEnter(ROW)""")
-check(E('TIP[#TIP]') == "Last time: 72 FPS in Goldshire.", "the preset's tooltip ends with Last time: 72 FPS in Goldshire.")
+check(E('TIP[#TIP]') == "Last time you used it: 72 FPS in Goldshire.", "the preset's tooltip ends with Last time you used it: 72 FPS in Goldshire.")
 X('NS.DeletePreset(MINE.id)')
 check(E('EyeCandyDB.presetFPS[MINE.id]') is None, "deleting the preset deletes its number")
 done()

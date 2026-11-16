@@ -172,8 +172,15 @@ X(P + ".partButtons[4].scripts.OnClick()")
 SP = P + ".steady"
 check(E(P + ".parts.steady.shown") and E(SP + ".head.label.text") == "Steady FPS" and E(SP + ".toggle.text") == "Turn on",
       "Steady FPS shows its own page, off, with Turn on")
-check("may cause hitching" in E(SP + ".how.text") and "30 seconds" in E(SP + ".how.text"),
-      "it names the game's own one and why not, and says how often it may change")
+how = E(SP + ".how.text")
+check("Dynamic Render Scale, because the game warns it can cause stutter" in how,
+      "it names the game's own one and why not (%r)" % how)
+# Each number on the page is the code's own.
+nums = {"90% of your goal": E("SF.LOW"), "for 5 seconds": E("SF.SUSTAIN"), "5% at a time": E("SF.STEP"),
+        "once every 30 seconds": E("SF.GAP"), "never below 70%": E("SF.FLOOR")}
+want = {"90% of your goal": 0.9, "for 5 seconds": 5, "5% at a time": 0.05, "once every 30 seconds": 30, "never below 70%": 0.7}
+check(all(k in how and abs(nums[k] - want[k]) < 1e-9 for k in want), "the how-to's numbers match the code's (%r)" % nums)
+check(E("NS.RunningNote()") is None, "off, the title and the card say nothing of Steady FPS")
 check(not E("NS.FPS.IsWatching('steady')") and E("not (EyeCandyDB.steady and EyeCandyDB.steady.on)"), "off by default: it isn't watching FPS")
 
 
@@ -194,6 +201,9 @@ X("SetCVar('RenderScale', 1); SetCVar('useMaxFPS', 0); SetCVar('vsync', 0)")
 X(SP + ".toggle.scripts.OnClick()")
 check(E("NS.FPS.IsWatching('steady')") and E("EyeCandyDB.steady.on") and E(SP + ".toggle.text") == "Turn off",
       "Turn on starts watching FPS, and is saved")
+st = E(SP + ".status.text")
+check(st.startswith("On. Render scale is 100%, as you set it. Goal: 60 FPS.") and E("NS.RunningNote()") is None,
+      "at your own render scale the page says so, and the title and card say nothing (%r)" % st)
 tick(4, 50)
 check(cv("RenderScale") == "1", "4 seconds of low FPS: render scale stays")
 tick(2, 50)
@@ -201,6 +211,13 @@ check(abs(float(cv("RenderScale")) - 0.95) < 1e-6 and abs(E("EyeCandyDB.steady.s
       "after 5 seconds it lowers render scale one step, and saves what it set")
 st = E(SP + ".status.text")
 check("95% now" in st and "Yours is 100%" in st,"the page shows the render scale now and your own (%r)" % st)
+# The title and the Presets card say so too (rule 8).
+check(E("NS.RunningNote()") == "Steady FPS has render scale at 95%. Yours is 100%.",
+      "the title and the card say Steady FPS has render scale away from yours (%r)" % E("NS.RunningNote()"))
+X("NS.ShowTab('presets'); NS.RefreshUI()")
+card = E("EyeCandyMainFrame.pages.presets.card.note.text")
+check("Steady FPS has render scale at 95%. Yours is 100%." in (card or ""), "the Presets card shows it (%r)" % card)
+X("NS.ShowTab('autotune'); NS.RefreshUI()")
 
 # Backups, presets and Back see your own render scale, not the lowered one.
 check(E("NS.SituationValue('RenderScale', GetCVar('RenderScale'))") in ("1", 1), "your own value for backups and Back is 100%")
@@ -255,7 +272,8 @@ check(float(cv("RenderScale")) < 1, "low FPS again: it lowers")
 tick(10, 30)
 st = E(SP + ".status.text")
 check("Lowering didn't help here, so it stopped" in st, "FPS no better after the step: the page says it stopped, and why (%r)" % st)
-check("Biggest hitch from a change:" in st and "Changes this session:" in st, "and shows the biggest hitch and how many changes")
+check("Longest pause after a change:" in st and ", when a normal frame took " in st and "Changes since you logged in or reloaded: " in st,
+      "and shows the longest pause after a change and how many changes (%r)" % st)
 tick(30, 30)
 check(cv("RenderScale") == "1", "once the gap is over, that step goes back")
 X(SP + ".toggle.scripts.OnClick()")
@@ -318,5 +336,28 @@ X("SetCVar('RenderScale', 1); NS.SteadyFPS.TurnOn(); EyeCandyDB.eyeTest = { befo
 tick(1, 60)
 check("Waiting: the eye test has your settings." in E(SP + ".status.text"), "the page says what it waits for")
 X("EyeCandyDB.eyeTest = nil; NS.SteadyFPS.TurnOff()")
+
+# Off but still lowered (turned off in a fight): the title and card still say so, until yours is back.
+check(lowered(), "lowered once more")
+X("INCOMBAT = true; NS.SteadyFPS.TurnOff()")
+check(E("NS.RunningNote()") == "Steady FPS has render scale at 95%. Yours is 100%.", "off in a fight, still lowered: the title still says so")
+X("INCOMBAT = false; FIRE('PLAYER_REGEN_ENABLED')")
+check(cv("RenderScale") == "1" and E("NS.RunningNote()") is None, "once yours is back, it says nothing")
+
+# A change Steady FPS makes is not "Your own changes" in today's list (Backups.lua's OwnSince sees your own
+# render scale through ns.SituationValue), and the preset's change count stays at 0.
+X("NS.ApplyPresetById('tier3'); NS.SteadyFPS.TurnOn()")
+top_name = lambda: E("NS.BackSteps()[1] and NS.BackSteps()[1].name")
+check(top_name() == "High" and E("select(2, NS.OnPreset())") == 0, "High is on, unchanged (%r)" % top_name())
+step_rs = E("NS.BackSteps()[1].after.RenderScale")
+tick(6, 40)
+lowered_rs = cv("RenderScale")
+check(step_rs is not None and float(lowered_rs) < float(step_rs) - 0.01,
+      "Steady FPS lowered render scale under what High left (%r, High left %r)" % (lowered_rs, step_rs))
+check(top_name() == "High" and E("select(2, NS.OnPreset())") == 0,
+      "and today's list shows no Your own changes, and High still counts 0 changed (%r)" % top_name())
+X("SetCVar('graphicsShadowQuality', GetCVar('graphicsShadowQuality') == '1' and '2' or '1')")
+check(top_name() == "Your own changes", "(a setting you change yourself still shows as Your own changes)")
+X("NS.SteadyFPS.TurnOff()")
 
 done()

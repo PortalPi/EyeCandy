@@ -30,3 +30,4 @@ EyeTest.lua
 Steps.lua
 PhotoMode.lua
 LiveTune.lua
+RenderCap.lua
