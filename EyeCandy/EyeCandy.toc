@@ -25,3 +25,4 @@ Autotune.lua
 AutotuneTab.lua
 PatchWatch.lua
 Helper.lua
+FPS.lua
