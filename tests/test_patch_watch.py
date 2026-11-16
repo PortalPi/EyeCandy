@@ -1,5 +1,5 @@
 """The patch warning (PatchWatch.lua): at logout Eye Candy keeps a copy of your settings, and at the next
-login it says which ones changed while the game was closed, with Put them back and Keep the game's.
+login it says which ones changed while the game was closed, with Put them back and Keep the changes.
 
 Run alone: python tests/test_patch_watch.py
 """
@@ -100,7 +100,7 @@ check(head == "The game changed 2 settings since you last played. Put them back?
 ls = lines(lua3)
 check("Render Scale: was 150%, now 100%" in ls, "render scale shows as percent, was and now: %s" % ls)
 check(any(l.startswith("View Distance: was 10, now 6") for l in ls), "view distance shows as the game's menu shows it (1 to 10)")
-check(frame(lua3).back.text == "Put them back" and frame(lua3).keep.text == "Keep the game's", "two buttons: Put them back, Keep the game's")
+check(frame(lua3).back.text == "Put them back" and frame(lua3).keep.text == "Keep the changes", "two buttons: Put them back, Keep the changes")
 check(frame(lua3).back.shown is not False and frame(lua3).keep.shown is not False, "both buttons show")
 check("EyeCandyPatchFrame" in list(ev(lua3, 'NS.PEEK_WINDOWS').values()), "Peek hides it like Eye Candy's other windows")
 check(ev(lua3, '(function() for _, n in ipairs(UISpecialFrames) do if n == "EyeCandyPatchFrame" then return true end end end)()'), "Esc closes it")
@@ -117,20 +117,33 @@ check(frame(lua3).refused.text == "|cffff4040The game kept Render Scale at 100%.
 check(ev(lua3, '#NS.ListBackups()') == nb, "Put them back takes no backup")
 check(frame(lua3).back.shown is False and frame(lua3).keep.shown is False and frame(lua3).close.shown, "after it, only Close shows")
 
+# With the render scale hold on (RenderCap.lua, a restart lifts it), the red line adds that sentence.
+luaT = session(db, 'EyeCandyDB.patchWatch.snap.values.RenderScale = "1.5";' + patch)
+luaT.execute('function GetMaxRenderScale() return 1 end; NS.RenderCap = { Held = function() return true end, TELL = "A restart lifts it." }')
+frame(luaT).back.scripts.OnClick(frame(luaT).back)
+check(frame(luaT).refused.text == "|cffff4040The game kept Render Scale at 100%. A restart lifts it.|r", "render scale held: the red line adds the restart sentence: %s" % frame(luaT).refused.text)
+luaT2 = session(db, 'EyeCandyDB.patchWatch.snap.values.RenderScale = "1.5";' + patch)
+luaT2.execute('function GetMaxRenderScale() return 1 end; NS.RenderCap = { Held = function() return false end, TELL = "A restart lifts it." }')
+frame(luaT2).back.scripts.OnClick(frame(luaT2).back)
+check("A restart lifts it." not in frame(luaT2).refused.text, "render scale not held: no restart sentence")
+
+# A setting with no name on any tab never shows its raw name.
+check(ev(lua, 'NS.PatchWatch.Name("someUnknownCVar")') == "a setting the game changed", "an unknown setting has a plain name")
+
 # The next logout keeps what is on now, so the refused one does not come back.
 db = logout(lua3)
 lua4 = session(db, 'SetCVar("graphicsSSAO", "2")')
 check(not shown(lua4), "next login: nothing new, no window")
 
-# Keep the game's changes nothing and closes.
+# Keep the changes changes nothing and closes.
 lua5 = session(db, 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1")')
 check(shown(lua5) and frame(lua5).head.text.startswith("The game changed 1 setting since you last played. Put it back?"), "one setting: Put it back? (%s)" % frame(lua5).head.text)
 check(frame(lua5).back.text == "Put it back", "one setting: the button says Put it back")
 frame(lua5).keep.scripts.OnClick(frame(lua5).keep)
-check(not shown(lua5) and g(lua5, "graphicsShadowQuality") == "1", "Keep the game's closes and changes nothing")
+check(not shown(lua5) and g(lua5, "graphicsShadowQuality") == "1", "Keep the changes closes and changes nothing")
 db_kept = logout(lua5)
 lua6 = session(db_kept, 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1")')
-check(not shown(lua6), "after Keep the game's, the next login asks nothing")
+check(not shown(lua6), "after Keep the changes, the next login asks nothing")
 
 # Something rewrites a setting at every start (the game or another addon): shown once, then never again.
 lua7 = session(db, 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1")')
