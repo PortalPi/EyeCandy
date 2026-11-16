@@ -1,5 +1,15 @@
--- Eye Candy: photo mode, a part of the Experimental tab. One button: the Screenshot preset goes on, the
--- game's UI hides, the game takes a photo, and your settings and UI come back.
+-- Eye Candy: photo mode, a part of the Experimental tab. One button takes a photo with no UI. A choice says
+-- which settings it uses (EyeCandyDB.photoChoice): "mine" (your settings as they are: nothing changes, only
+-- the game's UI hides) or "screenshot" (the default): the photo settings go on, the UI hides, the game takes
+-- a photo, and your settings and UI come back. The photo settings are the Screenshot preset, or your own
+-- once saved (EyeCandyDB.photoSettings, every setting on Eye Candy's list).
+--
+-- Change it: your settings are saved first (EyeCandyDB.photo, as for a photo, with Eye Candy's own choices:
+-- levels, Extras, dials, Look), the photo settings go on, and you adjust them on the Standard and Hidden
+-- tabs. Save as my photo settings keeps what is on as the photo settings, Cancel keeps nothing; either puts
+-- your settings and choices back. Backups, presets, Back and restores end the edit first (Cancel), so they
+-- never see the photo settings. A fight, a loading screen or /reload cancels it too, and a copy still saved at
+-- the next login is put back. Closing the window does not end it: the title says photo settings are on.
 --
 -- Screenshot() is what the game's own screenshot key calls. Addons may call it: Memento (CurseForge, for the
 -- retail game of Nov 2026) takes one by itself after a boss kill or an achievement. Not tested on Forever
@@ -16,7 +26,8 @@
 -- waited and says so on the tab, so a photo that still looks half-loaded can be matched to the count.
 --
 -- Your settings from before are saved in EyeCandyDB.photo first. A fight, a loading screen, Esc or any other
--- Eye Candy change stops it and puts them back. It never changes settings in a fight.
+-- Eye Candy change stops a photo and puts them back. It never changes settings in a fight. With "My settings
+-- now" nothing is saved or changed, so there is nothing to put back but the UI.
 
 local _, ns = ...
 local PM = {}
@@ -25,9 +36,12 @@ ns.PhotoMode = PM
 PM.PRESET = "look:screenshot"
 PM.MIN, PM.MAX, PM.WINDOW, PM.AGREE, PM.SPIKE = 2, 6, 0.5, 0.1, 2.5
 PM.SHOT_WAIT = 5 -- seconds to wait for the game to say the photo is saved
+PM.MINE_WAIT = 0.3 -- with your own settings nothing changes: a moment for the UI to hide
 PM.FOLDER = "World of Warcraft\\_forever_\\Screenshots"
 
-local shot -- nil, or { phase = "settle" | "shot", waited, frames, wn, wt, prevFps, left }
+local shot -- nil, or { phase = "settle" | "shot", waited, frames, wn, wt, prevFps, left, mine }
+local edit = false -- true while the photo settings are on for you to adjust (Change it)
+local noted = false -- an apply ran during the edit: Backups' record of the choices in force is renewed after
 local busy = false -- true while photo mode itself sets values, so its own guard lets them through
 local situationsWaiting = false -- a zone change came during the photo: the switch looks again after it
 
@@ -60,6 +74,34 @@ local function SetValues(values)
 	busy = false
 end
 
+local function Copy(t)
+	local out = {}
+	for k, v in pairs(t or {}) do out[k] = v end
+	return out
+end
+
+-- Eye Candy's own choices (levels, Extras, dials, Look): the Hidden and Standard tabs write them as you adjust,
+-- so an edit saves them with your settings and gives them back.
+local function CaptureChoices()
+	local db = ns.db
+	return { tiers = Copy(db.tiers), extras = Copy(db.extras), advanced = Copy(db.advanced), look = db.look,
+		presetExtras = db.presetExtras and Copy(db.presetExtras) or nil, keepApplied = db.keepApplied }
+end
+
+local function RestoreChoices(state)
+	if type(state) ~= "table" then return end
+	local db = ns.db
+	db.tiers, db.extras, db.advanced = Copy(state.tiers), Copy(state.extras), Copy(state.advanced)
+	db.look = state.look
+	db.presetExtras = state.presetExtras and Copy(state.presetExtras) or nil
+	-- "Keep my settings applied" can be ticked during the edit too. An older copy has no keepApplied: leave it.
+	if state.keepApplied ~= nil then db.keepApplied = state.keepApplied end
+	if ns.SaveMirror then pcall(ns.SaveMirror) end
+	-- Backups keeps its own record of the choices in force: renew it if the edit applied anything.
+	if noted and ns.NoteApplied then pcall(ns.NoteApplied) end
+	noted = false
+end
+
 -- Puts back the settings from before, menu values before hidden ones (a menu value can reset hidden ones),
 -- then anything left over. In a fight it waits. Returns true when they are back now.
 local function PutBack()
@@ -74,6 +116,7 @@ local function PutBack()
 	busy = false
 	SetValues(saved.before)
 	ns.db.photo = nil
+	RestoreChoices(saved.state)
 	-- The city or instance switch waited while the photo had your settings: it looks again now.
 	if situationsWaiting then
 		situationsWaiting = false
@@ -127,7 +170,7 @@ local function Finish(result)
 	local ui = s.uiShown and " The UI came back before the photo, so it may be in it." or ""
 	if result == "saved" then
 		Say(all and "done" or "waiting", "Photo saved at " .. date("%H:%M:%S") .. ", in " .. PM.FOLDER
-			.. " where the game is installed. " .. Waited(s) .. ui .. " " .. closing)
+			.. " where the game is installed." .. (s.mine and "" or " " .. Waited(s)) .. ui .. " " .. closing)
 	elseif result == "failed" then
 		Say("refused", "The game couldn't save the photo. " .. closing)
 	else
@@ -138,22 +181,41 @@ local function Finish(result)
 	Refresh()
 end
 
--- Takes the photo. Returns true (it carries on by itself for a few seconds), or nil and a plain reason.
-function PM.Take()
-	if shot then return nil, "Photo mode is already taking a photo." end
-	if InCombatLockdown() then return nil, "Not in a fight. Try again after it." end
-	if type(Screenshot) ~= "function" then return nil, "This game doesn't let addons take a photo." end
-	if ns.EyeTest and ns.EyeTest.IsOn() then return nil, "The eye test is on. Finish or stop it first." end
-	local AT = ns.Autotune
-	if AT and AT.IsRunning() then return nil, "Autotune is running. Stop it first." end
-	if ns.IsPeeking and ns.IsPeeking() then return nil, "Peek is on. Press Back first." end
-	if ns.IsComparing and ns.IsComparing() then
-		local ok, err = ns.StopCompare()
-		if not ok then return nil, err end
+-- What the photo uses: "mine" or "screenshot" (the default).
+function PM.Choice()
+	return (ns.db and ns.db.photoChoice == "mine") and "mine" or "screenshot"
+end
+
+function PM.SetChoice(choice)
+	if shot then
+		Say("waiting", "Photo mode is taking a photo. Wait a few seconds, then pick.")
+		Refresh()
+		return nil
 	end
+	if edit or not ns.db then return nil end
+	ns.db.photoChoice = choice == "mine" and "mine" or "screenshot"
+	Refresh()
+	return true
+end
+
+-- Your saved photo settings, or nil.
+function PM.Saved()
+	local s = ns.db and ns.db.photoSettings
+	if type(s) == "table" and type(s.values) == "table" and next(s.values) then return s end
+end
+
+-- The values the photo settings put on, and what to call them: your saved ones, else the Screenshot preset.
+-- Returns values, name; or nil and a plain reason.
+function PM.PhotoValues()
+	local saved = PM.Saved()
+	if saved then return Copy(saved.values), "Your photo settings" end
 	local values = ns.PresetValues and ns.PresetValues(PM.PRESET)
 	if not values then return nil, "The Screenshot preset is missing." end
-	-- Every setting on Eye Candy's list, and the preset's, so the way back covers them all.
+	return values, "The Screenshot preset"
+end
+
+-- Every setting on Eye Candy's list, and any extra in values, as they are now: the way back.
+local function Before(values)
 	local before = {}
 	for _, cvar in ipairs(ns.AllManagedCVars()) do
 		local v = ns.GetInfo(cvar)
@@ -162,25 +224,153 @@ function PM.Take()
 	for cvar in pairs(values) do
 		if before[cvar] == nil and ns.Exists(cvar) then before[cvar] = ns.GetInfo(cvar) end
 	end
-	ns.db.photo = { before = before }
-	shot = { phase = "settle", waited = 0, frames = 0, wn = 0, wt = 0 }
-	busy = true
-	local ok, err = pcall(ns.ApplyValues, values, true)
-	busy = false
-	if not ok then
-		shot = nil
-		pcall(PutBack) -- it sets each value back itself even when the apply fails again
-		return nil, "The Screenshot preset couldn't go on, so no photo was taken. Your settings are back. (" .. tostring(err) .. ")"
+	return before
+end
+
+-- What stops photo mode taking a photo or opening an edit, as a plain reason, or nil. Ends a Compare.
+local function Blocked(what)
+	if shot then return "Photo mode is already taking a photo." end
+	if edit then return "The photo settings are on for you to adjust. Save them or press Cancel first." end
+	if InCombatLockdown() then return "Not in a fight. Try again after it." end
+	if ns.db.photo then return "Photo mode is still putting your settings back. It waits for the fight to end." end
+	if ns.EyeTest and ns.EyeTest.IsOn() then return "The eye test is on. Finish or stop it first." end
+	local AT = ns.Autotune
+	if AT and AT.IsRunning() then return "Autotune is running. Stop it first." end
+	-- Its result is on until you keep or undo it, and an undo then would be taken back by the way back.
+	if ns.db.autotune then return "Autotune has your settings. Keep or undo its result first." end
+	if ns.IsPeeking and ns.IsPeeking() then return "Peek is on. Press Back first." end
+	if ns.IsComparing and ns.IsComparing() then
+		local ok, err = ns.StopCompare()
+		if not ok then return err end
+	end
+	return nil
+end
+
+-- Takes the photo. Returns true (it carries on by itself for a few seconds), or nil and a plain reason.
+function PM.Take()
+	if not shot and not edit and InCombatLockdown() then return nil, "Not in a fight. Try again after it." end
+	if not shot and not edit and type(Screenshot) ~= "function" then return nil, "This game doesn't let addons take a photo." end
+	local blocked = Blocked()
+	if blocked then return nil, blocked end
+	local mine = PM.Choice() == "mine"
+	local values, name
+	if not mine then
+		values, name = PM.PhotoValues()
+		if not values then return nil, name end
+		-- Saved first, so the way back covers every setting.
+		ns.db.photo = { before = Before(values) }
+	end
+	shot = { phase = "settle", waited = 0, frames = 0, wn = 0, wt = 0, mine = mine }
+	if not mine then
+		busy = true
+		local ok, err = pcall(ns.ApplyValues, values, true)
+		busy = false
+		if not ok then
+			shot = nil
+			pcall(PutBack) -- it sets each value back itself even when the apply fails again
+			return nil, name .. " couldn't go on, so no photo was taken. Your settings are back. (" .. tostring(err) .. ")"
+		end
 	end
 	local hid, why = ns.PeekWithoutBar()
 	if not hid then
 		shot = nil
 		PutBack()
-		return nil, (why or "Couldn't hide the game's UI.") .. " No photo was taken, and your settings are back."
+		return nil, (why or "Couldn't hide the game's UI.") .. (mine and " No photo was taken." or " No photo was taken, and your settings are back.")
 	end
 	Say(nil, nil)
 	frame:Show()
 	return true
+end
+
+function PM.IsEditing() return edit end
+
+-- Change it: your settings are saved, the photo settings go on, and you adjust them on the Standard and Hidden
+-- tabs. Returns true, or nil and a plain reason.
+function PM.Change()
+	local blocked = Blocked()
+	if blocked then return nil, blocked end
+	local values, name = PM.PhotoValues()
+	if not values then return nil, name end
+	-- The Original backup is made first if it is missing, so it holds your settings and not the photo's.
+	if ns.TakeBackup then ns.TakeBackup(false) end
+	ns.db.photo = { before = Before(values), state = CaptureChoices(), editing = true }
+	edit, noted = true, false
+	busy = true
+	local ok, err = pcall(ns.ApplyValues, values, true)
+	busy = false
+	if not ok then
+		edit = false
+		pcall(PutBack)
+		return nil, name .. " couldn't go on, so nothing changed. Your settings are back. (" .. tostring(err) .. ")"
+	end
+	Say(nil, nil)
+	Refresh()
+	return true
+end
+
+-- Ends the edit and puts your settings and choices back. Returns the closing words.
+local function EndEdit()
+	edit = false
+	if PutBack() then return "Your settings are back as they were.", true end
+	return "Your settings come back when the fight ends.", false
+end
+
+-- Save as my photo settings: every setting on Eye Candy's list, as it is now, is kept as the photo settings.
+-- Then your own come back. Returns true, or nil and a plain reason.
+function PM.SavePhotoSettings()
+	if not edit then return nil end
+	-- A setting still as it was before the edit (the photo settings don't set it, and it wasn't adjusted) may be
+	-- one the city or instance switch, or Steady FPS, lowered: it is kept as your own value (ns.SituationValue,
+	-- as backups and presets do), so a photo outside the city isn't taken with the city's lowered values.
+	local before = ns.db.photo and ns.db.photo.before or {}
+	local values = {}
+	for _, cvar in ipairs(ns.AllManagedCVars()) do
+		local v = ns.GetInfo(cvar)
+		if v ~= nil and ns.SituationValue and before[cvar] ~= nil and ns.Same(v, before[cvar]) then
+			v = ns.SituationValue(cvar, v)
+		end
+		if v ~= nil then values[cvar] = tostring(v) end
+	end
+	ns.db.photoSettings ={ values = values, saved = date("%d %b") }
+	ns.db.photoChoice = "screenshot"
+	local closing, all = EndEdit()
+	Say(all and "done" or "waiting", "Saved as your photo settings. A photo with the Screenshot choice now uses them. " .. closing)
+	Refresh()
+	return true
+end
+
+-- Cancel, or an end from outside (a fight, a loading screen): nothing is saved, your own come back.
+-- why: shown to the player, nil for the Cancel button.
+function PM.CancelEdit(why)
+	if not edit then return end
+	local closing, all = EndEdit()
+	local lead = why and ("The photo settings were not saved: " .. why .. ". ") or "Cancelled. Nothing was saved. "
+	Say(all and "done" or "waiting", lead .. closing)
+	Tell(PM.message)
+	Refresh()
+end
+
+-- Back to Screenshot preset: forgets your saved photo settings.
+function PM.ForgetPhotoSettings()
+	if edit or shot or not ns.db then return nil end
+	ns.db.photoSettings = nil
+	Say("done", "Your photo settings are gone. A photo with the Screenshot choice uses the Screenshot preset again.")
+	Refresh()
+	return true
+end
+
+-- One short line for the window's title and the Presets card while the photo settings are on, or nil.
+function PM.Note()
+	if edit then return "Photo settings are on, not saved yet" end
+	local saved = ns.db and ns.db.photo
+	if saved and saved.afterCombat then return "Photo mode puts your settings back after the fight" end
+end
+
+local runningNote = ns.RunningNote
+ns.RunningNote = function(...)
+	local note = PM.Note()
+	if note then return note end
+	if runningNote then return runningNote(...) end
 end
 
 -- Stops it and puts your settings back. why: shown to the player.
@@ -204,7 +394,15 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 	if shot.phase == "settle" then
 		-- Esc or Alt+Z brought the UI back (Peek.lua ends the peek): no photo.
 		if not (ns.IsPeeking and ns.IsPeeking()) then return PM.Stop("the UI came back") end
-		if PM.Settle(shot, elapsed) then
+		-- Your own settings: nothing changed, so only a moment for the UI to hide.
+		local ready
+		if shot.mine then
+			shot.waited, shot.frames = shot.waited + elapsed, shot.frames + 1
+			ready = shot.waited >= PM.MINE_WAIT
+		else
+			ready = PM.Settle(shot, elapsed)
+		end
+		if ready then
 			shot.phase, shot.left = "shot", PM.SHOT_WAIT
 			if not pcall(Screenshot) then return Finish("failed") end
 		end
@@ -216,40 +414,82 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 	end
 end)
 
--- Any other Eye Candy change stops it first, so the way back stays right (as the eye test, EyeTest.lua):
+-- Any other Eye Candy change stops a photo first, so the way back stays right (as the eye test, EyeTest.lua):
 -- an apply, a backup, a preset's step (NoteBeforePreset), Back on a step (RestoreStep), /ec back (GoBack)
--- and a restore.
+-- and a restore. An edit of the photo settings lets the three the Standard and Hidden tabs use through (an
+-- apply, and the Original backup they make sure of); the rest end it first, so they hold your settings.
+local ALLOWED_IN_EDIT = { ApplyAll = true, ApplyValues = true, TakeBackup = true }
 for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
 	"RestoreStep", "GoBack", "RestoreBackupById" }) do
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
-			if shot and not busy then PM.Stop("another setting changed") end
+			if not busy then
+				if shot then PM.Stop("another setting changed") end
+				if edit and not ALLOWED_IN_EDIT[name] then PM.CancelEdit("another setting changed") end
+			end
 			return orig(...)
 		end
 	end
 end
 
--- Compare, Autotune and the eye test change settings too: none starts while it takes a photo.
+-- During the edit the city and instance switch waits (it looks again once yours are back), so an apply on the
+-- Standard or Hidden tab must not be lowered by it either: that would cap the photo settings and write the
+-- edited value into the switch's record of your own (Situations.lua).
+local keepLowered = ns.KeepSituationLowered
+if keepLowered then
+	ns.KeepSituationLowered = function(fn, ...)
+		if edit then return fn(...) end
+		return keepLowered(fn, ...)
+	end
+end
+
+-- Save my settings as a preset (the Presets tab, /ec save) would save the photo settings while they are on.
+local saveCurrent = ns.SaveCurrentAsPreset
+if saveCurrent then
+	ns.SaveCurrentAsPreset = function(...)
+		if edit then return nil, "The photo settings are on. Save them or press Cancel on the Photo mode page first." end
+		return saveCurrent(...)
+	end
+end
+
+-- Backups keeps a record of the choices in force. An apply during the edit changes it: renewed once yours are back.
+for _, name in ipairs({ "NoteApplied", "NoteAppliedExtra" }) do
+	local orig = ns[name]
+	if orig then
+		ns[name] = function(...)
+			if edit then noted = true end
+			return orig(...)
+		end
+	end
+end
+
+-- Compare, Autotune and the eye test change settings too: none starts while it takes a photo, or while
+-- the photo settings are on for you to adjust.
 local REFUSE = "Photo mode is taking a photo. Wait a few seconds."
+local REFUSE_EDIT = "The photo settings are on. Save them or press Cancel on the Photo mode page first."
+local function Refuse() return shot and REFUSE or (edit and REFUSE_EDIT) or nil end
 local toggleCompare = ns.ToggleCompare
 if toggleCompare then
 	ns.ToggleCompare = function(...)
-		if shot then return nil, REFUSE end
+		local why = Refuse()
+		if why then return nil, why end
 		return toggleCompare(...)
 	end
 end
 if ns.Autotune then
 	local start = ns.Autotune.Start
 	ns.Autotune.Start = function(...)
-		if shot then return false, REFUSE end
+		local why = Refuse()
+		if why then return false, why end
 		return start(...)
 	end
 end
 if ns.EyeTest then
 	local start = ns.EyeTest.Start
 	ns.EyeTest.Start = function(...)
-		if shot then return nil, REFUSE end
+		local why = Refuse()
+		if why then return nil, why end
 		return start(...)
 	end
 end
@@ -281,7 +521,7 @@ end
 if ns.FPS and ns.FPS.Still then
 	local still = ns.FPS.Still
 	ns.FPS.Still = function(...)
-		if shot then return false end
+		if shot or edit then return false end
 		return still(...)
 	end
 end
@@ -294,17 +534,19 @@ events:SetScript("OnEvent", function(_, event, isLogin, isReload)
 	elseif event == "PLAYER_REGEN_DISABLED" then
 		-- Lockdown starts just after this event, so settings can still go back here.
 		if shot then PM.Stop("a fight started") end
+		if edit then PM.CancelEdit("a fight started") end
 	elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
 		if shot then PM.Stop("a loading screen") end
+		if edit then PM.CancelEdit("a loading screen") end
 	elseif event == "PLAYER_REGEN_ENABLED" then
-		if saved and saved.afterCombat and not shot and PutBack() then
+		if saved and saved.afterCombat and not shot and not edit and PutBack() then
 			Say("done", "Photo mode: the fight is over, so your settings are back as they were.")
 			Tell(PM.message)
 			Refresh()
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		-- Still saved at login (saved variables are only written at logout or /reload): put them back.
-		if (isLogin or isReload) and saved and not shot and PutBack() then
+		if (isLogin or isReload) and saved and not shot and not edit and PutBack() then
 			Say("done", "Photo mode didn't finish last time, so your settings went back as they were.")
 			Tell(PM.message)
 		end
@@ -341,9 +583,26 @@ local function TextH(fs, text)
 	return (breaks + 1) * 14
 end
 
-PM.WHY = "One click takes a photo with the Screenshot preset and no UI on the screen. Then your settings and UI come back."
-PM.HOW = "Stand where you want the photo and point the camera first. It hides the UI, waits a few seconds for the new settings, "
+local GOLD, WHITE = "|cffffd100", "|cffffffff"
+
+PM.WHY = "One click takes a photo with no UI on the screen. Pick what it uses: your settings as they are, or the Screenshot preset."
+PM.HOW = "Stand where you want the photo and point the camera first. It hides the UI, waits a few seconds if settings change, "
 	.. "takes the photo and puts everything back. Expect low FPS for those seconds. A fight, a loading screen or Esc stops it."
+PM.EDIT = "Photo settings are on now. Adjust them on the Standard and Hidden tabs. Then press Save as my photo settings. "
+	.. "Cancel puts your own settings back and saves nothing. A fight or a loading screen cancels it."
+
+-- What the photo uses now, in a line.
+local function ChoiceText()
+	if PM.Choice() == "mine" then
+		return "The photo uses your settings as they are now. Nothing changes. Only the UI hides."
+	end
+	local saved = PM.Saved()
+	if saved then
+		return "The photo uses your photo settings" .. (saved.saved and (", saved " .. saved.saved) or "")
+			.. ". Your settings come back after."
+	end
+	return "The photo uses the Screenshot preset. Your settings come back after. Change it lets you adjust it."
+end
 
 local function Build(page, holder)
 	local c = ns.ScrollPage(holder, 0)
@@ -358,6 +617,25 @@ local function Build(page, holder)
 	e.how = Text(c, "GameFontDisableSmall")
 	e.how:SetText(PM.HOW)
 	Under(e.how, e.why, 0, 8)
+	-- The choice: what the photo uses.
+	e.mine = ns.Button(c, "My settings now", 130, function() PM.SetChoice("mine") end)
+	ns.Tooltip(e.mine, "My settings now", "The photo uses your settings as they are. No setting changes. Only the UI hides.")
+	e.mine.label = "My settings now"
+	e.shotChoice = ns.Button(c, "Screenshot preset", 130, function() PM.SetChoice("screenshot") end)
+	e.shotChoice:SetPoint("LEFT", e.mine, "RIGHT", ROW, 0)
+	ns.Tooltip(e.shotChoice, "Screenshot preset", "The photo uses the Screenshot preset, or your own photo settings once you have saved some. Your settings come back after.")
+	e.shotChoice.label = "Screenshot preset"
+	e.change = ns.Button(c, "Change it", 90, function()
+		local ok, err = PM.Change()
+		if not ok and err then Say("refused", err) end
+		Refresh()
+	end)
+	e.change:SetPoint("LEFT", e.shotChoice, "RIGHT", ROW, 0)
+	ns.Tooltip(e.change, "Change it", "Puts the photo settings on so you can adjust them on the Standard and Hidden tabs. Yours are saved first and come back when you save or cancel.")
+	e.choiceText = Text(c, "GameFontDisableSmall")
+	e.reset = ns.Button(c, "Back to Screenshot preset", 170, function() PM.ForgetPhotoSettings() end)
+	e.reset:SetHeight(20)
+	ns.Tooltip(e.reset, "Back to Screenshot preset", "Forgets your saved photo settings. A photo then uses the Screenshot preset again.")
 	e.take = ns.Button(c, "Take photo", 110, function()
 		local ok, err = PM.Take()
 		if not ok and err then
@@ -365,10 +643,20 @@ local function Build(page, holder)
 			Refresh()
 		end
 	end)
-	Under(e.take, e.how, 0, 8)
-	ns.Tooltip(e.take, "Take photo", "Puts the Screenshot preset on, hides the UI, takes a photo, then puts your settings and UI back.")
+	ns.Tooltip(e.take, "Take photo", "Hides the UI and takes a photo with what you picked above. Your settings and UI come back after.")
+
+	-- While the photo settings are on.
+	e.editText = Text(c)
+	e.save = ns.Button(c, "Save as my photo settings", 190, function()
+		local ok, err = PM.SavePhotoSettings()
+		if not ok and err then Say("refused", err) end
+		Refresh()
+	end)
+	ns.Tooltip(e.save, "Save as my photo settings", "Keeps every setting on Eye Candy's list as it is now as your photo settings. Then your own settings come back.")
+	e.cancel = ns.Button(c, "Cancel", 90, function() PM.CancelEdit() end)
+	e.cancel:SetPoint("LEFT", e.save, "RIGHT", ROW, 0)
+	ns.Tooltip(e.cancel, "Cancel", "Saves nothing. Your own settings come back as they were.")
 	e.status = Text(c)
-	Under(e.status, e.take, 0, 8)
 end
 
 local function StatusText()
@@ -383,13 +671,52 @@ local function Refresh_(page)
 	local e = page.photo
 	local status = StatusText()
 	e.status:SetText(status)
-	local height = e.headH + ROW + TextH(e.why, PM.WHY) + 8 + TextH(e.how, PM.HOW) + 8 + 24 + 8 + TextH(e.status, status)
+	local editing = PM.IsEditing()
+	local mine = PM.Choice() == "mine"
+	local saved = PM.Saved() ~= nil
+	for _, f in ipairs({ e.mine, e.shotChoice, e.change, e.choiceText, e.take }) do f:SetShown(not editing) end
+	e.reset:SetShown(not editing and saved)
+	for _, f in ipairs({ e.editText, e.save, e.cancel }) do f:SetShown(editing and true or false) end
+	-- The choice made is gold (rule 20: the selected thing).
+	e.mine:SetText((mine and GOLD or WHITE) .. e.mine.label .. "|r")
+	e.shotChoice:SetText((mine and WHITE or GOLD) .. e.shotChoice.label .. "|r")
+	e.mine.chosen, e.shotChoice.chosen = mine, not mine
+	local height = e.headH + ROW + TextH(e.why, PM.WHY) + 8 + TextH(e.how, PM.HOW) + 8
+	local last
+	if editing then
+		e.editText:SetText(PM.EDIT)
+		e.editText:ClearAllPoints()
+		Under(e.editText, e.how, 0, 8)
+		e.save:ClearAllPoints()
+		Under(e.save, e.editText, 0, 8)
+		last = e.save
+		height = height + TextH(e.editText, PM.EDIT) + 8 + 24
+	else
+		local text = ChoiceText()
+		e.choiceText:SetText(text)
+		for _, f in ipairs({ e.mine, e.choiceText, e.reset, e.take }) do f:ClearAllPoints() end
+		Under(e.mine, e.how, 0, 8)
+		Under(e.choiceText, e.mine, 0, 8)
+		height = height + 24 + 8 + TextH(e.choiceText, text)
+		local above = e.choiceText
+		if saved then
+			Under(e.reset, e.choiceText, 0, 8)
+			above = e.reset
+			height = height + 8 + 20
+		end
+		Under(e.take, above, 0, 8)
+		last = e.take
+		height = height + 8 + 24
+	end
+	e.status:ClearAllPoints()
+	Under(e.status, last, 0, 8)
+	height = height + 8 + TextH(e.status, status)
 	e.content:SetHeight(height + 16)
 end
 
 if ns.AddExperiment then
 	ns.AddExperiment({
 		key = "photo", name = "Photo mode", build = Build, refresh = Refresh_,
-		tip = "One click: a photo with the Screenshot preset and no UI, then everything back.",
+		tip = "One click: a photo with no UI, using your settings or the Screenshot preset, then everything back.",
 	})
 end
