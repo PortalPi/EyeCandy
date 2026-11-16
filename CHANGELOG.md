@@ -1,5 +1,10 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **The Experimental tab has parts.** A row of buttons at its top picks one: Autotune, or the new eye test. It remembers the one you looked at last.
+- **Eye test (experimental).** Like at the optician: which is better, 1 or 2? Each round shows one setting two ways in the same spot: shadows, field of view, glow, contrast, view distance, render scale, sharpening, SSAO, grass, and fog and sun rays. Flip between them as often as you like, then pick one, or say they look the same to you. After the last round your answers are on, and Save as preset keeps them as a preset of your own. A fight, a loading screen, Options or closing the window ends it and puts your settings back.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.

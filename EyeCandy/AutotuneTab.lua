@@ -1,5 +1,8 @@
--- Eye Candy: the Experimental tab (Autotune, Autotune.lua). Pick a goal, a way of tuning and where to start,
--- press Start, stand still. All three are remembered per account in EyeCandyDB.autotuneGoal =
+-- Eye Candy: the Experimental tab. It holds several parts (ns.EXPERIMENTS): Autotune first, then each part
+-- another file adds with ns.AddExperiment. A row of buttons at the top picks the part on show, remembered per
+-- account in EyeCandyDB.experimentPart. Each part has its own scrolling page.
+-- Autotune (Autotune.lua): pick a goal, a way of tuning and where to start, press Start, stand still. All
+-- three are remembered per account in EyeCandyDB.autotuneGoal =
 -- { mode, goal, style, from (a preset's id; nil is the lowest settings) }.
 -- Built to docs/ui-rules.md: ns.Header headings, each part anchored under the one before (so a long
 -- line pushes the rest down instead of overlapping it), and only the colours in rule 20.
@@ -257,8 +260,8 @@ local function FrameH(f, built)
 	return (h and h > 0) and h or built
 end
 
-ns.TAB_BUILD.autotune = function(page)
-	local c = ns.ScrollPage(page, 0)
+local function BuildAutotune(page, holder)
+	local c = ns.ScrollPage(holder, 0)
 	c:SetHeight(640)
 	page.content = c
 
@@ -398,12 +401,12 @@ ns.TAB_BUILD.autotune = function(page)
 	if page.putBack.SetNormalFontObject then page.putBack:SetNormalFontObject("GameFontNormalSmall") end
 	page.putBack:SetPoint("LEFT", page.keep, "RIGHT", 8, 0)
 	ns.Tooltip(page.keep, "Save as preset", function()
-		return "Saves Autotune's settings as your preset \"" .. (AT.result and AT.result.name or "Autotune") .. "\" and keeps them on. A backup of yours is taken first."
+		return "Saves Autotune's settings as your preset \"" .. (AT.result and AT.result.name or "Autotune") .. "\" and keeps them on, like any preset. Back to before on the Presets tab undoes it."
 	end)
 	ns.Tooltip(page.putBack, "Back to before Autotune", "Puts your settings back as they were before Autotune.")
 end
 
-ns.TAB_REFRESH.autotune = function(page)
+local function RefreshAutotune(page)
 	local mode, goal, style, from = Goal()
 	local running = AT.IsRunning()
 	local pcText = PCText()
@@ -460,4 +463,70 @@ ns.TAB_REFRESH.autotune = function(page)
 		height = height + GROUP + H.result + ROW + FrameH(page.keep, 24) + 8 + TextH(page.result, text)
 	end
 	page.content:SetHeight(height + 16) -- room under the last line
+end
+
+----------------------------------------------------------------------
+-- The parts of the tab, and the row of buttons that picks one
+----------------------------------------------------------------------
+
+-- { key, name, tip, build(page, holder), refresh(page) }, in the order the buttons show. build gets the
+-- tab's page (to keep its frames on) and the part's own frame (under the buttons) to build in.
+ns.EXPERIMENTS = ns.EXPERIMENTS or {}
+local PART = {}
+
+-- Adds a part to the tab. Files load before the tab is built, so every part has its button.
+function ns.AddExperiment(part)
+	if PART[part.key] then return end
+	PART[part.key] = part
+	ns.EXPERIMENTS[#ns.EXPERIMENTS + 1] = part
+end
+
+ns.AddExperiment({
+	key = "autotune", name = "Autotune", build = BuildAutotune, refresh = RefreshAutotune,
+	tip = "Finds the best look your PC can hold at the frame rate you pick.",
+})
+
+-- The part on show: the one picked last, or Autotune.
+function ns.ExperimentPart()
+	local key = ns.db and ns.db.experimentPart
+	return PART[key] and key or "autotune"
+end
+
+-- Shows a part of the Experimental tab, and the tab if the window is open on another.
+function ns.ShowExperiment(key)
+	if not PART[key] then return end
+	ns.db.experimentPart = key
+	ns.RefreshUI()
+end
+
+local PICK_W, PICK_H = 110, 32 -- each button, and the row with the gap under it
+
+ns.TAB_BUILD.autotune = function(page)
+	page.parts, page.partButtons = {}, {}
+	local prev, x = nil, 0
+	for i, part in ipairs(ns.EXPERIMENTS) do
+		local b = ns.Button(page, part.name, PICK_W, function() ns.ShowExperiment(part.key) end)
+		if prev then b:SetPoint("LEFT", prev, "RIGHT", ROW, 0) else b:SetPoint("TOPLEFT", 0, 0) end
+		ns.Tooltip(b, part.name, part.tip, x > W / 2 and "ANCHOR_LEFT" or nil)
+		x = x + PICK_W + ROW
+		b.key, b.label = part.key, part.name
+		page.partButtons[i] = b
+		prev = b
+		local holder = CreateFrame("Frame", nil, page)
+		holder:SetPoint("TOPLEFT", 0, -PICK_H)
+		holder:SetPoint("BOTTOMRIGHT", 0, 0)
+		page.parts[part.key] = holder
+		part.build(page, holder)
+	end
+end
+
+ns.TAB_REFRESH.autotune = function(page)
+	local key = ns.ExperimentPart()
+	-- The part on show is gold (rule 20: the selected thing), the rest white.
+	for _, b in ipairs(page.partButtons) do
+		b.chosen = b.key == key
+		b:SetText((b.chosen and GOLD or WHITE) .. b.label .. "|r")
+	end
+	for k, holder in pairs(page.parts) do holder:SetShown(k == key) end
+	PART[key].refresh(page)
 end
