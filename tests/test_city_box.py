@@ -1,4 +1,4 @@
-"""The "Switch in cities by itself" box says on the screen what it does (UI rule 23: nothing needed
+"""The "Lower settings in capital cities" box says on the screen what it does (UI rule 23: nothing needed
 lives only in a tooltip), in grey, under the box and clear of the next row.
 Run: python tests/test_city_box.py"""
 from lib import boot, check, done, addon

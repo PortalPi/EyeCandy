@@ -263,7 +263,7 @@ local pendingAfterCombat = false
 -- opts.menu: Graphics menu index (step down to what the GPU supports); opts.scale: render scale (clamp).
 local function ApplyOne(cvar, label, wanted, opts, result)
 	if not ns.Exists(cvar) then
-		result.skipped[#result.skipped + 1] = label .. " (not in this client)"
+		result.skipped[#result.skipped + 1] = label .. " (not in this game)"
 		return
 	end
 	local target = wanted
@@ -293,7 +293,7 @@ local function ApplyOne(cvar, label, wanted, opts, result)
 			result.changed[#result.changed + 1] = string.format("%s: %s (%s, asked %s)", label, FormatNumber(target), why, FormatNumber(wanted))
 		end
 	else
-		result.changed[#result.changed + 1] = string.format("%s: client kept %s (asked %s)", label, tostring(now), FormatNumber(target))
+		result.changed[#result.changed + 1] = string.format("%s: the game kept %s (asked %s)", label, tostring(now), FormatNumber(target))
 	end
 end
 
@@ -335,7 +335,7 @@ end
 function ns.ApplyAll(onlyHidden, quiet)
 	if InCombatLockdown() then
 		pendingAfterCombat = true
-		if not quiet then ns.Print("in combat. Settings will apply when combat ends.") end
+		if not quiet then ns.Print("in a fight. Settings apply when it ends.") end
 		return
 	end
 
@@ -518,12 +518,12 @@ function ns.SetLook(key)
 	local scaleBefore = ns.GetInfo("RenderScale")
 	if not ns.SetPreset(look.base, look) then return false end
 	if look.back then
-		ns.Print(look.name .. " on. When you're done, type /ec back to put your settings back as they were.")
+		ns.Print(look.name .. " on. Type /ec back when you're done.")
 	else
-		ns.Print((look.situation and "Preset: " or "Look: ") .. look.name .. ". Fine-tune anything on the Hidden tab. /ec back undoes it.")
+		ns.Print((look.situation and "Preset: " or "Look: ") .. look.name .. ". /ec back undoes it.")
 	end
 	if scaleBefore and not Same(scaleBefore, ns.GetInfo("RenderScale")) then
-		ns.Print("Render scale changed. If the picture doesn't change, restart the game so it takes effect.")
+		ns.Print("Render scale changed. If the picture looks the same, restart the game.")
 	end
 	return true
 end
@@ -534,10 +534,10 @@ function ns.ApplyShowcase()
 	if ns.RenderCap and ns.RenderCap.Held() then
 		ns.Print("Showcase on. " .. ns.RenderCap.TELL)
 	else
-		ns.Print("Showcase on. If the picture doesn't look sharper, restart the game so the new render scale takes effect.")
+		ns.Print("Showcase on. If the picture isn't sharper, restart the game.")
 	end
 	if scaleBefore and not Same(scaleBefore, ns.GetInfo("RenderScale")) then
-		ns.Print("Render scale changed. Check your FPS. If it's too low, lower 'Render scale override' on the Hidden tab.")
+		ns.Print("Render scale changed. If FPS is too low, lower Render scale override on the Hidden tab.")
 	end
 	return true
 end
@@ -556,7 +556,7 @@ end
 local function Line(buf, cvar, label)
 	local value, default = ns.GetInfo(cvar)
 	if value == nil then
-		buf[#buf + 1] = string.format("  %-30s (not in this client)", cvar)
+		buf[#buf + 1] = string.format("  %-30s (not in this game)", cvar)
 		return
 	end
 	local mark = Same(value, default) and "" or "  *changed"
@@ -821,22 +821,23 @@ SlashCmdList.EYECANDY = function(msg)
 	elseif msg == "help" then
 		ns.Print("/ec  open the window")
 		if ns.SlashClash() then ns.Print(ns.CLASH_LINE) end
-		ns.Print("/ec export  copy box with your settings (changed graphics CVars)")
-		ns.Print("/ec export all  every graphics CVar the client has")
+		ns.Print("/ec export  copy your changed settings from a box")
+		ns.Print("/ec export all  every graphics setting the game has")
 		ns.Print("/ec preset <performance|balanced|high|ultra|cinematic>  set every system and apply")
-		ns.Print("/ec showcase  everything pushed: Cinematic plus the Showcase hidden settings")
-		ns.Print("/ec look <beautiful|painterly|crisp|moody|classic>  curated styles")
-		ns.Print("/ec look <raid|laptop|screenshot>  presets for a job. /ec back  go back one step: undo the newest thing in today's list")
+		ns.Print("/ec showcase  Cinematic, plus Showcase's hidden settings")
+		ns.Print("/ec look <beautiful|painterly|crisp|moody|classic>  apply a Look")
+		ns.Print("/ec look <raid|laptop|screenshot|city>  apply a preset for a job")
+		ns.Print("/ec back  undo the newest step in today's list")
 		ns.Print("/ec presets  list presets. save <name>  save your settings. use <name>  apply one. share <name>  make a share code")
-		ns.Print("/ec hidden  open the Hidden tab: system levels and ~60 hidden settings (also: /ec advanced)")
+		ns.Print("/ec hidden  open the Hidden tab (or /ec advanced)")
 		ns.Print("/ec minimap  show or hide the minimap button")
-		ns.Print("/ec fade  turn off (or on) the window fading when the mouse is away")
-		ns.Print("/ec find <word>  search CVars, with the client's own descriptions")
-		ns.Print("/ec report  copy box with a bug report to paste into GitHub")
-		ns.Print("/ec peek  hide the game's UI and Eye Candy to see the world. Back or Esc brings it back")
+		ns.Print("/ec fade  turn window fading on or off")
+		ns.Print("/ec find <word>  search the game's settings, with its own descriptions")
+		ns.Print("/ec report  a bug report to copy into GitHub")
+		ns.Print("/ec peek  hide all UI to see the world. Back or Esc brings it back")
 		ns.Print("/ec compare  flip between before your last preset and now. compare stop  end on now")
 		ns.Print("/ec apply  re-apply your chosen levels and settings")
-		ns.Print("/ec restore  put back the values from before Eye Candy's first apply")
+		ns.Print("/ec restore  go back to your settings from before Eye Candy")
 		ns.Print("/ec backups  list backups. backup <name>  make one. restore <number>  restore one")
 	else
 		ns.ToggleMain()

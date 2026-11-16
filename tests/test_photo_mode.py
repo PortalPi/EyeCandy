@@ -110,7 +110,7 @@ check(not E("PM.IsOn()") and cv("graphicsShadowQuality") == "5" and cv("cameraFo
       "once saved, your settings are back")
 check(E("UIParent.shown") and E("EyeCandyMainFrame.shown") and E("NS.IsPeeking()") is False, "and the UI and the window")
 check("Photo saved at " in st and "Find it in the Screenshots folder, inside World of Warcraft\\_forever_." in st
-      and "seconds" in st and "frames" not in st, "it says where the photo is and how many seconds it waited, not frames (%r)" % st)
+      and "seconds" not in st and "frames" not in st, "it says where the photo is, with no wait time or frame count (%r)" % st)
 check(E("PM.last.frames") >= 120, "the frames it waited are kept")
 
 take()
@@ -243,21 +243,21 @@ check('"Default"' in E(PP + ".choiceText.text") and not E(PP + ".save.shown"), "
 X(CHANGE)
 check(E("PM.IsEditing()") and cv("cameraFov") == "90" and cv("graphicsDepthEffects") == "3" and E("EyeCandyDB.photo.before.cameraFov") == "70",
       "Change saves your settings, then puts Default on")
-check(E(PP + ".bigText.shown") and E(PP + ".bigText.text") == "Screenshot preset is on: Default",
-      "it says in big writing that the screenshot preset is on")
+check(E(PP + ".bigText.shown") and E(PP + ".bigText.text") == "Adjusting: Default",
+      "it says in big writing which screenshot preset is being adjusted")
 et = E(PP + ".editText.text")
-check("Standard and Hidden" in et and "come back here" in et and "Save screenshot preset" in et and "Default stays" in et,
+check("Standard and Hidden" in et and "come back and press" in et and "Save screenshot preset" in et and "Default stays" in et,
       "and says where to adjust it, to come back here to save, and that Default itself stays")
 check(E(PP + ".save.shown") and E(PP + ".save.text") == "Save screenshot preset" and E(PP + ".cancel.shown") and not E(PP + ".saveNew.shown")
       and not E(PP + ".take.shown") and not E(R0 + ".shown"), "the page shows Save screenshot preset and Cancel, and no list or Take photo")
-check("Screenshot preset on" in E("NS.RunningNote()"), "the window title says a screenshot preset is on")
+check("Screenshot preset not saved" in E("NS.RunningNote()"), "the window title says a screenshot preset is on")
 check(E("UIParent.shown") and E("EyeCandyMainFrame.shown"), "the UI stays: you adjust in the window")
 X("OK, ERR = NS.SetAdvanced('cameraFov', '80'); NS.SetAdvanced('Contrast', '60')")
 check(E("OK") and E("PM.IsEditing()") and cv("cameraFov") == "80", "a change on the Hidden tab doesn't end the edit")
 X("NS.ApplyAll(false, true)")
 check(E("PM.IsEditing()"), "nor does Apply")
 X("PM.Take_OK, PM.Take_ERR = PM.Take()")
-check(E("PM.Take_OK") is None and "Cancel" in E("PM.Take_ERR") and E("PM.IsEditing()"), "Take photo is refused during the edit")
+check(E("PM.Take_OK") is None and "cancel the screenshot preset" in E("PM.Take_ERR") and E("PM.IsEditing()"), "Take photo is refused during the edit")
 X("C_OK, C_ERR = NS.ToggleCompare(); A_OK = NS.Autotune.Start('balance'); E_OK = NS.EyeTest.Start()")
 check(E("C_OK") is None and E("A_OK") is False and E("E_OK") is None and E("PM.IsEditing()"), "Compare, Autotune and the eye test don't start during the edit")
 check(E("NS.FPS.Still({})") is False, "the FPS reader measures no preset during the edit")
@@ -295,7 +295,7 @@ check(cv("cameraFov") == "70" and cv("Contrast") == "55" and E("EyeCandyDB.photo
 
 # Change on a saved one: Save keeps it in that one, Save as new makes another.
 X(R1 + ".change.scripts.OnClick()")
-check(cv("cameraFov") == "80" and E(PP + ".bigText.text") == "Screenshot preset is on: Golden hour" and E(PP + ".saveNew.shown")
+check(cv("cameraFov") == "80" and E(PP + ".bigText.text") == "Adjusting: Golden hour" and E(PP + ".saveNew.shown")
       and "Default stays" not in E(PP + ".editText.text"), "Change on a saved one starts from it, and offers Save as new too")
 X("NS.SetAdvanced('cameraFov', '85')")
 X(A + ".shown = false; " + PP + ".save.scripts.OnClick()")
@@ -429,7 +429,7 @@ check(lua3.eval("GetCVar('cameraFov')") == "75" and lua3.eval("EyeCandyDB.photo"
 X("EyeCandyDB.keepApplied = true; PM.Change(); EyeCandyDB.keepApplied = false; PM.CancelEdit()")
 check(E("EyeCandyDB.keepApplied") == True, "Keep my settings applied, changed during the edit, comes back with Cancel")
 X("PM.Change(); SP_OK, SP_ERR = NS.SaveCurrentAsPreset('Photo try')")
-check(E("SP_OK") is None and "screenshot preset is on" in E("SP_ERR"), "Save my settings as a preset is refused while the photo settings are on")
+check(E("SP_OK") is None and "cancel the screenshot preset" in E("SP_ERR"), "Save my settings as a preset is refused while the photo settings are on")
 X("PM.CancelEdit(); SP_OK = NS.SaveCurrentAsPreset('After the edit')")
 check(E("SP_OK") is not None, "and works again once they are gone")
 X("EyeCandyDB.autotune = { before = {} }; AT_OK, AT_ERR = PM.Change(); EyeCandyDB.autotune = nil")

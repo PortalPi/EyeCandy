@@ -120,7 +120,7 @@ for i in range(4, 11):
 check(E("ET.State().phase") == "result" and E(EP + ".resultHead.shown") and not E(EP + ".roundHead.shown"),
       "after the last round, your answers show")
 res = E(EP + ".result.text")
-check("on now" in res and "Shadows:" in res and "the same to you" in res and "Sharpening: Strong" in res,
+check("in use, not saved yet" in res and "Shadows:" in res and "the same to you" in res and "Sharpening: Strong" in res,
       "the answers list each round, the same-to-you one too (%s)" % res.replace("\n", " | "))
 check(E("NS.RunningNote()") == "Eye test's answers are on, not saved yet", "the title says the answers are on but not saved")
 
