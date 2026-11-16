@@ -929,10 +929,11 @@ local function Say(kind, text)
 end
 AT.Say = Say
 
--- Chat only when the Experimental tab isn't in front of the player: the tab says it there.
+-- Chat only when Autotune isn't in front of the player (the Experimental tab, on its Autotune part): it says it there.
 local function Tell(msg)
 	local m = _G.EyeCandyMainFrame
-	if m and m.IsShown and m:IsShown() and not m.shrunk and m.tab == "autotune" then return end
+	if m and m.IsShown and m:IsShown() and not m.shrunk and m.tab == "autotune"
+		and (not ns.ExperimentPart or ns.ExperimentPart() == "autotune") then return end
 	ns.Print(msg)
 end
 

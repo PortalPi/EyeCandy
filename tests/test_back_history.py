@@ -92,7 +92,9 @@ check(names()[0] == 'Restored "Raid night"', "and ending Compare leaves nothing 
 # While Autotune has your settings, its changes are not yours.
 X('SetCVar("farclip", "999"); EyeCandyDB.autotune = { before = {} }')
 check(names()[0] != "Your own changes", "Autotune's changes are not shown as yours")
-X('EyeCandyDB.autotune = nil')
+X('EyeCandyDB.autotune = nil; EyeCandyDB.eyeTest = { before = {} }')
+check(names()[0] != "Your own changes", "nor the eye test's, while it holds your settings")
+X('EyeCandyDB.eyeTest = nil')
 check(names()[0] == "Your own changes", "once it is done, a change is yours again")
 
 # /ec back goes back one step, the newest, and says so once.
