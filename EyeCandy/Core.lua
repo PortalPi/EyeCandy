@@ -192,6 +192,11 @@ function ns.LoadDB()
 	EyeCandyDB.presets = EyeCandyDB.presets or {} -- your own presets (Presets.lua)
 	EyeCandyDB.nextPresetId = EyeCandyDB.nextPresetId or 1
 	ns.db = EyeCandyDB
+	-- Saved before the record of a built-in's Extras was kept: a Look's are worked out from the Look.
+	if EyeCandyDB.presetExtras == nil and EyeCandyDB.look and ns.FindLook then
+		local look = ns.FindLook(EyeCandyDB.look)
+		if look then EyeCandyDB.presetExtras = ns.BuiltinExtras(look.base, look) end
+	end
 
 	-- Mirror CVar: survives even if SavedVariables fail to load (seen on the Forever beta).
 	if C_CVar and C_CVar.RegisterCVar then
@@ -408,6 +413,12 @@ function ns.ExtrasAfterBuiltin(index, look)
 	local after, dropped = {}, {}
 	for key, value in pairs(ns.db.extras) do
 		if last[key] ~= nil and Same(last[key], value) then dropped[key] = true else after[key] = value end
+	end
+	-- One you set back to "Use tier" whose setting still holds the last built-in's value: that value
+	-- is the preset's, so it is handed back too.
+	for _, ex in ipairs(ns.EXTRAS) do
+		local was = last[ex.key]
+		if was ~= nil and ns.db.extras[ex.key] == nil and Same(ns.GetInfo(ex.cvar), was) then dropped[ex.key] = true end
 	end
 	for key, value in pairs(ns.BuiltinExtras(index, look)) do
 		after[key], dropped[key] = value, nil

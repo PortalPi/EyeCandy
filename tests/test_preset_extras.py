@@ -109,5 +109,18 @@ X('S = NS.db.steps[1]; S.state.presetExtras = nil; for k in pairs(S.state.extras
 X('S.state.extras.renderScale = 1.5; S.state.look = "moody"')
 X('NS.GoBack(1)')
 apply("tier3")
-check(ex("renderScale") is None, "an older step on Moody, put back: Moody's render scale still goes on High")
+check(ex("renderScale") is None, "a step saved on Moody with no record (made up here, as an older version saved it), put back: Moody's render scale still goes on High")
+
+# 10. An Extra you set back to "Use tier" while its setting still holds the Look's value: handed back.
+apply("look:moody")
+X('NS.SetExtra(EX.sharpness, nil); NS.ApplyAll(false, true)')
+check(g("ResampleSharpness") == "0.5", "set up: sharpness on Use tier still holds Moody's 0.5")
+X('PV = NS.PresetValues("tier3")')
+apply("tier3")
+check(g("ResampleSharpness") == "0.2" and E('PV.ResampleSharpness') == "0.2", "then High hands it back to before, and PresetValues says so (%r, %r)" % (g("ResampleSharpness"), E('PV.ResampleSharpness')))
+
+# 11. A saved file from before the record was kept, on Moody: worked out at login.
+old = boot(svdb='EyeCandyDB = { tiers = {}, extras = { renderScale = 1.5, resample = 2, sharpness = 0.5, entityLod = 20 }, advanced = {}, look = "moody", keepApplied = true }')
+old.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); NS.ApplyPresetById("tier3")')
+check(old.eval('next(NS.db.extras) == nil'), "a saved file on Moody with no record: High still hands back Moody's Extras")
 done()
