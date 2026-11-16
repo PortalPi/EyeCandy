@@ -489,8 +489,8 @@ local function Small(b)
 end
 
 ET.WHY = "Like at the optician: which is better, 1 or 2? Each round shows one setting two ways. "
-	.. "Flip as often as you like, then pick. Your answers make a preset of your own."
-ET.HOW = "Stand still and leave the camera alone, so only the setting changes. "
+	.. "Flip as often as you like, then pick. Save as preset keeps your answers as a preset."
+ET.HOW = "It changes your settings while it runs. Stand still and leave the camera alone, so only the setting changes. "
 	.. "A fight, a loading screen, Options or closing this window ends the test and puts your settings back."
 
 local function Build(page, holder)

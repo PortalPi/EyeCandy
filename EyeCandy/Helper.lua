@@ -233,7 +233,7 @@ local function PickText(p)
 	if #ups > 0 then lines[#lines + 1] = "Higher: " .. H.List(ups) .. "." end
 	if #downs > 0 then lines[#lines + 1] = "Lower: " .. H.List(downs) .. "." end
 	lines[#lines + 1] = n == 0 and "Nothing would change."
-		or string.format("Changes up to %d of your settings. Back to before undoes it.", n)
+		or string.format("Changes up to %d %s. Back to before undoes it.", n, n == 1 and "setting" or "settings")
 	return table.concat(lines, "\n")
 end
 

@@ -136,7 +136,7 @@ check(E('(NS.OnPreset()).id') == "tier4", "nothing changes before Apply")
 click(S + '.apply')
 check(E('(NS.OnPreset()).id') == "tier3" and E('NS.BackSteps()[1].name') == "High", "Apply puts High on, as today's newest step")
 check(E(S + '.title.text') == "Now on High" and E(S + '.body.text') == "To undo it, press Back on the top row under What you did today.", "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
-check("Changes up to " in body and " of your settings. Back to before undoes it." in body, "the pick text says it changes up to N settings (%r)" % body)
+check("Changes up to " in body and " settings. Back to before undoes it." in body, "the pick text says it changes up to N settings (%r)" % body)
 check(E(S + '.apply.shown') is not True, "no Apply once it is on")
 # A pick that changes nothing says so, with no count.
 X('REALCH = NS.Helper.Changes; NS.Helper.Changes = function() return 0, {}, {} end')
