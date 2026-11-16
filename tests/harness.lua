@@ -9,7 +9,7 @@ local cvars = {
   groundEffectDist={"320","100"}, groundEffectFade={"70","70"}, graphicsParticleDensity={"4","3"}, graphicsSpellDensity={"2","1"},
   vsync={"1","0"}, Gamma={"1","1"}, vrsValar={"1","0"}, doodadLodScale={"150","100"}, lodObjectFadeScale={"150","100"}, lodObjectCullSize={"14","15"}, terrainLodDist={"650","400"}, TerrainLodDiv={"768","768"}, wmoLodDist={"400","300"}, dynamicLod={"1","1"}, maxLightDist={"2048","2048"}, ResampleQuality={"3","3"}, ResampleSharpness={"0.2","0.2"}, entityLodDist={"10","10"},
 }
--- horizonStart deliberately missing to test "not in this client"
+-- horizonStart deliberately missing to test "not in this game"
 CLAMP = { cameraDistanceMaxZoomFactor = 2.6 } -- client clamps zoom
 SUPPORTED_MAX = { graphicsParticleDensity = 4 } -- index 5 illegal when secondary lighting is on
 SETLOG = {}
