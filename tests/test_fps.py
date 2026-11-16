@@ -45,6 +45,8 @@ check(E('#GOT') == 1 and E('GOT[1][2]') == 64 and E('GOT[1][3]') == 32, "half a 
 check(E('NS.FPS.Now()') == 64, "Now gives the smoothed FPS")
 X('FRAMES(1, 0.25); FRAMES(16, 1/64)')
 check(E('#GOT') == 2 and E('GOT[2][4]') == 0.25, "the longest frame in a reading is passed on (a hitch shows)")
+X('NOWBEFORE = NS.FPS.Now(); FRAMES(1, 3)')
+check(E('#GOT') == 2 and E('NS.FPS.Now() == NOWBEFORE'), "a 3 second frame (a loading screen) is dropped, so the number doesn't dip")
 X('NS.FPS.Unwatch("t")')
 check(not E('NS.FPS.frame.shown') and E('NS.FPS.Now()') is None, "the last watcher out stops the reader and clears Now")
 
@@ -84,6 +86,10 @@ X('MAIN.shown = false; MAIN.hooks.OnHide(MAIN)')
 check(not E('NS.FPS.IsWatching("bar")') and not E('NS.FPS.frame.shown'), "closing the window stops the reader")
 X('MAIN.shown = true; MAIN.hooks.OnShow(MAIN)')
 check(E('MAIN.fps.text') == "", "opened again, it starts blank, not with an old number")
+X('MAIN.IsVisible = function() return false end; MAIN.hooks.OnHide(MAIN)')
+check(not E('NS.FPS.IsWatching("bar")'), "under Alt+Z (still shown, not visible) the reader stops too")
+X('MAIN.IsVisible = nil; MAIN.hooks.OnShow(MAIN)')
+check(E('NS.FPS.IsWatching("bar")') == True, "and starts again when the UI comes back")
 
 # Where it sits.
 X('NS.ShowTab("presets")')
@@ -141,6 +147,10 @@ X('NS.ApplyPresetById("tier1"); for i = 1, 4 do FRAMES(30, 1/100) end; NS.ApplyP
 X('for i = 1, 30 do FRAMES(30, 1/55) end')
 check(E('EyeCandyDB.presetFPS["tier1"]') is None and E('EyeCandyDB.presetFPS["look:moody"].fps') == 55,
       "a second preset part way: only the second is measured")
+
+# Autotune applies presets of its own: none is measured while it runs.
+X('local real = NS.Autotune.IsRunning; NS.Autotune.IsRunning = function() return true end; NS.ApplyPresetById("tier1"); NS.Autotune.IsRunning = real')
+check(E('NS.FPS.Measuring()') is None and not E('NS.FPS.IsWatching("preset")'), "a preset Autotune applies while running is not measured")
 
 # A loading screen ends it.
 X('NS.ApplyPresetById("tier1"); FIRE("PLAYER_LEAVING_WORLD")')

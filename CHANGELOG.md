@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- **Live FPS on the window.** The bottom bar shows your FPS, updated twice a second, so you can watch it move while you drag a slider. On the shrunk bar it sits at the top left. It costs next to nothing, and nothing at all while the window is closed.
-- **Each preset remembers its FPS.** A few seconds after you apply a preset, once you stand still out of a fight, Eye Candy notes the FPS it gives and where. The preset's tooltip then says "Last time: 63 FPS in Goldshire." Moving, turning, a fight or changing a setting first means it isn't noted.
+- **Live FPS on the window.** The bottom bar shows your FPS, updated twice a second, so you can watch it move while you drag a slider. On the shrunk bar it sits at the top left, and steps aside while Compare needs the room. It costs next to nothing.
+- **Each preset remembers its FPS.** A few seconds after you apply a preset, once you stand still out of a fight, Eye Candy notes the FPS it gives and where. The preset's tooltip then says "Last time: 63 FPS in Goldshire." Moving, turning or a fight makes it wait until you stand still again. If you change a setting first, or don't stand still for a minute, it isn't noted.
 
 ## 1.0.1
 

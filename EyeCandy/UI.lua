@@ -2068,7 +2068,6 @@ function ns.BuildMain()
 		main.fps:SetSize(FPS_W, 14)
 		main.fps:SetTextColor(0.62, 0.62, 0.62)
 		main.fps:SetWordWrap(false)
-		ns.FPS.ShowOn(main.fps, main, FPSFits)
 	end
 
 	main:SetScript("OnShow", function()
@@ -2087,6 +2086,8 @@ function ns.BuildMain()
 		end
 	end)
 	main:SetScript("OnUpdate", ns.MainTick)
+	-- After the SetScript calls above, so its OnShow and OnHide hooks sit on top of them.
+	if main.fps then ns.FPS.ShowOn(main.fps, main, FPSFits) end
 end
 
 -- Every frame while the window is open: the fade, then the Compare button. Compare can end on

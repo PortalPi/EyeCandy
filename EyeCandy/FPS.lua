@@ -25,6 +25,7 @@ ns.FPS = FPS
 FPS.EVERY = 0.5   -- seconds in one reading
 FPS.SMOOTH = 0.5  -- each reading moves the smoothed number this share of the way to the new one
 FPS.STEP = 0.75   -- the shown number moves once the smoothed one is this far from it
+FPS.STALL = 2     -- seconds: a single frame this long is a stall, not a reading
 
 -- The smoothed FPS after one more reading. The first reading stands alone.
 function FPS.Smooth(prev, raw)
@@ -57,6 +58,9 @@ function FPS.Tick(elapsed)
 	if spent < FPS.EVERY then return end
 	local n, t, long = frames, spent, longest
 	frames, spent, longest = 0, 0, 0
+	-- One frame of over FPS.STALL seconds is the game standing still (a loading screen), not a frame
+	-- rate: it is dropped, so the number doesn't dip for it.
+	if n == 1 and t > FPS.STALL then return end
 	local raw = n / t
 	FPS.now = FPS.Smooth(FPS.now, raw)
 	local now = FPS.now
@@ -113,9 +117,10 @@ function FPS.ShowOn(text, window, fits)
 		text:SetText("")
 		FPS.Watch("bar", Draw)
 	end
-	-- Alt+Z hides the window's parent, so the window still counts as shown: keep reading.
+	-- Closed, peeked or under Alt+Z (which hides the parent, so the window still counts as shown):
+	-- nobody sees it, so stop. OnShow comes again when it can be seen.
 	local function Off(self)
-		if self:IsShown() then return end
+		if self:IsVisible() then return end
 		FPS.Unwatch("bar")
 	end
 	window:HookScript("OnShow", On)
@@ -230,8 +235,10 @@ local function OnReading(_, raw, n, t, long)
 	if result == "done" then Store(m) end
 end
 
--- Measure what preset id gives. A new preset starts over.
+-- Measure what preset id gives. A new preset starts over. Not while Autotune runs (it applies presets
+-- of its own, and measures its own way).
 function FPS.Measure(id)
+	if AT.IsRunning and AT.IsRunning() then return FPS.StopMeasure() end
 	measure = FPS.NewMeasure(id)
 	FPS.Watch("preset", OnReading)
 end
