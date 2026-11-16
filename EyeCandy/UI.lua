@@ -1115,27 +1115,54 @@ function ns.ImportFromStrip(page, mode)
 	if scroll and scroll.SetVerticalScroll then pcall(scroll.SetVerticalScroll, scroll, top) end
 end
 
--- Under the Capital city row: let Eye Candy switch it on in a capital city and off when you leave.
-local CITY_TIP = "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat."
-local CITY_LINE = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave."
-local function CityBox(page)
-	if page.cityBox then return page.cityBox end
+-- Under the Capital city and Raid & PvP rows: let Eye Candy switch it on by itself, and off when you
+-- leave (Situations.lua). field is the page's name for the box; key the Situation's.
+local SITUATION_BOXES = {
+	["look:city"] = {
+		field = "cityBox", key = "city", label = "Switch in cities by itself",
+		tip = "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat.",
+		line = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave.",
+	},
+	["look:raid"] = {
+		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids and battlegrounds by itself",
+		tip = "In a dungeon, raid, battleground or arena, lowers your settings to Raid & PvP's. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
+		line = "In dungeons, raids, battlegrounds and arenas, lowers costly settings to Raid & PvP's. They go back when you leave.",
+	},
+}
+local function SituationBox(page, spec)
+	if page[spec.field] then return page[spec.field] end
 	local box = CreateFrame("CheckButton", nil, page.content, "UICheckButtonTemplate")
 	box:SetSize(22, 22)
 	box:SetScript("OnClick", function(self)
-		ns.SetAutoSituation("city", self:GetChecked() and true or false)
+		ns.SetAutoSituation(spec.key, self:GetChecked() and true or false)
 	end)
 	box.text = Label(box, "", "GameFontHighlightSmall")
 	box.text:SetPoint("LEFT", box, "RIGHT", 2, 0)
-	Tooltip(box, "Switch in cities by itself", CITY_TIP)
+	Tooltip(box, spec.label, spec.tip)
 	-- What it does, on the screen (rule 23). The tooltip has the detail.
-	local note = Label(page.content, CITY_LINE, "GameFontHighlightSmall")
+	local note = Label(page.content, spec.line, "GameFontHighlightSmall")
 	note:SetTextColor(0.62, 0.62, 0.62)
 	note:SetWidth(ns.ROW_W - 50)
 	if note.SetWordWrap then note:SetWordWrap(false) end
 	box.note = note
-	page.cityBox = box
+	page[spec.field] = box
 	return box
+end
+
+-- The box's words: its label, then "On now" while its switch has settings lowered, or that it waits
+-- for a fight to end (rule 25).
+local function SituationBoxText(spec)
+	local text = spec.label
+	if ns.IsAutoSituationOn(spec.key) and ns.SituationWaiting and ns.SituationWaiting() then
+		return text .. "  |cff9d9d9dWaits for the fight to end|r"
+	end
+	if ns.ActiveSituationKey and ns.ActiveSituationKey() == spec.key then
+		local where = ns.SituationPlace and ns.SituationPlace()
+		local none = ns.SituationNote and ns.SituationNote() == false
+		return text .. "  |cffffd100On now" .. (where and (": in " .. where) or "") .. "|r"
+			.. (none and "  |cff9d9d9dNothing needed lowering|r" or "")
+	end
+	return text
 end
 
 local function RefreshPresetList(page)
@@ -1173,7 +1200,7 @@ local function RefreshPresetList(page)
 	page.rows = page.rows or {}
 	page.empties = page.empties or {}
 	local y, nh, nr, ne = 0, 0, 0, 0
-	local cityShown, helperShown = false, false
+	local boxShown, helperShown = {}, false
 	for _, e in ipairs(entries) do
 		if e.header then
 			nh = nh + 1
@@ -1260,23 +1287,26 @@ local function RefreshPresetList(page)
 			row.top = y
 			row:Show()
 			y = y + ROW_H + ROW_GAP
-			if p.id == "look:city" and ns.SetAutoSituation then
-				local box = CityBox(page)
+			local spec = SITUATION_BOXES[p.id]
+			if spec and ns.SetAutoSituation then
+				local box = SituationBox(page, spec)
 				box:ClearAllPoints()
 				box:SetPoint("TOPLEFT", 10, -(y - ROW_GAP + 2))
-				box:SetChecked(ns.IsAutoSituationOn("city"))
-				local active = ns.ActiveSituationName and ns.ActiveSituationName()
-				box.text:SetText("Switch in cities by itself" .. (active and "  |cffffd100On now: in a city|r" or ""))
+				box:SetChecked(ns.IsAutoSituationOn(spec.key))
+				box.text:SetText(SituationBoxText(spec))
 				box:Show()
 				box.note:ClearAllPoints()
 				box.note:SetPoint("TOPLEFT", 34, -(y - ROW_GAP + 2 + 20))
 				box.note:Show()
-				cityShown = true
+				boxShown[spec.field] = true
 				y = y + 26 + 14
 			end
 		end
 	end
-	if page.cityBox and not cityShown then page.cityBox:Hide(); page.cityBox.note:Hide() end
+	for _, spec in pairs(SITUATION_BOXES) do
+		local box = page[spec.field]
+		if box and not boxShown[spec.field] then box:Hide(); box.note:Hide() end
+	end
 	if page.helperStrip and not helperShown then page.helperStrip:Hide() end
 	for i = nr + 1, #page.rows do page.rows[i]:Hide() end
 	for i = ne + 1, #page.empties do page.empties[i]:Hide() end
@@ -1348,7 +1378,12 @@ end
 function ns.RunningNote()
 	local at = ns.AutotuneNote and ns.AutotuneNote()
 	if at then return at end
-	if ns.ActiveSituationName and ns.ActiveSituationName() then return "In a city: some settings lowered" end
+	if ns.ActiveSituationName and ns.ActiveSituationName() then
+		-- false: a switch is on here but lowered nothing, so there is nothing to say.
+		local note = ns.SituationNote and ns.SituationNote()
+		if note == false then return nil end
+		return note or "In a city: some settings lowered"
+	end
 end
 
 -- The "On now" card at the top of the Presets tab.

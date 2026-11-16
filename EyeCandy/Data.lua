@@ -248,11 +248,19 @@ ns.EXPORT_EXTRA = {
 ns.SITUATIONS = {
 	{
 		key = "raid", situation = true, name = "Raid & PvP", base = 3,
-		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off (the soft edges on smoke and spells), less glow, the widest view and a further camera zoom so you see more of the fight.\nIf the game's own Raid and Battleground settings are switched on, the game uses those inside raids and battlegrounds instead.",
+		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off (the soft edges on smoke and spells), less glow, the widest view and a further camera zoom so you see more of the fight.\nIf the game's own Raid and Battleground settings are switched on, the game uses those inside raids and battlegrounds instead.\nOr type /ec instance to have it done for you: in a dungeon, raid, battleground or arena your costly settings come down to these, and they go back when you leave.",
 		dials = {
 			graphicsParticleDensity = 1, graphicsDepthEffects = 0, weatherDensity = 0,
 			bloomUserMult = 0.4, cameraFov = 90, cameraDistanceMaxZoomFactor = 2.6,
 		},
+		-- The switch by itself in a dungeon, raid, battleground or arena (Situations.lua, /ec instance):
+		-- Raid & PvP's own values (High, then the dials above), only where yours are higher. Only settings
+		-- that cost more when higher: not field of view or zoom, which Raid & PvP raises.
+		auto = { test = "instance", caps = {
+			graphicsShadowQuality = 4, graphicsLightMode = 2, graphicsSSAO = 3, graphicsDepthEffects = 0,
+			graphicsComputeEffects = 3, weatherDensity = 0, graphicsViewDistance = 8, graphicsEnvironmentDetail = 8,
+			graphicsGroundClutter = 8, groundEffectDensity = 96, graphicsParticleDensity = 1, bloomUserMult = 0.4,
+		} },
 	},
 	{
 		key = "laptop", situation = true, name = "Laptop", base = 1,

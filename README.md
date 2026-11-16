@@ -22,6 +22,7 @@ Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting fo
 - **Back to before.** After a preset, one click puts back your settings from just before it. One step back, and only until you change something else.
 - **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
 - **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
+- **Steadier frames in big fights.** Off until you turn it on (`/ec instance`). In a dungeon, raid, battleground or arena it lowers your settings to Raid & PvP's where yours are higher, and puts them back when you leave.
 - **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
 - **Easy to find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window. Right-click the minimap button to open Backups.
 
@@ -62,6 +63,7 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | `/ec backup [name]` | Make a backup |
 | `/ec restore <number>` | Restore a backup, no question asked. It makes no backup of now (`/ec restore` alone restores the Original) |
 | `/ec city` | Turn the city switch on or off (`city on`, `city off`) |
+| `/ec instance` | Turn the dungeon, raid and battleground switch on or off (`instance on`, `instance off`) |
 | `/ec apply` | Apply your settings again |
 | `/ec minimap` | Show or hide the minimap button |
 | `/ec fade` | Turn off (or on) the window fading a little when the mouse is away |
