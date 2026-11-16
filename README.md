@@ -19,7 +19,7 @@ Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting fo
 - **Hidden settings.** About 60 settings the game's menu does not show, each with a plain description. Every number setting is a slider with a typed box.
 - **Standard tab.** The game's own Graphics menu in one place.
 - **Dated backups.** Your Original settings (made once and kept for good) and backups you name. Eye Candy makes no other backup by itself. On the Backups tab, Restore shows what will change first.
-- **Back to before.** After a preset, one click puts back your settings from just before it. One step back, and only until you change something else.
+- **Back to before.** The Presets tab lists what you did today: each preset, each restore, and your own changes between them. Each has its own Back, which puts back your settings from just before that step. It asks first and says how many settings change.
 - **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
 - **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
 - **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
@@ -53,7 +53,7 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | `/ec showcase` | Cinematic plus the Showcase hidden settings |
 | `/ec look <beautiful\|painterly\|crisp\|moody\|classic>` | Apply a Look |
 | `/ec look <raid\|laptop\|screenshot\|city>` | Apply a preset for a job |
-| `/ec back` | Back to before your last preset (one step, until you change something) |
+| `/ec back` | Go back one step: undo the newest step in today's list |
 | `/ec presets` | List presets |
 | `/ec save <name>` | Save your current settings as a preset |
 | `/ec use <name>` | Apply a preset |

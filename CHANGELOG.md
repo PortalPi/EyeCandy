@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **More than one step back.** Back used to undo only your last preset, and only until you changed something. Now the Presets tab lists what you did today, newest first: each preset, each restore, and your own changes between them. Each has its own Back, which puts back your settings from just before that step and undoes the steps above it. It asks first and says how many settings change. A restore from the Backups tab can now be undone too. The list keeps your last 10 steps and starts fresh each day. It is never a backup. `/ec back` goes back one step, the newest.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.

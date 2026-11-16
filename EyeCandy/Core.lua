@@ -333,7 +333,8 @@ function ns.ApplyAll(onlyHidden, quiet)
 	end
 
 	-- Save the Original before anything changes (the login re-apply can run before it exists).
-	-- Apply takes no backup of its own: only a preset keeps a "before" record (ns.NoteBeforePreset).
+	-- Apply takes no backup and is no step of its own: what it changes shows in today's steps as your
+	-- own changes (ns.NoteBeforeStep, Backups.lua).
 	ns.TakeBackup(false)
 
 	-- Menu indices first, then hidden values (the menu values can reset hidden ones).
@@ -397,7 +398,7 @@ function ns.SetPreset(index, look)
 		ns.Print("can't change presets in combat. Try again after the fight.")
 		return false
 	end
-	-- One "before" record for Back to before and Compare (Backups.lua). No backup row. First, so a
+	-- One of today's steps, for Back to before and Compare (Backups.lua). No backup row. First, so a
 	-- Compare showing "before" ends (Compare.lua) before anything reads the settings.
 	if ns.NoteBeforePreset then
 		ns.NoteBeforePreset(look and look.name or (index > #ns.TIERS and "Showcase" or ns.TIERS[index]))
@@ -772,7 +773,7 @@ SlashCmdList.EYECANDY = function(msg)
 		ns.Print("/ec preset <performance|balanced|high|ultra|cinematic>  set every system and apply")
 		ns.Print("/ec showcase  everything pushed: Cinematic plus the Showcase hidden settings")
 		ns.Print("/ec look <beautiful|painterly|crisp|moody|classic>  curated styles")
-		ns.Print("/ec look <raid|laptop|screenshot>  presets for a job. /ec back  undo the last preset")
+		ns.Print("/ec look <raid|laptop|screenshot>  presets for a job. /ec back  undo the newest of today's steps")
 		ns.Print("/ec presets  list presets. save <name>  save your settings. use <name>  apply one. share <name>  make a share code")
 		ns.Print("/ec hidden  open the Hidden tab: system levels and ~60 hidden settings (also: /ec advanced)")
 		ns.Print("/ec minimap  show or hide the minimap button")

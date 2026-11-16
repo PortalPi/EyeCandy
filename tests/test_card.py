@@ -1,5 +1,5 @@
-"""The On now card: with no preset it says only what is true (Back shows only after a preset was
-applied), and its right edge lines up with the rows under it. Run: python tests/test_card.py"""
+"""The On now card: with no preset it says only what is true (Back lives on today's steps in the
+list, not on the card), and its right edge lines up with the rows under it. Run: python tests/test_card.py"""
 from lib import boot, check, done, GEO
 
 lua = boot()
@@ -13,13 +13,13 @@ P = 'EyeCandyMainFrame.pages.presets'
 
 # (a) No preset yet.
 text = E(P + '.card.detail.text')
-check(E(P + '.backButton.shown') == False, "before any preset there is no Back button")
+check(E('#NS.BackSteps()') == 0 and E(P + '.backButton') is None, "before any preset there is no step to go back to, and the card has no Back button")
 check("Back" not in text and "undo" not in text, "so the card does not mention Back or undo (%r)" % text)
 check(text == "Pick one below. A preset applies when you press Apply on it.", "it says only what a row does, so it stays true while the city switch or Autotune runs")
 
 # After a preset: Back shows, and the card says what is on.
 X('NS.ApplyPresetById("tier1"); NS.RefreshUI()')
-check(E(P + '.backButton.shown') == True and E(P + '.card.name.text') == "Performance", "after Performance, Back shows and the card names it")
+check(E('NS.BackSteps()[1].name') == "Performance" and E(P + '.card.name.text') == "Performance", "after Performance, it is today's step and the card names it")
 
 # A preset deleted while Back still shows: still nothing false on the card.
 X('MINE = NS.SaveCurrentAsPreset("Mine"); NS.ApplyPresetById(MINE.id); NS.DeletePreset(MINE.id); NS.RefreshUI()')

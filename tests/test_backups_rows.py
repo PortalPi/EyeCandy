@@ -66,10 +66,10 @@ check(E('EyeCandyMainFrame.pages.backups.rows[1].delete.shown') == False, "the O
 X('local d = EyeCandyMainFrame.pages.backups.rows[2].delete; d.scripts.OnEnter(d)')
 check(E('TIPS[1]') == "Delete" and "Asks first" in E('TIPS[2]'), "Delete has a tooltip")
 
-# Restore asks first and says it can't be undone (no backup is made for you).
+# Restore asks first, says no backup is made for you, and that Back can undo it today (a step).
 X('NS.AskRestore(NS.ListBackups()[2])')
 t = E('EyeCandyAskFrame.textFS.text')
-check(t.startswith("Restore 1 setting from") and "This can't be undone. Create a backup first if you want to keep your settings now." in t and "backed up first" not in t, "the restore question is true (%s)" % t)
+check(t.startswith("Restore 1 setting from") and "It makes no backup of your settings now. Back on the Presets tab can undo it today." in t and "can't be undone" not in t, "the restore question is true (%s)" % t)
 
 # Restore and Delete say what happened on the Backups tab, not in chat.
 X('CHAT = {}; NS.RestoreBackupById = function(id) return 4 end; NS.RestoredLine = function(n, b) return "Restored " .. n .. " settings from \\"" .. b.label .. "\\"." end')

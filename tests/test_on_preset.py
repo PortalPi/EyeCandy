@@ -60,7 +60,7 @@ X('NS.ApplyPresetById(NEW.id)')
 check(on() == ("Painterly (2)", 0), "an imported preset you apply is the one you are on, under its saved name")
 
 # Back to before puts you back on the preset you had.
-X('NS.ApplyPresetById("tier3"); NS.ApplyPresetById("look:moody"); NS.UndoLastPreset()')
+X('NS.ApplyPresetById("tier3"); NS.ApplyPresetById("look:moody"); NS.GoBack()')
 check(on() == ("High", 0), "Back to before Moody puts you back on High")
 
 # A backup restore replaces every setting: you are on no preset after it.

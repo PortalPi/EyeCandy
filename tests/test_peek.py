@@ -123,7 +123,7 @@ check(ev('R1') is None and "Nothing to compare yet" in ev('R2') and not ev('NS.I
 check(ev('NS.CompareLabel()') is None, "no label when not comparing")
 lua.execute('SlashCmdList.EYECANDY("preset cinematic"); CHAT = {}')
 before, now = "7000", g("farclip")
-check(now != before and ev('EyeCandyDB.lastBefore.name') == "Cinematic", "setup: Cinematic changed farclip and kept its 'before' record")
+check(now != before and ev('NS.BeforeRecord().name') == "Cinematic", "setup: Cinematic changed farclip and is today's newest step")
 n0, c0 = nb(), choices()
 
 check(ev('NS.ToggleCompare()') is True and ev('NS.IsComparing()'), "Compare starts")
@@ -210,7 +210,7 @@ lua.execute('SetCVar("farclip", "9000"); SlashCmdList.EYECANDY("preset cinematic
 check(ev('NS.ToggleCompare()') is True and ev('GetCVar("farclip")') == "9000", "it uses the record from before the newest preset")
 check(ev('NS.CompareLabel()') == "Showing: before Cinematic", "labelled with that preset's name")
 lua.execute('NS.StopCompare(); SlashCmdList.EYECANDY("apply")')
-check(ev('EyeCandyDB.lastBefore.name') == "Cinematic", "Apply leaves the record alone, so Compare still means before the last preset")
+check(ev('NS.BeforeRecord().name') == "Cinematic", "Apply leaves the preset's step alone, so Compare still means before the last preset")
 check(len(lst(ev('NS.ListBackups()'))) == 1, "and none of it added a backup row")
 
 # Review finding 3: a backup or restore while before is showing ends compare on now first,
@@ -221,8 +221,8 @@ g = lambda n: ev('GetCVar("%s")' % n)
 lua.execute('SlashCmdList.EYECANDY("preset cinematic"); CHAT = {}')
 now = g("farclip")
 lua.execute('NS.ToggleCompare(); SlashCmdList.EYECANDY("look moody"); CHAT = {}')
-b0 = ev('EyeCandyDB.lastBefore')
-check(not ev('NS.IsComparing()') and b0['label'] == "Before Moody" and b0['values']['farclip'] == now and b0['values']['Gamma'] == "1", "a preset while showing before ends compare first; its 'before' record holds now, not before")
+b0 = ev('NS.BeforeRecord()')
+check(not ev('NS.IsComparing()') and b0['name'] == "Moody" and b0['values']['farclip'] == now and b0['values']['Gamma'] == "1", "a preset while showing before ends compare first; its 'before' record holds now, not before")
 check(g("Gamma") == "0.9", "setup: Moody set Gamma to 0.9 (Cinematic has 1)")
 lua.execute('NS.ToggleCompare()')
 check(ev('NS.IsComparing()') and g("Gamma") == "1", "compare then shows before Moody")

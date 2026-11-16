@@ -759,9 +759,6 @@ end
 
 local ROW_H, ROW_GAP, GROUP_GAP = 34, 4, 24
 local CARD_H = 72
--- The Back button stays short: the name is cut to a few characters (whole UTF-8 characters,
--- never half of one) and the full name is in the tooltip.
-local BACK_NAME_MAX, BACK_W_MAX = 18, 230
 
 -- One line under each name. Tiers say what they are for; the rest use the first sentence of
 -- their description, so a new Look or Situation gets a line without a change here.
@@ -1154,6 +1151,8 @@ local function RefreshPresetList(page)
 		elseif p.group == "Situations" then situations[#situations + 1] = p
 		else other[#other + 1] = p end
 	end
+	-- Today's steps first, each with its own Back (Steps.lua).
+	for _, e in ipairs(ns.StepEntries and ns.StepEntries(page) or {}) do entries[#entries + 1] = e end
 	AddGroup("Your presets", nil, list.user or {}, { save = true, strip = true,
 		empty = "No presets of your own yet. Save your settings as one, or import one from a friend below." })
 	AddGroup("Quality levels", "Every system at one level.", tiers)
@@ -1191,7 +1190,10 @@ local function RefreshPresetList(page)
 				page.saveButton:SetPoint("TOPRIGHT", -4, -6)
 				page.saveButton:Show()
 			end
+			if e.opts and e.opts.steps then ns.PlaceStepsMore(page, h, e.opts.steps) end
 			y = y + h.h
+		elseif e.step then
+			y = ns.PlaceStepRow(page, e, y)
 		elseif e.empty then
 			ne = ne + 1
 			local f = page.empties[ne]
@@ -1266,6 +1268,7 @@ local function RefreshPresetList(page)
 	if page.cityBox and not cityShown then page.cityBox:Hide(); page.cityBox.note:Hide() end
 	for i = nr + 1, #page.rows do page.rows[i]:Hide() end
 	for i = ne + 1, #page.empties do page.empties[i]:Hide() end
+	if ns.EndStepRows then ns.EndStepRows(page) end
 	page.content:SetHeight(math.max(y, 1))
 end
 
@@ -1354,22 +1357,23 @@ local function BuildCard(page)
 	c.kicker:SetPoint("TOPLEFT", 16, -8)
 	c.kicker:SetTextColor(0.62, 0.62, 0.62)
 	-- The kind and the change count sit beside "On now"; the name has the line below to itself.
-	-- Both stop short of the Back button and never wrap.
+	-- Both run to the card's right edge and never wrap.
 	c.detail = Label(c, "", "GameFontHighlightSmall")
 	c.detail:SetPoint("LEFT", c.kicker, "RIGHT", 8, 0)
-	c.detail:SetPoint("RIGHT", c, "RIGHT", -(BACK_W_MAX + 24), 0)
+	c.detail:SetPoint("RIGHT", c, "RIGHT", -16, 0)
 	c.detail:SetJustifyH("LEFT")
 	c.detail:SetWordWrap(false)
 	c.detail:SetTextColor(0.62, 0.62, 0.62)
 	c.name = Label(c, "", "GameFontNormalHuge")
 	c.name:SetPoint("TOPLEFT", 16, -24)
-	c.name:SetPoint("RIGHT", c, "RIGHT", -(BACK_W_MAX + 24), 0)
+	c.name:SetPoint("RIGHT", c, "RIGHT", -16, 0)
 	c.name:SetJustifyH("LEFT")
 	c.name:SetWordWrap(false)
-	-- Third line: what Back just did, else what is running on your settings (Autotune, the city switch).
+	-- Third line: what Back just did (on a Today row), else what is running on your settings (Autotune,
+	-- the city switch).
 	c.note = Label(c, "", "GameFontHighlightSmall")
 	c.note:SetPoint("TOPLEFT", 16, -52)
-	c.note:SetPoint("RIGHT", c, "RIGHT", -(BACK_W_MAX + 24), 0)
+	c.note:SetPoint("RIGHT", c, "RIGHT", -16, 0)
 	c.note:SetJustifyH("LEFT")
 	c.note:SetWordWrap(false)
 	page.card = c
@@ -1379,8 +1383,8 @@ end
 -- What the card's result line was said about. Once any of it changes (a fight ends, a setting moves,
 -- Autotune or the city switch starts), the line is out of date and goes.
 local function CardState(onKey)
-	local name = ns.LastPresetName and ns.LastPresetName()
-	return table.concat({ onKey, tostring(InCombatLockdown()), ns.RunningNote() or "", tostring(name) }, "|")
+	local steps = ns.StepsKey and ns.StepsKey() or ""
+	return table.concat({ onKey, tostring(InCombatLockdown()), ns.RunningNote() or "", steps }, "|")
 end
 
 local function RefreshCard(page)
@@ -1422,22 +1426,7 @@ ns.TAB_BUILD.presets = function(page)
 		return
 	end
 	BuildCard(page)
-	if ns.UndoLastPreset and ns.LastPresetName then
-		-- Shown only while the last preset can still be undone in one step.
-		local back = Button(page.card, "Back", 120, function()
-			local n, line = ns.GoBack()
-			page.cardMsg = line and ((n and "|cff7cff7c" or "|cffff4040") .. line .. "|r") or nil
-			page.cardMsgKey = nil
-			ns.RefreshUI()
-		end)
-		back:SetPoint("RIGHT", -12, 0)
-		back:Hide()
-		Tooltip(back, function() return back:GetText() or "Back" end, function()
-			local name = ns.LastPresetName()
-			return name and ("Puts every setting back as it was just before " .. name .. ".") or ""
-		end, "ANCHOR_LEFT")
-		page.backButton = back
-	end
+	-- Back to before lives on each of today's steps, in the list (Steps.lua).
 	page.content = ns.ScrollPage(page, -(CARD_H + 10))
 	page.saveButton = Button(page.content, "Save my settings as a preset", 210, function()
 		ns.Ask({ title = "Save as preset", text = "Name this preset. It saves all your graphics settings as they are now.", edit = "", accept = "Save",
@@ -1474,17 +1463,6 @@ end
 ns.TAB_REFRESH.presets = function(page)
 	if not page.usesList then return end
 	RefreshCard(page)
-	if page.backButton then
-		local name = ns.LastPresetName()
-		page.backName = name
-		page.backButton:SetShown(name ~= nil)
-		if name then
-			page.backButton:SetText("Back to before " .. ns.ShortName(name, BACK_NAME_MAX))
-			local fs = page.backButton:GetFontString()
-			local tw = fs and tonumber(fs:GetStringWidth() or 0) or 0
-			page.backButton:SetWidth(math.min(BACK_W_MAX, math.max(120, tw + 24)))
-		end
-	end
 	RefreshPresetList(page)
 end
 
@@ -1511,7 +1489,9 @@ function ns.AskRestore(b)
 	ns.Ask({
 		title = "Restore backup",
 		text = string.format("Restore %d %s from %s?", count, count == 1 and "setting" or "settings", tostring(b.time or "earlier"))
-			.. "\nThis can't be undone. Create a backup first if you want to keep your settings now.",
+			-- A restore is one of today's steps (Backups.lua), so Back undoes it until the day ends.
+			.. (ns.BackSteps and "\nIt makes no backup of your settings now. Back on the Presets tab can undo it today."
+				or "\nThis can't be undone. Create a backup first if you want to keep your settings now."),
 		accept = "Restore",
 		onAccept = function()
 			local page = main and main.pages and main.pages.backups
@@ -2059,10 +2039,10 @@ end
 
 -- Every frame while the window is open: the fade, then the Compare button. Compare can end on
 -- its own (combat, /ec compare stop), so the button and title redraw when its label changes.
--- Back to before shows only while nothing has changed since the preset (Presets.lua checks every
--- setting). Switching tabs redraws it; this catches a change made while the Presets tab is open
--- (the game's own menu, a slash command, Keep my settings applied), once a second. Each check reads
--- every managed setting, so it is skipped while there is no preset to go back to.
+-- Today's steps show "Your own changes" once a setting moves after the newest step (Backups.lua
+-- checks every setting). Switching tabs redraws it; this catches a change made while the Presets tab
+-- is open (the game's own menu, a slash command, Keep my settings applied), once a second. Each check
+-- reads every managed setting, so it is skipped while there are no steps today.
 ns.BACK_CHECK_EVERY = 1
 
 function ns.MainTick(self, elapsed)
@@ -2072,7 +2052,7 @@ function ns.MainTick(self, elapsed)
 		RefreshCompare()
 	end
 	local page = self.tab == "presets" and not self.shrunk and self.pages and self.pages.presets
-	local back = page and page.built and page.backButton and (page.backName or (ns.db and ns.db.lastBefore))
+	local back = page and page.built and ns.StepsKey and ns.db and type(ns.db.steps) == "table" and #ns.db.steps > 0
 	-- The "On now" card and row say how many settings changed since; a change keeps them current.
 	local on = page and page.built and page.usesList and ns.OnPreset and ns.db and (ns.db.onPreset or ns.db.look)
 	-- A result on the card goes once what it was about has changed (CardState).
@@ -2084,7 +2064,7 @@ function ns.MainTick(self, elapsed)
 			local p, changed = nil, 0
 			if (on or msg) and ns.OnPreset then p, changed = ns.OnPreset() end
 			local onKey = p and (p.id .. ":" .. changed) or ""
-			if (back and ns.LastPresetName() ~= page.backName) or (on and onKey ~= page.onKey)
+			if (back and ns.StepsKey() ~= page.stepsKey) or (on and onKey ~= page.onKey)
 				or (msg and CardState(onKey) ~= page.cardMsgKey) then
 				ns.TAB_REFRESH.presets(page)
 				SetTitle()

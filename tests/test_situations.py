@@ -32,13 +32,13 @@ lua.execute('SetCVar("weatherDensity", "2")')
 check(ev('NS.ApplyPresetById("look:raid")') == True, "Raid & PvP applies")
 check(g("graphicsShadowQuality") == "4" and g("graphicsParticleDensity") == "1" and g("graphicsDepthEffects") == "0", "Raid & PvP: High shadows, particles 1, depth effects off")
 check(g("weatherDensity") == "0" and g("cameraDistanceMaxZoomFactor") == "2.6" and g("bloomUserMult") == "0.4", "Raid & PvP: no weather, zoom 2.6, bloom 0.4")
-check(ev('EyeCandyDB.look') == "raid" and ev('NS.LastPresetName()') == "Raid & PvP", "the last preset is remembered for Back")
+check(ev('EyeCandyDB.look') == "raid" and ev('NS.BackSteps()[1].name') == "Raid & PvP", "the preset is today's newest step, for Back")
 check(any("Preset: Raid & PvP" in line for line in chat(lua)), "chat says the preset, not 'Look'")
 
 # /ec back puts back what was there before.
 lua.execute('SlashCmdList.EYECANDY("back")')
 check(g("weatherDensity") == "2" and g("graphicsDepthEffects") != "0", "/ec back restores the settings from before Raid & PvP")
-check(ev('NS.LastPresetName()') is None, "after going back there is nothing left to go back to")
+check(ev('#NS.BackSteps()') == 0, "after going back there is nothing left to go back to")
 lua.execute('CHAT = {}; SlashCmdList.EYECANDY("back")')
 check(any("Nothing to go back to" in line for line in chat(lua)), "a second /ec back says there is nothing to go back to")
 
@@ -88,25 +88,25 @@ for pid in ("look:raid", "look:laptop", "look:screenshot", "look:city"):
     prev = ev('NS.PreviewImport("%s")' % text) if text else None
     check(prev is not None and prev['ok'] == True and len(lst(prev['skipped'])) == 0, "%s shares and reads back with nothing skipped" % pid)
 
-# Review fix: a restore after a preset means Back would quietly undo the restore, so it refuses.
+# A restore from the Backups tab is one of today's steps, so /ec back undoes the restore.
 lua.execute('NS.ApplyPresetById("look:raid")')
 orig = ev('NS.OriginalBackup().id')
 lua.execute('NS.RestoreBackupById(%d); CHAT = {}' % orig)
-check(ev('NS.LastPresetName()') is None, "after a Backups-tab restore, Back is no longer offered")
+check(ev('NS.BackSteps()[1].kind') == "restore" and ev('GetCVar("weatherDensity")') != "0", "a Backups-tab restore is today's newest step")
 lua.execute('SlashCmdList.EYECANDY("back")')
-check(any("Nothing to go back to" in line for line in chat(lua)) and ev('GetCVar("weatherDensity")') != "0", "and /ec back leaves the restore alone")
-# A change after a preset: Back refuses with its reason.
+check(ev('GetCVar("weatherDensity")') == "0" and any("Back to before you restored" in line for line in chat(lua)), "and /ec back undoes the restore, back to Raid & PvP")
+# A change after a preset: /ec back undoes the change first, and keeps the preset.
 lua.execute('NS.ApplyPresetById("look:raid"); SetCVar("weatherDensity", "3"); CHAT = {}')
 lua.execute('SlashCmdList.EYECANDY("back")')
-check(any("Settings changed since Raid & PvP" in line for line in chat(lua)), "a change since the preset: Back says settings changed")
+check(ev('GetCVar("weatherDensity")') == "0" and any("Back to before your own changes" in line for line in chat(lua)), "a change since the preset: /ec back undoes your own change")
 
-# Back's record is not a backup, so deleting backups never takes it away.
+# Today's steps are not backups, so deleting backups never takes one away.
 lua.execute('NS.ApplyPresetById("look:laptop"); local b = NS.CreateBackup("manual", "Spare"); NS.DeleteBackup(b.id); CHAT = {}')
-check(ev('NS.LastPresetName()') == "Laptop", "deleting a backup leaves Back offered")
+check(ev('NS.BackSteps()[1].name') == "Laptop", "deleting a backup leaves Laptop in today's steps")
 
-# Your own preset also feeds Back.
+# Your own preset is a step too.
 p = ev('NS.SaveCurrentAsPreset("Mine")')
 lua.execute('NS.ApplyPresetById("tier1")')
-check(ev('NS.ApplyPresetById("%s")' % p['id']) == True and ev('NS.LastPresetName()') == "Mine", "applying your own preset is remembered for Back too")
+check(ev('NS.ApplyPresetById("%s")' % p['id']) == True and ev('NS.BackSteps()[1].name') == "Mine", "applying your own preset is a step for Back too")
 
 done()
