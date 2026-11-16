@@ -230,7 +230,7 @@ local function Leave()
 		end
 	end
 	if kept > 0 then
-		ns.Print(string.format("Left %d alone that changed while you were there.", kept))
+		ns.Print(string.format("%d %s changed while you were there, so %s.", kept, Plural(kept, "setting", "settings"), kept == 1 and "it stays" or "they stay"))
 	end
 	if ns.RefreshUI then ns.RefreshUI() end
 end
@@ -411,15 +411,15 @@ end)
 local SLASH = {
 	city = {
 		key = "city",
-		on = "In a capital city, Eye Candy now lowers view distance, environment detail, fog and far-away character detail, and puts them back when you leave. /ec city turns it off.",
+		on = "In a capital city, Eye Candy now lowers view distance, environment detail, fog and far-away character detail until you leave. /ec city turns it off.",
 		off = "Eye Candy no longer changes settings in capital cities.",
-		help = "/ec city  lower the costly settings in capital cities by itself, and put them back when you leave",
+		help = "/ec city  in capital cities, lower costly settings until you leave",
 	},
 	instance = {
 		key = "raid",
-		on = "In dungeons, raids, battlegrounds and arenas, Eye Candy now lowers costly settings to the Raid & PvP preset's settings, and puts them back when you leave. /ec instance turns it off.",
+		on = "In dungeons, raids, battlegrounds and arenas, Eye Candy now lowers costly settings to the Raid & PvP preset's settings until you leave. /ec instance turns it off.",
 		off = "Eye Candy no longer changes settings in dungeons, raids, battlegrounds and arenas.",
-		help = "/ec instance  lower the costly settings to the Raid & PvP preset's settings in dungeons, raids, battlegrounds and arenas by itself, and put them back when you leave",
+		help = "/ec instance  in dungeons, raids, battlegrounds and arenas, lower costly settings to the Raid & PvP preset's settings until you leave",
 	},
 }
 

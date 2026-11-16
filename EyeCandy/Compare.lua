@@ -211,7 +211,7 @@ events:SetScript("OnEvent", function(_, event)
 			ns.ApplyValues(saved.now, false)
 			C_Timer.After(4, function()
 				if not state and Saved() and Finish() then
-					ns.Print("put your settings back to now. Compare was still showing before when the game closed.")
+					ns.Print("Compare was on when the game closed, so your settings are back to now.")
 				end
 			end)
 		elseif saved then
