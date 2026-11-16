@@ -41,8 +41,8 @@ check(g("useTargetFPS") == "1", "target FPS left alone"); check(g("ResampleAlway
 check(g("groundEffectDensity") == "256" and g("groundEffectDist") == "500", "grass 256 / 500")
 check(g("farclip") == "10000", "farclip 10000")
 check(g("graphicsParticleDensity") == "4", "particle density stepped down to supported max (4)")
-check(any("not in this client" in x and "Horizon start" in x for x in c), "missing horizonStart reported, not set")
-check(any("client kept 2.6" in x for x in c), "zoom clamp reported")
+check(any("not in this game" in x and "Horizon start" in x for x in c), "missing horizonStart reported, not set")
+check(any("the game kept 2.6" in x for x in c), "zoom clamp reported")
 check(lua.eval('NS.OriginalBackup() ~= nil and NS.OriginalBackup().values.groundEffectDensity') == "48", "backup holds pre-apply grass value")
 
 # 2. Graphics menu overwrites grass, then Options closes -> hidden re-applied
@@ -62,7 +62,7 @@ chat(lua)
 lua.execute('SlashCmdList.EYECANDY("export")')
 txt = lua.eval('EyeCandyExportFrame.text')
 check("RTX 3090" in txt and "Experience preset: Enhanced" in txt and "Render scale range: 0.33 to 2" in txt, "export header (GPU, preset, render range)")
-check("horizonStart" in txt and "(not in this client)" in txt, "export flags missing CVars")
+check("horizonStart" in txt and "(not in this game)" in txt, "export flags missing CVars")
 check("--- Changed graphics CVars" in txt, "export includes changed-CVar scan")
 print("---- export sample ----"); print("\n".join(txt.split("\n")[:22]))
 

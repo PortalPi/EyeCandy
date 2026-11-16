@@ -297,7 +297,7 @@ check(S('GetCVar("graphicsShadowQuality")') == "0" and S('GetCVar("graphicsParti
 check(S('SETLOG[#SETLOG]') == "graphicsQuality" and S('#SETLOG') > 5, "the rows are set before the master slider")
 # info rows and the game's menu
 check(S('STDROW("gxMaximize").valueText.text') == "Fullscreen (Windowed)" and S('NS.FormatStandard(NS.STANDARD[1].rows[3])') == "2560x1440", "Display Mode and Resolution show what the game is using")
-check(S('STDROW("gxMaximize").control') is None and "game's own Options menu" in S('NS.StandardTooltip(NS.StandardRow("gxMaximize"))'), "Monitor, Display Mode and Resolution are changed in the game's menu")
+check(S('STDROW("gxMaximize").control') is None and "game's Options menu" in S('NS.StandardTooltip(NS.StandardRow("gxMaximize"))'), "Monitor, Display Mode and Resolution are changed in the game's menu")
 check("Not documented by Blizzard" in S('NS.StandardTooltip(NS.StandardRow("graphicsQuality"))') and "Game default: 6" in S('NS.StandardTooltip(NS.StandardRow("graphicsQuality"))'), "a tooltip without game text says so, and shows the default")
 luaS.execute('SettingsPanel.shown = false; EyeCandyMainFrame.pages.standard.gameMenu.scripts.OnClick(EyeCandyMainFrame.pages.standard.gameMenu)')
 check(S('SettingsPanel.shown') == True and S('EyeCandyMainFrame.shown') == False, "Open the game's menu button opens the game's Options and gets our window out of the way")
