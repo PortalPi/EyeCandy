@@ -1913,10 +1913,11 @@ function ns.RefreshUI()
 	RefreshCompare()
 end
 
--- Fade: after a second without the mouse over it, the main window fades a little, so more of
--- the world shows. It comes back at once when the mouse returns, and never fades while you type
--- in it or drag it. /ec fade turns it off (EyeCandyDB.noFade).
-ns.FADE_ALPHA, ns.FADE_DELAY = 0.7, 1
+-- Fade: after a second without the mouse over it, the main window fades to 35%, so the world
+-- shows through (70% was not see-through enough in game, 16 Nov 2026). It comes back at once when the
+-- mouse returns, and never fades while you type in it or drag it. /ec fade turns it off
+-- (EyeCandyDB.noFade).
+ns.FADE_ALPHA, ns.FADE_DELAY = 0.35, 1
 
 -- True when the box with the keyboard is one of this window's own (chat and other addons don't count).
 local function OwnsFocus(self)
@@ -1946,7 +1947,7 @@ function ns.FadeStep(self, elapsed)
 	if target == 1 then
 		if alpha ~= 1 then self:SetAlpha(1) end -- back at once
 	elseif alpha > target then
-		self:SetAlpha(math.max(target, alpha - elapsed * 1.5)) -- fade over about a fifth of a second
+		self:SetAlpha(math.max(target, alpha - elapsed * 3)) -- fade over about a fifth of a second
 	end
 end
 

@@ -66,7 +66,7 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | `/ec instance` | Turn the dungeon, raid and battleground switch on or off (`instance on`, `instance off`) |
 | `/ec apply` | Apply your settings again |
 | `/ec minimap` | Show or hide the minimap button |
-| `/ec fade` | Turn off (or on) the window fading a little when the mouse is away |
+| `/ec fade` | Turn off (or on) the window fading when the mouse is away |
 | `/ec find <word>` | Search the game's settings, with the game's own descriptions |
 | `/ec export [all]` | Open a box with your settings, to copy |
 | `/ec report` | Open a box with a bug report, to copy |

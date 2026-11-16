@@ -792,7 +792,7 @@ SlashCmdList.EYECANDY = function(msg)
 	elseif msg == "fade" then
 		ns.db.noFade = not ns.db.noFade or nil
 		ns.Print(ns.db.noFade and "the window no longer fades when the mouse is away."
-			or "the window fades a little when the mouse is away.")
+			or "the window fades when the mouse is away.")
 	elseif msg == "minimap" then
 		ns.ToggleMinimapButton()
 	elseif msg:match("^look") then
@@ -824,7 +824,7 @@ SlashCmdList.EYECANDY = function(msg)
 		ns.Print("/ec presets  list presets. save <name>  save your settings. use <name>  apply one. share <name>  make a share code")
 		ns.Print("/ec hidden  open the Hidden tab: system levels and ~60 hidden settings (also: /ec advanced)")
 		ns.Print("/ec minimap  show or hide the minimap button")
-		ns.Print("/ec fade  turn off (or on) the window fading a little when the mouse is away")
+		ns.Print("/ec fade  turn off (or on) the window fading when the mouse is away")
 		ns.Print("/ec find <word>  search CVars, with the client's own descriptions")
 		ns.Print("/ec report  copy box with a bug report to paste into GitHub")
 		ns.Print("/ec peek  hide the game's UI and Eye Candy to see the world. Back or Esc brings it back")
