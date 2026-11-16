@@ -163,8 +163,10 @@ local function BeforeValue(cvar)
 end
 
 -- The values a built-in sets, worked out without applying it. Tier rows, then Extras, then dials
--- (the same order ns.SetPreset uses, so later ones win). Hidden rows and dials the built-in hands back
--- get your value from before Eye Candy, as ns.SetPreset does. Extras it leaves alone are left out.
+-- (the same order ns.SetPreset uses, so later ones win). Hidden rows, dials and Extras the built-in
+-- hands back get your value from before Eye Candy, as ns.SetPreset does. Your own Extras stay, so
+-- they are in it too (a render scale override of yours beats a quality level's). Extras nobody set
+-- are left out.
 local function BuiltinValues(p)
 	local index = p.index or p.look.base
 	local look = p.look
@@ -179,15 +181,15 @@ local function BuiltinValues(p)
 			end
 		end
 	end
-	local extras = {}
-	if index > #ns.TIERS then
-		for key, value in pairs(ns.SHOWCASE_EXTRAS) do extras[key] = value end
-	end
-	if look then
-		for key, value in pairs(look.extras or {}) do extras[key] = value end
-	end
+	-- The Extras chosen after it (yours stay, the last built-in's go: Core.lua). One handed back goes
+	-- to your value from before Eye Candy, unless a tier row sets it (render scale, already in values).
+	local extras, dropped = ns.ExtrasAfterBuiltin(index, look)
 	for _, ex in ipairs(ns.EXTRAS) do
-		if extras[ex.key] ~= nil then values[ex.cvar] = tostring(extras[ex.key]) end
+		if extras[ex.key] ~= nil then
+			values[ex.cvar] = tostring(extras[ex.key])
+		elseif dropped[ex.key] and values[ex.cvar] == nil then
+			values[ex.cvar] = BeforeValue(ex.cvar)
+		end
 	end
 	for _, group in ipairs(ns.ADVANCED or {}) do
 		for _, d in ipairs(group.rows) do
@@ -388,6 +390,7 @@ function ns.ApplyPresetById(id)
 	-- Your preset is a set of values, not tiers: clear the tiers, Extras and Look so nothing re-applies over it.
 	wipe(ns.db.tiers)
 	wipe(ns.db.extras)
+	ns.db.presetExtras = nil -- no built-in's Extras left to hand back
 	wipe(ns.db.advanced)
 	ns.db.look = nil
 	local scaleBefore = ns.GetInfo("RenderScale")
