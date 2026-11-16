@@ -313,12 +313,12 @@ local function OnCopy(on)
 end
 
 -- Have you changed settings yourself since the newest step left them? Not while Compare shows
--- "before", or Autotune or the eye test holds your settings: those changes are theirs, and they put
+-- "before", or Autotune, photo mode or the eye test holds your settings: those changes are theirs, and they put
 -- them back.
 local function OwnSince(top)
 	if not (top and type(top.after) == "table") then return false end
 	if ns.IsComparing and ns.IsComparing() then return false end
-	if ns.db.autotune or ns.db.eyeTest then return false end
+	if ns.db.autotune or ns.db.eyeTest or ns.db.photo then return false end
 	return ns.ChangedSince(top.after)
 end
 

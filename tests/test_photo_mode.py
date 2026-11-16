@@ -182,6 +182,126 @@ check(cv("cameraFov") == "90" and E(PP + ".status.text").startswith(GREY), "in a
 X('INCOMBAT = false; FIRE("PLAYER_REGEN_ENABLED")')
 check(cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "and come back when it ends")
 
+# --- What the photo uses: My settings now ------------------------------------------------------------------
+X("PM.Stop('test')")
+check(E("PM.Choice()") == "screenshot" and E(PP + ".shotChoice.text").startswith(GOLD), "the Screenshot preset is the default choice, shown in gold")
+X(PP + ".mine.scripts.OnClick()")
+check(E("EyeCandyDB.photoChoice") == "mine" and E(PP + ".mine.text").startswith(GOLD) and "your settings as they are" in E(PP + ".choiceText.text"),
+      "My settings now is remembered, and the page says what the photo uses")
+take()
+check(E("PM.IsOn()") and E("EyeCandyDB.photo") is None and cv("cameraFov") == "70" and cv("graphicsShadowQuality") == "5",
+      "with My settings now no setting changes and nothing is saved")
+check(E("UIParent.shown") is False and E("NS.IsPeeking()"), "but the UI hides")
+frames(10)
+check(E("SHOTS") == 0, "it waits a moment for the UI to hide")
+frames(20)
+check(E("SHOTS") == 1, "then takes the photo, with no wait for settings")
+X('FIRE("SCREENSHOT_SUCCEEDED")')
+st = E(PP + ".status.text")
+check(not E("PM.IsOn()") and E("UIParent.shown") and cv("cameraFov") == "70" and "Photo saved" in st and "waited" not in st,
+      "and the UI comes back (%r)" % st)
+take()
+X('FIRE("PLAYER_REGEN_DISABLED")')
+check(not E("PM.IsOn()") and E("UIParent.shown") and cv("cameraFov") == "70", "a fight still stops it and brings the UI back")
+X(PP + ".shotChoice.scripts.OnClick()")
+check(E("EyeCandyDB.photoChoice") == "screenshot", "the Screenshot preset choice is remembered too")
+
+# --- Change it: the photo settings go on, you adjust them, Save or Cancel ----------------------------------
+X("SetCVar('graphicsShadowQuality', 5); SetCVar('cameraFov', 70); EyeCandyDB.advanced = { Contrast = '55' }; SetCVar('Contrast', 55)")
+check(E(PP + ".change.shown") and not E(PP + ".save.shown"), "Change it shows, Save as my photo settings does not")
+X(PP + ".change.scripts.OnClick()")
+check(E("PM.IsEditing()") and cv("cameraFov") == "90" and cv("graphicsDepthEffects") == "3" and E("EyeCandyDB.photo.before.cameraFov") == "70",
+      "Change it saves your settings, then puts the Screenshot preset on")
+check(E(PP + ".save.shown") and E(PP + ".cancel.shown") and not E(PP + ".take.shown") and not E(PP + ".change.shown"),
+      "the page shows Save as my photo settings and Cancel, and no Take photo")
+check("Standard and Hidden" in E(PP + ".editText.text") and "Cancel" in E(PP + ".editText.text"), "it says photo settings are on and how to finish")
+check("Photo settings are on" in E("NS.RunningNote()"), "the window title says photo settings are on")
+check(E("UIParent.shown") and E("EyeCandyMainFrame.shown"), "the UI stays: you adjust in the window")
+X("OK, ERR = NS.SetAdvanced('cameraFov', '80'); NS.SetAdvanced('Contrast', '60')")
+check(E("OK") and E("PM.IsEditing()") and cv("cameraFov") == "80", "a change on the Hidden tab doesn't end the edit")
+X("NS.ApplyAll(false, true)")
+check(E("PM.IsEditing()"), "nor does Apply")
+X("PM.Take_OK, PM.Take_ERR = PM.Take()")
+check(E("PM.Take_OK") is None and "Cancel" in E("PM.Take_ERR") and E("PM.IsEditing()"), "Take photo is refused during the edit")
+X("C_OK, C_ERR = NS.ToggleCompare(); A_OK = NS.Autotune.Start('balance'); E_OK = NS.EyeTest.Start()")
+check(E("C_OK") is None and E("A_OK") is False and E("E_OK") is None and E("PM.IsEditing()"), "Compare, Autotune and the eye test don't start during the edit")
+check(E("NS.FPS.Still({})") is False, "the FPS reader measures no preset during the edit")
+X("NS.PatchWatchLogout()")
+check(E("EyeCandyDB.patchWatch.snap.values.cameraFov") == "70", "the patch warning's copy at logout holds your settings, not the photo ones")
+check(E("NS.UpdateSituations()") is None and E("EyeCandyDB.photo ~= nil"), "the city switch waits during the edit")
+X(PP + ".save.scripts.OnClick()")
+check(not E("PM.IsEditing()") and E("EyeCandyDB.photo") is None and cv("cameraFov") == "70" and cv("Contrast") == "55",
+      "Save as my photo settings puts your own settings back")
+check(E("EyeCandyDB.advanced.Contrast") == "55" and E("EyeCandyDB.advanced.cameraFov") is None,
+      "and your own choices (the Hidden tab's dials), not the ones you tried")
+check(E("EyeCandyDB.photoSettings.values.cameraFov") == "80" and E("EyeCandyDB.photoSettings.values.Contrast") == "60",
+      "what was on is kept as your photo settings")
+check("Saved as your photo settings" in E(PP + ".status.text") and "Your settings are back" in E(PP + ".status.text")
+      and "saved" in E(PP + ".choiceText.text") and E(PP + ".reset.shown"), "it says so, and the page names the saved settings")
+take()
+check(cv("cameraFov") == "80" and cv("Contrast") == "60", "a photo with the Screenshot choice now uses your photo settings")
+frames(200)
+X('FIRE("SCREENSHOT_SUCCEEDED")')
+check(cv("cameraFov") == "70" and cv("Contrast") == "55" and E("EyeCandyDB.photo") is None, "and your settings come back after it")
+
+# Cancel keeps nothing. Change it starts from the saved photo settings.
+X(PP + ".change.scripts.OnClick()")
+check(cv("cameraFov") == "80", "Change it starts from your saved photo settings")
+X("NS.SetAdvanced('cameraFov', '65'); NS.SetStandard('graphicsShadowQuality', 2)")
+X(PP + ".cancel.scripts.OnClick()")
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and cv("graphicsShadowQuality") == "5" and E("EyeCandyDB.photo") is None
+      and E("EyeCandyDB.photoSettings.values.cameraFov") == "80" and E("EyeCandyDB.advanced.cameraFov") is None,
+      "Cancel puts your settings back and keeps the saved ones as they were")
+check("Nothing was saved" in E(PP + ".status.text"), "and says nothing was saved")
+X(PP + ".reset.scripts.OnClick()")
+check(E("EyeCandyDB.photoSettings") is None and not E(PP + ".reset.shown"), "Back to Screenshot preset forgets the saved photo settings")
+take()
+check(cv("cameraFov") == "90", "and the photo uses the Screenshot preset again")
+frames(200)
+X('FIRE("SCREENSHOT_SUCCEEDED")')
+
+# Backups and the rest see your settings: they end the edit first.
+X(PP + ".change.scripts.OnClick()")
+X("ENTRY = NS.CreateBackup('manual', 'during edit')")
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("ENTRY.values.cameraFov") == "70" and E("EyeCandyDB.photo") is None,
+      "a backup during the edit ends it first, so it holds your settings")
+check("another setting changed" in E(PP + ".status.text"), "and the page says why")
+X(PP + ".change.scripts.OnClick()")
+X("NS.GoBack()")
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70", "Back ends the edit first")
+
+# --- An edit cut short -------------------------------------------------------------------------------------
+X(PP + ".change.scripts.OnClick()")
+X('FIRE("PLAYER_LEAVING_WORLD")')
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None and "loading screen" in E(PP + ".status.text"),
+      "a loading screen cancels the edit, your settings back")
+X(PP + ".change.scripts.OnClick()")
+X('FIRE("PLAYER_LOGOUT")')
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "so does a logout or /reload")
+X(PP + ".change.scripts.OnClick()")
+X('FIRE("PLAYER_REGEN_DISABLED")')
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and "fight" in E(PP + ".status.text"), "a fight cancels it, your settings back")
+X("INCOMBAT = true; " + PP + ".change.scripts.OnClick()")
+check(not E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "fight" in E(PP + ".status.text") and cv("cameraFov") == "70",
+      "Change it in a fight is refused, in red, and changes nothing")
+X("INCOMBAT = false; " + PP + ".change.scripts.OnClick(); INCOMBAT = true; PM.CancelEdit('a fight started')")
+check(cv("cameraFov") == "90" and E(PP + ".status.text").startswith(GREY) and "after the fight" in E("NS.RunningNote()"),
+      "in a locked fight your settings wait, in grey, and the title says so")
+X("PM.T_OK, PM.T_ERR = PM.Change()")
+check(E("PM.T_OK") is None and "fight" in E("PM.T_ERR"), "no new edit starts while they wait")
+X("INCOMBAT = false; PM.T_OK, PM.T_ERR = PM.Change()")
+check(E("PM.T_OK") is None and "putting your settings back" in E("PM.T_ERR") and cv("cameraFov") == "90",
+      "nor once the lockdown is over but the put-back hasn't run")
+X("INCOMBAT = true")
+X('INCOMBAT = false; FIRE("PLAYER_REGEN_ENABLED")')
+check(cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None and E("EyeCandyDB.advanced.Contrast") == "55",
+      "they come back when the fight ends, with your choices")
+X("SetCVar('cameraFov', 70)")
+lua3 = boot(PRE + "EyeCandyDB = { advanced = { Contrast = '60' }, photo = { editing = true, before = { cameraFov = '75' }, state = { tiers = {}, extras = {}, advanced = { Contrast = '50' } } } }")
+lua3.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
+check(lua3.eval("GetCVar('cameraFov')") == "75" and lua3.eval("EyeCandyDB.photo") is None and lua3.eval("EyeCandyDB.advanced.Contrast") == "50"
+      and any("didn't finish" in m for m in chat(lua3)), "an edit still saved at the next login puts your settings and choices back")
+
 # --- Still saved at the next login: it puts them back ------------------------------------------------
 lua2 = boot(PRE + "EyeCandyDB = { photo = { before = { cameraFov = '75' } } }")
 lua2.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
