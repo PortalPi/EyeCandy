@@ -31,6 +31,8 @@ media/      logo/EyeCandy.png and EyeCandy.psd. Not shipped.
 .github/    workflows/tests.yml (manual), workflows/release.yml (tag push), ISSUE_TEMPLATE/bug.yml
             workflows/curseforge-comments.yml (hourly): each new CurseForge comment becomes an issue,
             by scripts/curseforge_comments.py (checks: python .github/scripts/test_curseforge_comments.py)
+            workflows/feedback-ask.yml and feedback-answer.yml: the maintainer's phone Yes or No on a
+            sorted issue, by scripts/feedback_phone.py (checks: python .github/scripts/test_feedback_phone.py)
 .pkgmeta, CHANGELOG.md   what the BigWigs packager ships. CHANGELOG.md is the players' notes.
 ```
 
