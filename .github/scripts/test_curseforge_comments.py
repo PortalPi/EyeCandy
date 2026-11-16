@@ -58,6 +58,13 @@ check("a page reaching the floor ends paging", cc.reached(page, 20))
 check("a pinned old comment does not end paging", not cc.reached([comment(5, pinned=True), comment(40)], 20))
 check("an empty page ends paging", cc.reached([], 20))
 
+odd = [{"id": "31"}, {"id": True}, {"text": "no id"}, comment(32)]
+check("comments without a whole-number id are skipped", [c["id"] for c in cc.pick_new(odd, 20)] == [32])
+check("an odd id does not end paging", not cc.reached([{"id": "1"}, comment(40)], 20))
+check("a bad date reads unknown", "When: unknown" in cc.issue_body({"id": 5, "datePosted": "x"}))
+check("a missing date reads unknown", "When: unknown" in cc.issue_body({"id": 5}))
+check("a stand-in keeps the marker", cc.marker_id(cc.stand_in_body(77, 422)) == 77)
+
 check("highest filed id from issue bodies", cc.highest_filed([cc.issue_body(comment(4)), "no marker", None, cc.issue_body(comment(9))]) == 9)
 check("no issues means zero", cc.highest_filed([]) == 0)
 
