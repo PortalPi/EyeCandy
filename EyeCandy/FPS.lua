@@ -250,16 +250,19 @@ function FPS.StopMeasure()
 	FPS.Unwatch("preset")
 end
 
--- "Last time: 63 FPS in Goldshire." for the preset's tooltip, or nil.
+-- "Last time you used it: 63 FPS in Goldshire." for the preset's tooltip, or nil.
+-- Not on the row's grey line too: that line comes from ns.PresetLine (UI.lua), which Help me pick shares,
+-- and on the tightest row (On now, with changes) it has room for about 50 characters (test_preset_lines.py),
+-- which the longest lines already use.
 function FPS.PresetLine(id)
 	local all = ns.db and ns.db.presetFPS
 	local r = type(all) == "table" and all[id]
 	local fps = type(r) == "table" and tonumber(r.fps)
 	if not fps then return nil end
 	if type(r.zone) == "string" and r.zone ~= "" then
-		return string.format("Last time: %d FPS in %s.", fps, r.zone)
+		return string.format("Last time you used it: %d FPS in %s.", fps, r.zone)
 	end
-	return string.format("Last time: %d FPS.", fps)
+	return string.format("Last time you used it: %d FPS.", fps)
 end
 
 -- Every preset applied, built-in or yours (Presets.lua records it here).
