@@ -274,10 +274,13 @@ end
 -- A deleted preset's number goes with it.
 local delete = ns.DeletePreset
 if delete then
-	ns.DeletePreset = function(id, ...)
-		local ok, err = delete(id, ...)
+	-- Hands back exactly what DeletePreset gave (a success returns one value, not true and nil).
+	local function After(id, ok, ...)
 		if ok and ns.db and type(ns.db.presetFPS) == "table" then ns.db.presetFPS[id] = nil end
-		return ok, err
+		return ok, ...
+	end
+	ns.DeletePreset = function(id, ...)
+		return After(id, delete(id, ...))
 	end
 end
 
