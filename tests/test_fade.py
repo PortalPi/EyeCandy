@@ -1,4 +1,4 @@
-"""The main window fades a little when the mouse is away, and /ec fade turns that off.
+"""The main window fades to 35% when the mouse is away, and /ec fade turns that off.
 Run: python tests/test_fade.py"""
 from lib import boot, chat, check, done
 
@@ -30,7 +30,7 @@ a = lambda: E(M + '.alpha')
 X('TICK(5)')
 check(a() == 1, "half a second away: no fade yet")
 X('TICK(10)')
-check(abs(a() - 0.7) < 1e-9, "after a second away the window fades to 70%")
+check(abs(a() - 0.35) < 1e-9, "after a second away the window fades to 35%")
 X('MOUSEOVER = true; TICK(1)')
 check(a() == 1, "the mouse back over it: full at once")
 X('MOUSEOVER = false; TICK(9)')
@@ -40,15 +40,15 @@ check(a() == 1, "the second starts again after the mouse leaves")
 X('FOCUS = EyeCandySearchBox; TICK(30)')
 check(a() == 1, "typing in a box keeps the window full")
 X('FOCUS = nil; TICK(30)')
-check(abs(a() - 0.7) < 1e-9, "done typing, it fades again")
+check(abs(a() - 0.35) < 1e-9, "done typing, it fades again")
 X('MOUSEOVER = true; TICK(1); MOUSEOVER = false; FOCUS = CHATBOX; TICK(30); FOCUS = nil')
-check(abs(a() - 0.7) < 1e-9, "typing in chat (not Eye Candy's box) still lets it fade")
+check(abs(a() - 0.35) < 1e-9, "typing in chat (not Eye Candy's box) still lets it fade")
 
 # An open dropdown list sits outside the window; while it is open the window stays full.
 X('MOUSEOVER = true; TICK(1); MOUSEOVER = false; MENUOPEN = true; TICK(30)')
 check(a() == 1, "with a dropdown list open, the window stays full")
 X('MENUOPEN = false; TICK(30)')
-check(abs(a() - 0.7) < 1e-9, "the list closed, it fades again")
+check(abs(a() - 0.35) < 1e-9, "the list closed, it fades again")
 
 # Scaling from the grip keeps it full even if the cursor leaves the window.
 X('MOUSEOVER = true; TICK(1); MOUSEOVER = false; %s.scaleGrip.left = 10; TICK(30)' % M)
@@ -65,7 +65,7 @@ check(E('EyeCandyDB.noFade') == True and "no longer fades" in chat(lua)[0], "/ec
 X('TICK(30)')
 check(a() == 1, "with fading off, the window stays full")
 X('SlashCmdList.EYECANDY("fade")')
-check(E('EyeCandyDB.noFade') is None and "fades a little" in chat(lua)[0], "/ec fade again turns it back on")
+check(E('EyeCandyDB.noFade') is None and "window fades when" in chat(lua)[0], "/ec fade again turns it back on")
 X('TICK(30)')
-check(abs(a() - 0.7) < 1e-9, "and it fades again")
+check(abs(a() - 0.35) < 1e-9, "and it fades again")
 done()
