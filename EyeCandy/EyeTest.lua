@@ -165,7 +165,7 @@ function ET.Start()
 			rounds[#rounds + 1] = { def = def, a = a, b = b, [1] = swap and b or a, [2] = swap and a or b }
 		end
 	end
-	if #rounds == 0 then return nil, "This game has none of the settings the eye test flips." end
+	if #rounds == 0 then return nil, "This game has none of the settings the eye test uses." end
 	-- Every setting on Eye Candy's list, and each round's, so the way back covers them all.
 	local before = {}
 	for _, cvar in ipairs(ns.AllManagedCVars()) do
@@ -186,7 +186,7 @@ end
 -- Shows side n (1 or 2) of this round.
 function ET.Show(n)
 	if not (test and test.live and test.phase == "round") then return nil end
-	if InCombatLockdown() then return nil, "Not in a fight." end
+	if InCombatLockdown() then return nil, "You can't change settings in a fight. Try again after it." end
 	local r = test.rounds[test.i]
 	SetValues(r[n])
 	test.showing = n
@@ -199,7 +199,7 @@ end
 -- Returns true, or nil and a plain reason.
 function ET.Answer(choice)
 	if not (test and test.live and test.phase == "round") then return nil end
-	if InCombatLockdown() then return nil, "Not in a fight." end
+	if InCombatLockdown() then return nil, "You can't change settings in a fight. Try again after it." end
 	if not (test.seen[1] and test.seen[2]) then return nil, "Look at both first: press Show 1 and Show 2." end
 	local r = test.rounds[test.i]
 	local keep
@@ -225,7 +225,7 @@ function ET.Answer(choice)
 		BeginRound()
 	else
 		test.phase, test.showing = "result", nil
-		Tell("Eye test done. Save as preset keeps your answers, on the Experimental tab.")
+		Tell("Eye test done. Your answers are on. Press Save as preset on the Experimental tab to keep them.")
 		Refresh()
 	end
 	return true
@@ -265,7 +265,7 @@ function ET.Stop(why)
 	local back = PutBack()
 	local kept = test.phase == "result"
 	if not kept then test = nil end
-	local lead = "Eye test ended: " .. why .. ". "
+	local lead = "Eye test ended because " .. why .. ". "
 	if back then
 		Say("done", lead .. "Your settings are back as they were." .. (kept and " Save as preset still saves your answers." or ""))
 	else
@@ -279,7 +279,7 @@ end
 function ET.Back()
 	if not test then return nil end
 	if not PutBack() then
-		return nil, "Not in a fight. Your settings go back when it ends."
+		return nil, "You can't go back in a fight. Your settings go back when it ends."
 	end
 	test = nil
 	Say("done", "Eye test: your settings are back as they were.")
@@ -350,7 +350,7 @@ for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup",
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
-			if test and test.live and not busy then ET.Stop("another setting changed") end
+			if test and test.live and not busy then ET.Stop("something else changed your settings") end
 			return orig(...)
 		end
 	end
@@ -435,7 +435,7 @@ events:SetScript("OnEvent", function(_, event, isLogin, isReload)
 		-- Lockdown starts just after this event, so settings can still go back here.
 		if test and test.live then ET.Stop("a fight started") end
 	elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
-		if test and test.live then ET.Stop("a loading screen") end
+		if test and test.live then ET.Stop("a loading screen came up") end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		if saved and saved.afterCombat and not (test and test.live) and PutBack() then
 			Say("done", "Eye test: the fight is over, so your settings are back as they were.")
