@@ -50,5 +50,13 @@ check("Yes carries its code", yes["body"] == f"yes 12 {c}")
 check("buttons clear the notice", all(a["clear"] for a in msg["actions"]))
 check("title names the issue", msg["title"] == "Eye Candy: a player's comment (#12)")
 
+# An answer's own comment says when it was done; nobody else's counts.
+mine = {"user": {"login": "github-actions[bot]"}, "body": fp.DONE + " yes -->\nx", "created_at": "2026-11-17T00:00:10Z"}
+check("done time read from the bot's marker comment", fp.done_at(mine) == 1794873610)
+check("a stranger's marker does not count", fp.done_at({**mine, "user": {"login": "someone"}}) == -1)
+check("a bot comment without the marker does not count", fp.done_at({**mine, "body": "hello"}) == -1)
+check("a bad date does not count", fp.done_at({**mine, "created_at": "soon"}) == -1)
+check("no user does not count", fp.done_at({"body": fp.DONE}) == -1)
+
 print("ALL PASS" if not failed else f"{len(failed)} FAILED")
 sys.exit(1 if failed else 0)

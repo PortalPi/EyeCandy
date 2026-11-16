@@ -5,10 +5,12 @@
   topic as a phone notification. Tapping it opens the comment (the readable page). It has two
   buttons, "Yes, fix it" and "No", each posting "<yes|no> <issue> <code>" to the topic's reply
   topic, "<topic>-reply".
-- answer (run by .github/workflows/feedback-answer.yml every 10 minutes): reads the last hour of
-  the reply topic. Yes adds the label claude-fix, which starts the fix routine. No closes the
-  issue as not planned. Each sends Dan one line saying it was done. Doing it twice changes
-  nothing, so the overlapping hour is safe.
+- answer (run by .github/workflows/feedback-answer.yml every 10 minutes): reads the last 12 hours
+  of the reply topic (all ntfy.sh keeps). Yes adds the label claude-fix, which starts the fix
+  routine. No closes the issue as not planned. Each leaves a comment starting
+  <!-- eyecandy-answer: and sends Dan one line saying it was done. A tap no newer than that
+  comment is skipped, so the same tap read again by a later run never acts twice, and an old No
+  never closes an issue reopened since.
 - The code is an HMAC of the verb and the issue number with APPROVE_KEY (an Actions secret), so
   only a notification this sent can say yes, and only for its own issue. The topic name
   (NTFY_TOPIC, an Actions secret) is never printed.
@@ -17,6 +19,7 @@ Server: ntfy.sh (Dan, 17 Nov 2026). It limits requests per sending address, and 
 share addresses, so a 429 is tried again. Standard library only.
 """
 
+import datetime
 import hashlib
 import hmac
 import json
@@ -33,7 +36,9 @@ PHONE_MAX = 200
 FALLBACK = "A player's comment may need a fix. Open to read it."
 REPLY = re.compile(r"\A(yes|no) ([0-9]{1,9}) ([0-9a-f]{16})\Z")
 LABEL = "claude-fix"
-WINDOW = "1h"
+WINDOW = "12h"  # as long as ntfy.sh keeps a message
+DONE = "<!-- eyecandy-answer:"
+BOT = "github-actions[bot]"
 TRIES = 4
 
 
@@ -64,6 +69,17 @@ def phone_line(body):
             if text:
                 return text[:PHONE_MAX]
     return FALLBACK
+
+
+def done_at(comment):
+    """When this workflow did an answer, as epoch seconds, from its own marker comment; else -1.
+    Only github-actions[bot]'s comments count, so nobody else can block a tap."""
+    if (comment.get("user") or {}).get("login") != BOT or not (comment.get("body") or "").startswith(DONE):
+        return -1
+    try:
+        return int(datetime.datetime.fromisoformat(comment["created_at"].replace("Z", "+00:00")).timestamp())
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return -1
 
 
 def ask_message(topic, issue, line, url, key):
@@ -124,24 +140,41 @@ def answer():
         except json.JSONDecodeError:
             continue
         got = read_reply(event.get("message"), key) if event.get("event") == "message" else None
-        if got:
-            replies.append(got)
+        if got and isinstance(event.get("time"), int):
+            replies.append((event["time"], *got))
     print(f"{len(replies)} good replies in the last {WINDOW}.")
-    for verb, n in replies:
-        api = f"https://api.github.com/repos/{repo}/issues/{n}"
-        issue = http(api, token=token)
-        if "pull_request" in issue or issue["state"] != "open":
-            continue
-        if verb == "yes":
-            if LABEL in [label["name"] for label in issue.get("labels", [])]:
-                continue
-            http(api + "/labels", {"labels": [LABEL]}, token)
-            notify(topic, "Eye Candy", f"Yes heard. Fixing #{n} now.")
-            print(f"#{n}: labelled {LABEL}.")
-        else:
-            http(api, {"state": "closed", "state_reason": "not_planned"}, token, method="PATCH")
-            notify(topic, "Eye Candy", f"No heard. Closed #{n}.")
-            print(f"#{n}: closed as not planned.")
+    failed = 0
+    for when, verb, n in sorted(replies):
+        try:
+            act(repo, token, topic, when, verb, n)
+        except (RuntimeError, KeyError, TypeError, ValueError) as e:
+            failed += 1
+            print(f"#{n}: not done ({e}).")
+    if failed:
+        sys.exit(f"{failed} replies were not done; the next run tries them again.")
+
+
+def act(repo, token, topic, when, verb, n):
+    """Do one tap, unless an answer to this issue was already done at or after it."""
+    api = f"https://api.github.com/repos/{repo}/issues/{n}"
+    issue = http(api, token=token)
+    if "pull_request" in issue:
+        return
+    comments = http(api + "/comments?per_page=100", token=token)
+    if any(done_at(c) >= when for c in comments):
+        return  # this tap, or a later one, was already done
+    if issue["state"] != "open":
+        return
+    if verb == "yes":
+        http(api + "/labels", {"labels": [LABEL]}, token)
+        http(api + "/comments", {"body": DONE + " yes -->\nThe maintainer said yes. A fix is on its way."}, token)
+        notify(topic, "Eye Candy", f"Yes heard. Fixing #{n} now.")
+        print(f"#{n}: labelled {LABEL}.")
+    else:
+        http(api + "/comments", {"body": DONE + " no -->\nThe maintainer said no to this one for now."}, token)
+        http(api, {"state": "closed", "state_reason": "not_planned"}, token, method="PATCH")
+        notify(topic, "Eye Candy", f"No heard. Closed #{n}.")
+        print(f"#{n}: closed as not planned.")
 
 
 if __name__ == "__main__":
