@@ -80,8 +80,8 @@ def take():
 
 # --- Refusals show in red under Take photo ----------------------------------------------------------
 X("INCOMBAT = true; " + PP + ".take.scripts.OnClick(); INCOMBAT = false")
-check(E(PP + ".status.text").startswith(RED) and "fight" in E(PP + ".status.text") and not E("PM.IsOn()"),
-      "in a fight it is refused, in red")
+check(E(PP + ".status.text").startswith(RED) and "You can't take a photo in a fight. Try again after it." in E(PP + ".status.text")
+      and not E("PM.IsOn()"), "in a fight it is refused, in red, saying what can't be done")
 X("local s = Screenshot; Screenshot = nil; " + PP + ".take.scripts.OnClick(); Screenshot = s")
 check("doesn't let addons" in E(PP + ".status.text") and not E("PM.IsOn()"), "with no Screenshot in the game it is refused")
 X("NS.EyeTest.Start(); " + PP + ".take.scripts.OnClick()")
@@ -109,7 +109,8 @@ st = E(PP + ".status.text")
 check(not E("PM.IsOn()") and cv("graphicsShadowQuality") == "5" and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None,
       "once saved, your settings are back")
 check(E("UIParent.shown") and E("EyeCandyMainFrame.shown") and E("NS.IsPeeking()") is False, "and the UI and the window")
-check("Photo saved" in st and "_forever_" in st and "Screenshots" in st and "frames" in st, "it says where the photo is and how many frames it waited (%r)" % st)
+check("Photo saved at " in st and "Find it in the Screenshots folder, inside World of Warcraft\\_forever_." in st
+      and "seconds" in st and "frames" not in st, "it says where the photo is and how many seconds it waited, not frames (%r)" % st)
 check(E("PM.last.frames") >= 120, "the frames it waited are kept")
 
 take()
@@ -139,6 +140,8 @@ take()
 X("UIParent.shown = true; UIParent.hooks.OnShow(UIParent)")
 frames(1)
 check(not E("PM.IsOn()") and cv("cameraFov") == "70" and E("SHOTS") == 0, "Esc brings the UI back: no photo, settings back")
+check("Photo mode stopped because the game's UI came back. No photo was taken." in E(PP + ".status.text"),
+      "and it says why in a whole sentence (%r)" % E(PP + ".status.text"))
 take()
 frames(200)
 X("UIParent.shown = true; UIParent.hooks.OnShow(UIParent)")
@@ -148,8 +151,12 @@ check("Photo saved" in E(PP + ".status.text") and "may be in it" in E(PP + ".sta
       "Esc while the game takes the photo: it says the UI may be in it")
 X("RAWERR = NS.ApplyValues; NS.ApplyValues = function() error('broken') end")
 X(PP + ".take.scripts.OnClick(); NS.ApplyValues = RAWERR")
-check(E(PP + ".status.text").startswith(RED) and "couldn't go on" in E(PP + ".status.text") and not E("PM.IsOn()")
+st = E(PP + ".status.text")
+check(st.startswith(RED + "Default couldn't go on") and not E("PM.IsOn()")
       and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "an error putting the preset on is refused in red, no Lua error, settings back")
+check("Try again, or type /ec report." in st and "(" not in st and "broken" not in st, "the message has no raw error in brackets (%r)" % st)
+X("SEEN = false; for _, e in ipairs(NS.CapturedErrors()) do if e.text:find('broken', 1, true) then SEEN = true end end")
+check(E("SEEN"), "the error itself goes to /ec report's list")
 
 # The city switch waits during a photo, and lowers your own settings once they are back.
 X("SetCVar('graphicsViewDistance', 9); NS.SetAutoSituation('city', true)")
@@ -173,7 +180,8 @@ check(E("NS.FPS.Still({})") is False, "the FPS reader measures no preset during 
 X("NS.PatchWatchLogout()")
 check(E("EyeCandyDB.patchWatch.snap.values.cameraFov") == "70", "the patch warning's copy at logout holds your settings, not the photo's")
 X("NS.ApplyAll()")
-check(not E("PM.IsOn()") and "another setting" in E(PP + ".status.text"), "another Eye Candy apply stops it first")
+check(not E("PM.IsOn()") and "stopped because something else changed or saved your settings" in E(PP + ".status.text"),
+      "another Eye Candy apply stops it first, and says so")
 
 # A fight already locked: the settings wait for its end, in grey.
 take()
@@ -221,8 +229,16 @@ def ask(text=None):
 
 
 X("SetCVar('graphicsShadowQuality', 5); SetCVar('cameraFov', 70); EyeCandyDB.advanced = { Contrast = '55' }; SetCVar('Contrast', 55); NS.RefreshUI()")
-check(E(PP + ".listHead.shown") and E(R0 + ".shown") and E(R0 + ".pick.text") == GOLD + "Default|r" and E(R0 + ".rename") is None
-      and E(R0 + ".delete") is None and E(R0 + ".change.shown") is not False, "the list has Default, picked in gold, with Change and no Rename or Delete")
+check(E(PP + ".listHead.shown") and E(PP + ".listHead.label.text") == "Screenshot presets"
+      and E(PP + ".listHead.note.text") == "Click a name to use it for photos." and E(PP + ".listHead.rule") is not None,
+      "the list has a real heading (ns.Header: gold, a rule, a grey note)")
+check(E(R0 + ".shown") and E(R0 + ".name.text") == "Default" and E(R0 + ".picked") and E(R0 + ".more") is None
+      and E(R0 + ".change.shown") is not False, "the list has Default, picked, with Change and no \"...\" menu")
+check(E(R0 + ".line.text") == "Eye Candy's own. Can't be renamed or deleted.", "Default's grey line says it is Eye Candy's own, on the screen")
+X('TIP = {}; GameTooltip.AddLine = function(self, t) TIP[#TIP + 1] = t end; %s.scripts.OnEnter(%s); GameTooltip.AddLine = nil' % (R0, R0))
+check("built-in Screenshot preset" in E("TIP[2]"), "Default's tooltip says it uses the built-in Screenshot preset's settings")
+X("%s.scripts.OnClick(%s, 'RightButton')" % (R0, R0))
+check(not E("EyeCandyPresetMenu and EyeCandyPresetMenu.shown"), "right-clicking Default opens no menu: there is nothing to put in it")
 check('"Default"' in E(PP + ".choiceText.text") and not E(PP + ".save.shown"), "the page says the photo uses Default")
 X(CHANGE)
 check(E("PM.IsEditing()") and cv("cameraFov") == "90" and cv("graphicsDepthEffects") == "3" and E("EyeCandyDB.photo.before.cameraFov") == "70",
@@ -251,15 +267,14 @@ check(E("NS.UpdateSituations()") is None and E("EyeCandyDB.photo ~= nil"), "the 
 
 # Save on Default asks for a new name: Default itself never changes.
 X(PP + ".save.scripts.OnClick()")
-check(E(A + ".shown") and E(A + ".edit.text") == "Photo preset 1", "Save on Default asks for a name, offering Photo preset 1")
+check(E(A + ".shown") and E(A + ".edit.text") == "Screenshot preset 1", "Save on Default asks for a name, offering Screenshot preset 1")
 ask("default")
-check(E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "Default is Eye Candy's own" in E(PP + ".status.text"),
-      "the name Default is refused in red, and the preset stays on")
-X(PP + ".save.scripts.OnClick()")
+check(E("PM.IsEditing()") and E(A + ".shown") and E(A + ".errFS.text").startswith(RED) and "Default is Eye Candy's own" in E(A + ".errFS.text")
+      and E(A + ".edit.text") == "default", "the name Default is refused in red under the name box, which stays open, and the preset stays on")
 ask("   ")
-check(E("PM.IsEditing()") and "Type a name" in E(PP + ".status.text"), "so is an empty name")
-X(PP + ".save.scripts.OnClick()")
+check(E("PM.IsEditing()") and E(A + ".shown") and "Type a name" in E(A + ".errFS.text"), "so is an empty name")
 ask("Golden hour")
+check(not E(A + ".shown"), "a good name closes the box")
 check(not E("PM.IsEditing()") and E("EyeCandyDB.photo") is None and cv("cameraFov") == "70" and cv("Contrast") == "55",
       "saving puts your own settings back")
 check(E("EyeCandyDB.advanced.Contrast") == "55" and E("EyeCandyDB.advanced.cameraFov") is None,
@@ -268,8 +283,10 @@ check(E("#EyeCandyDB.photoPresets") == 1 and E("EyeCandyDB.photoPresets[1].name"
       and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "80" and E("EyeCandyDB.photoPresets[1].values.Contrast") == "60",
       "what was on is kept as a new screenshot preset with that name")
 check('Saved as "Golden hour"' in E(PP + ".status.text") and "Your settings are back" in E(PP + ".status.text"), "it says so")
-check(E("PM.Pick()") == 1 and E(R1 + ".pick.text") == GOLD + "Golden hour|r" and E(R0 + ".pick.text") == WHITE + "Default|r"
-      and '"Golden hour"' in E(PP + ".choiceText.text"), "the new one is picked for photos, in gold, under Default")
+check(E("PM.Pick()") == 1 and E(R1 + ".name.text") == "Golden hour" and E(R1 + ".picked") and not E(R0 + ".picked")
+      and '"Golden hour"' in E(PP + ".choiceText.text"), "the new one is picked for photos, under Default")
+check(E(R1 + ".line.text").startswith("Saved ") and E(R1 + ".more") is not None and E(R1 + ".more.text") == "...",
+      "a saved one's grey line says when it was saved, and it has a \"...\" menu")
 take()
 check(cv("cameraFov") == "80" and cv("Contrast") == "60", "a photo now uses it")
 frames(200)
@@ -287,7 +304,7 @@ check(not E("PM.IsEditing()") and not E(A + ".shown") and E("#EyeCandyDB.photoPr
 X(R1 + ".change.scripts.OnClick(); NS.SetAdvanced('cameraFov', '65')")
 X(PP + ".saveNew.scripts.OnClick()")
 ask()
-check(E("#EyeCandyDB.photoPresets") == 2 and E("EyeCandyDB.photoPresets[2].name") == "Photo preset 1"
+check(E("#EyeCandyDB.photoPresets") == 2 and E("EyeCandyDB.photoPresets[2].name") == "Screenshot preset 1"
       and E("EyeCandyDB.photoPresets[2].values.cameraFov") == "65" and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "85"
       and E("PM.Pick()") == 2, "Save as new makes another and picks it; the one you changed stays as it was")
 
@@ -304,9 +321,11 @@ check(E("PM.Pick()") == 2, "and the pick goes back to the one from before the Ch
 # Review fixes: a name box from an edit that is over saves nothing; a full list says so before the box.
 X(CHANGE + "; " + PP + ".save.scripts.OnClick()")
 X('FIRE("PLAYER_REGEN_DISABLED")')
+check("Your changes to \"Default\" weren't saved because a fight started." in E(PP + ".status.text"),
+      "a fight ending the edit names the preset and says why (%r)" % E(PP + ".status.text"))
 ask("Too late")
-check(E("#EyeCandyDB.photoPresets") == 2 and "That change is over" in E(PP + ".status.text") and not E("PM.IsEditing()"),
-      "a name typed after a fight ended the edit saves nothing, and says so")
+check(E("#EyeCandyDB.photoPresets") == 2 and "That change is over" in E(PP + ".status.text") and not E("PM.IsEditing()")
+      and not E(A + ".shown"), "a name typed after a fight ended the edit saves nothing, closes the box and says so")
 X("for i = 3, 10 do EyeCandyDB.photoPresets[i] = { name = 'P' .. i, values = { cameraFov = '90' } } end")
 X(CHANGE + "; " + A + ".shown = false; " + PP + ".save.scripts.OnClick()")
 check(not E(A + ".shown") and "You have 10" in E(PP + ".status.text") and E("PM.IsEditing()"),
@@ -314,25 +333,46 @@ check(not E(A + ".shown") and "You have 10" in E(PP + ".status.text") and E("PM.
 X(PP + ".cancel.scripts.OnClick(); for i = 10, 3, -1 do table.remove(EyeCandyDB.photoPresets, i) end; NS.RefreshUI()")
 X("RN_OK, RN_ERR = PM.RenamePreset(2, string.rep('\\195\\169', 30))")
 check(E("RN_OK") and E("RN_ERR") is None, "a name of 30 accented letters fits: it counts letters, not bytes")
-X("PM.RenamePreset(2, 'Photo preset 1')")
+X("PM.RenamePreset(2, 'Screenshot preset 1')")
 
-# Pick, rename, delete.
-X(R0 + ".pick.scripts.OnClick()")
-check(E("PM.Pick()") == 0 and E(R0 + ".pick.text").startswith(GOLD), "clicking a name picks it for photos")
-X(R1 + ".rename.scripts.OnClick()")
-check(E(A + ".edit.text") == "Golden hour", "Rename offers the old name")
-ask("photo preset 1")
-check(E("EyeCandyDB.photoPresets[1].name") == "Golden hour" and "already have" in E(PP + ".status.text"),
-      "a name another one has is refused")
-X(R1 + ".rename.scripts.OnClick()")
+# Pick, rename, delete. The "..." menu (the stand-in list, as the game's MenuUtil is missing here).
+MENU = "EyeCandyPresetMenu"
+
+
+def menu(row):
+    """Opens row's "..." menu and returns the labels it shows."""
+    X(row + ".more.scripts.OnClick(" + row + ".more)")
+    return [E("%s.buttons[%d].text" % (MENU, i)) for i in range(1, 6) if E("%s.buttons[%d] and %s.buttons[%d].shown" % (MENU, i, MENU, i))]
+
+
+X(R0 + ".scripts.OnClick(" + R0 + ", 'LeftButton')")
+check(E("PM.Pick()") == 0 and E(R0 + ".picked") and not E(R1 + ".picked"), "clicking a name picks it for photos")
+check(menu(R1) == ["Rename", RED + "Delete|r"] and E(MENU + ".shown"), "a saved one's \"...\" menu has Rename, then Delete last, in red")
+X(MENU + ".buttons[1].scripts.OnClick(" + MENU + ".buttons[1])")
+check(not E(MENU + ".shown") and E(A + ".shown") and E(A + ".edit.text") == "Golden hour", "Rename closes the menu and offers the old name")
+ask("screenshot preset 1")
+check(E("EyeCandyDB.photoPresets[1].name") == "Golden hour" and E(A + ".shown") and "already have" in E(A + ".errFS.text"),
+      "a name another one has is refused, in the box, which stays open")
 ask("Sunset")
-check(E("EyeCandyDB.photoPresets[1].name") == "Sunset" and E(R1 + ".pick.text") == WHITE + "Sunset|r", "a new name shows in the list")
-X(R2 + ".pick.scripts.OnClick(); " + R2 + ".delete.scripts.OnClick()")
-check("can't be undone" in E(A + ".textFS.text") and E("#EyeCandyDB.photoPresets") == 2, "Delete asks first")
+check(E("EyeCandyDB.photoPresets[1].name") == "Sunset" and E(R1 + ".name.text") == "Sunset" and not E(A + ".shown"), "a new name shows in the list")
+X(R2 + ".scripts.OnClick(" + R2 + ", 'LeftButton'); " + R2 + ".scripts.OnClick(" + R2 + ", 'RightButton')")
+check(E(MENU + ".shown") and E(MENU + ".buttons[2].text") == RED + "Delete|r", "right-clicking a saved row opens its menu too")
+X(MENU + ".buttons[2].scripts.OnClick(" + MENU + ".buttons[2])")
+check("can't be undone" in E(A + ".textFS.text") and E(A + ".accept.text") == RED + "Delete|r" and E("#EyeCandyDB.photoPresets") == 2,
+      "Delete asks first, with a red Delete button")
 ask()
 check(E("#EyeCandyDB.photoPresets") == 1 and E("PM.Pick()") == 0 and "now uses Default" in E(PP + ".status.text")
       and not E(R2 + ".shown"), "deleting the picked one goes back to Default, and its row goes")
-X(R1 + ".delete.scripts.OnClick()")
+# With the game's own menu: the same items, under the preset's name.
+X("MENUS = {}; MenuUtil = { CreateContextMenu = function(owner, gen) local root = { items = {} }; function root:CreateTitle(t) self.title = t end; "
+  "function root:CreateButton(t, f) self.items[#self.items + 1] = { t, f } end; gen(owner, root); MENUS[#MENUS + 1] = root end }")
+X(R1 + ".more.scripts.OnClick(" + R1 + ".more)")
+check(E("MENUS[1].title") == "Sunset" and E("#MENUS[1].items") == 2 and E("MENUS[1].items[1][1]") == "Rename"
+      and E("MENUS[1].items[2][1]") == RED + "Delete|r", "with the game's menu, \"...\" opens it with the name, Rename and a red Delete")
+X(R0 + ".scripts.OnClick(" + R0 + ", 'RightButton')")
+check(E("#MENUS") == 1, "and right-clicking Default opens none")
+X("MENUS[1].items[2][2](); MenuUtil = nil")
+check("can't be undone" in E(A + ".textFS.text"), "its Delete asks first too")
 ask()
 check(E("#EyeCandyDB.photoPresets") == 0 and not E(R1 + ".shown") and E(R0 + ".shown"), "Default stays when all yours are gone")
 take()
@@ -348,7 +388,7 @@ X(CHANGE)
 X("ENTRY = NS.CreateBackup('manual', 'during edit')")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("ENTRY.values.cameraFov") == "70" and E("EyeCandyDB.photo") is None,
       "a backup during the edit ends it first, so it holds your settings")
-check("another setting changed" in E(PP + ".status.text"), "and the page says why")
+check("weren't saved because something else changed or saved your settings" in E(PP + ".status.text"), "and the page says why")
 X(CHANGE)
 X("NS.GoBack()")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70", "Back ends the edit first")
@@ -356,8 +396,8 @@ check(not E("PM.IsEditing()") and cv("cameraFov") == "70", "Back ends the edit f
 # --- An edit cut short -------------------------------------------------------------------------------------
 X(CHANGE)
 X('FIRE("PLAYER_LEAVING_WORLD")')
-check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None and "loading screen" in E(PP + ".status.text"),
-      "a loading screen cancels the edit, your settings back")
+check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None
+      and "weren't saved because a loading screen came up." in E(PP + ".status.text"), "a loading screen cancels the edit, your settings back")
 X(CHANGE)
 X('FIRE("PLAYER_LOGOUT")')
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "so does a logout or /reload")
@@ -365,8 +405,8 @@ X(CHANGE)
 X('FIRE("PLAYER_REGEN_DISABLED")')
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and "fight" in E(PP + ".status.text"), "a fight cancels it, your settings back")
 X("INCOMBAT = true; " + CHANGE)
-check(not E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "fight" in E(PP + ".status.text") and cv("cameraFov") == "70",
-      "Change it in a fight is refused, in red, and changes nothing")
+check(not E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "You can't change a screenshot preset in a fight." in E(PP + ".status.text")
+      and cv("cameraFov") == "70", "Change it in a fight is refused, in red, and changes nothing")
 X("INCOMBAT = false; " + CHANGE + "; INCOMBAT = true; PM.CancelEdit('a fight started')")
 check(cv("cameraFov") == "90" and E(PP + ".status.text").startswith(GREY) and "after the fight" in E("NS.RunningNote()"),
       "in a locked fight your settings wait, in grey, and the title says so")
@@ -402,7 +442,7 @@ X("PM.Stop('test'); SetCVar('cameraFov', 70)")
 # A single set of photo settings saved before the list existed becomes the first screenshot preset.
 lua4 = boot(PRE + "EyeCandyDB = { photoSettings = { values = { cameraFov = '77' }, saved = '15 Nov' } }")
 lua4.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
-check(lua4.eval("NS.PhotoMode.Name(NS.PhotoMode.Pick())") == "My photo settings" and lua4.eval("EyeCandyDB.photoSettings") is None
+check(lua4.eval("NS.PhotoMode.Name(NS.PhotoMode.Pick())") == "My screenshot preset" and lua4.eval("EyeCandyDB.photoSettings") is None
       and lua4.eval("EyeCandyDB.photoPresets[1].values.cameraFov") == "77", "photo settings saved before the list become a picked screenshot preset")
 
 # --- Still saved at the next login: it puts them back ------------------------------------------------
