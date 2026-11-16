@@ -1,7 +1,9 @@
 name: release
 
 # Packages the addon and uploads it when a version tag is pushed, for example `git tag v1.0.0`.
-# Only the maintainer pushes tags.
+# Only the maintainer pushes tags. auto-tag.yml also makes the tag when a release version lands on
+# main, and starts this run on the tag by name (a tag made with the built-in token starts nothing
+# by itself). Started on a branch instead of a tag, the version check below stops it.
 #
 # Uploads go where the .toc has an ID and the repo has the matching secret:
 #   CurseForge: `## X-Curse-Project-ID` in EyeCandy.toc + secret CF_API_TOKEN
@@ -13,6 +15,7 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
 
 permissions:
   contents: write # needed to create the GitHub release

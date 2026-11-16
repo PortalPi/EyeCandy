@@ -1,0 +1,87 @@
+name: auto-tag
+
+# On each push to main:
+# - If EyeCandy.toc's version is a release number (1.2.0, not 1.2.0-dev) with no tag yet, this
+#   makes the tag v1.2.0 on that commit and starts release.yml on it. The release still waits for
+#   the maintainer's approval (the "release" environment), as before.
+# - It deletes claude/fix-issue-* branches whose pull request is merged.
+#
+# Why: the cloud fix routine can merge to main, but its GitHub proxy refuses tags and branch
+# deletion (checked 17 Nov 2026). A tag made with the built-in token does not start release.yml
+# by itself, so this starts it by name. A tag pushed by hand still works as before; this then sees
+# the tag and does nothing. Versions with a suffix (1.2.0-beta) are tagged by hand only.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # make the tag, delete merged fix branches
+  actions: write # start release.yml
+  pull-requests: read # see whether a fix branch's pull request is merged
+
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # all tags and branches
+
+      - name: Tag a new release version
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^## Version: *//p' EyeCandy/EyeCandy.toc | tr -d '\r' | head -n1)
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version '$version' is not a release number; no tag."
+            exit 0
+          fi
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            # A release run for a tag has the tag as its branch, whether a push or a start by name.
+            runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?branch=$tag" --jq .total_count)
+            if [ "$runs" -gt 0 ]; then
+              echo "$tag already exists and has a release run; nothing to do."
+              exit 0
+            fi
+            echo "$tag exists but has no release run (an earlier start failed); starting it."
+          else
+            git tag "$tag" "$GITHUB_SHA"
+            if ! git push origin "refs/tags/$tag"; then
+              if [ -n "$(git ls-remote --tags origin "refs/tags/$tag")" ]; then
+                echo "$tag was pushed by hand meanwhile; that push starts the release."
+                exit 0
+              fi
+              echo "::error::Could not push $tag."
+              exit 1
+            fi
+          fi
+          gh workflow run release.yml --ref "$tag"
+          echo "Started the release for $tag. It waits for the maintainer's approval."
+
+      - name: Delete merged fix branches
+        if: success() || failure() # tidy even when tagging failed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          owner="${GITHUB_REPOSITORY%%/*}"
+          for b in $(git for-each-ref --format='%(refname:strip=3)' 'refs/remotes/origin/claude/fix-issue-*'); do
+            if ! merged=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=closed&head=$owner:$b" --jq '[.[] | select(.merged_at != null)] | length'); then
+              echo "Could not check $b; left for the next push."
+              continue
+            fi
+            if [ "$merged" -gt 0 ] && git merge-base --is-ancestor "origin/$b" "$GITHUB_SHA"; then
+              git push origin --delete "$b"
+              echo "Deleted $b (merged)."
+            fi
+          done
