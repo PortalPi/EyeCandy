@@ -146,12 +146,14 @@ def begin():
 
 begin()
 X('FIRE("PLAYER_REGEN_DISABLED")')
-check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5" and "fight" in E(EP + ".status.text"),
-      "a fight ends it and puts your settings back")
+check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5"
+      and E(EP + ".status.text").startswith("Eye test ended because a fight started. "),
+      "a fight ends it, puts your settings back, and says why in a sentence (%r)" % E(EP + ".status.text"))
 X('FIRE("PLAYER_REGEN_ENABLED")')
 begin()
 X('FIRE("PLAYER_LEAVING_WORLD")')
-check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5", "a loading screen ends it and puts your settings back")
+check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5" and "because a loading screen came up." in E(EP + ".status.text"),
+      "a loading screen ends it and puts your settings back")
 begin()
 X("EyeCandyMainFrame.hooks.OnHide(EyeCandyMainFrame)")
 check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5", "closing the window ends it and puts your settings back")
@@ -172,7 +174,7 @@ X("STOPPED = NS.ToggleCompare and select(2, NS.ToggleCompare()); AT_OK, AT_ERR =
 check("eye test" in (E("STOPPED") or "") and E("AT_OK") is False and "eye test" in E("AT_ERR") and E("ET.IsOn()"),
       "Compare and Autotune don't start during the test")
 X("NS.ApplyAll()")
-check(not E("ET.IsOn()") and "another setting" in E(EP + ".status.text"), "another Eye Candy apply ends it first")
+check(not E("ET.IsOn()") and "because something else changed your settings." in E(EP + ".status.text"), "another Eye Candy apply ends it first")
 check(E("NS.FPS.Still({})") is True, "standing still with no test on, the FPS reader may measure a preset")
 begin()
 check(E("NS.FPS.Still({})") is False, "during the test it doesn't, so no preset's FPS is measured on the test's values")
@@ -180,7 +182,13 @@ X("NS.PatchWatchLogout()")
 check(cv("graphicsShadowQuality") == "1" and E("EyeCandyDB.patchWatch.snap.values.graphicsShadowQuality") == "5",
       "the patch warning's copy at logout holds your settings, not the test's")
 X(EP + ".stop.scripts.OnClick()")
-check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5", "Stop eye test puts your settings back")
+check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5" and "because you pressed Stop." in E(EP + ".status.text"),
+      "Stop eye test puts your settings back")
+begin()
+X("INCOMBAT = true; SHOW_OK, SHOW_ERR = ET.Show(2); ANS_OK, ANS_ERR = ET.Answer(1); INCOMBAT = false")
+check(E("SHOW_ERR") == "You can't change settings in a fight. Try again after it." and E("ANS_ERR") == E("SHOW_ERR"),
+      "in a fight, Show and the answers say why they did nothing (%r)" % E("SHOW_ERR"))
+X(EP + ".stop.scripts.OnClick()")
 
 # A fight already locked: the settings wait for its end, and the window says so in grey.
 begin()
@@ -206,6 +214,8 @@ check(E("NS.FindPresetByName('After the fight').values.graphicsShadowQuality") =
 begin()
 for i in range(10):
     X("ET.Show(1); ET.Show(2); ET.Answer(2)")
+X("INCOMBAT = true; BACK_OK, BACK_ERR = ET.Back(); INCOMBAT = false")
+check(E("BACK_ERR") == "You can't go back in a fight. Your settings go back when it ends.", "Back in a fight says why it waits (%r)" % E("BACK_ERR"))
 X(EP + ".back.scripts.OnClick()")
 check(cv("graphicsShadowQuality") == "5" and E("ET.State()") is None, "Back to before eye test puts your settings back and forgets the answers")
 
