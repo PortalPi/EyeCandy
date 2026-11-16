@@ -309,9 +309,9 @@ function ET.Save(name)
 	PutBack()
 	test = nil
 	if ns.ApplyPresetById(p.id) then
-		Say("done", "Your answers are saved as your preset \"" .. p.name .. "\" and on now.")
+		Say("done", "Saved your answers as \"" .. p.name .. "\" and applied it.")
 	else
-		Say("refused", "Your preset \"" .. p.name .. "\" is saved, but it couldn't be put on. Pick it on the Presets tab to try again.")
+		Say("refused", "Saved \"" .. p.name .. "\", but it couldn't be applied. Try Apply on the Presets tab.")
 	end
 	Refresh()
 	return p
@@ -488,10 +488,10 @@ local function Small(b)
 	if b.SetNormalFontObject then b:SetNormalFontObject("GameFontNormalSmall") end
 end
 
-ET.WHY = "Like at the optician: which is better, 1 or 2? Each round shows one setting two ways, in the same spot. "
-	.. "Flip between them as often as you like, then pick one. After the last round, Save as preset keeps your answers as a preset of your own."
-ET.HOW = "Stand still and leave the camera where it is, so only the setting changes. "
-	.. "The test changes your settings while it runs. A fight, a loading screen, Options or closing this window ends it and puts your settings back."
+ET.WHY = "Like at the optician: which is better, 1 or 2? Each round shows one setting two ways. "
+	.. "Flip as often as you like, then pick. Save as preset keeps your answers as a preset."
+ET.HOW = "It changes your settings while it runs. Stand still and leave the camera alone, so only the setting changes. "
+	.. "A fight, a loading screen, Options or closing this window ends the test and puts your settings back."
 
 local function Build(page, holder)
 	local c = ns.ScrollPage(holder, 0)
@@ -527,7 +527,7 @@ local function Build(page, holder)
 	for n = 1, 2 do
 		local b = ns.Button(c, "Show " .. n, 90, function() ET.Show(n) end)
 		if n == 1 then Under(b, e.roundText, 0, 8) else b:SetPoint("LEFT", e.show[1], "RIGHT", ROW, 0) end
-		ns.Tooltip(b, "Show " .. n, "Puts side " .. n .. " on, so you can see it. Flip as often as you like.")
+		ns.Tooltip(b, "Show " .. n, "Shows side " .. n .. ". Flip as often as you like.")
 		b.label = "Show " .. n
 		e.show[n] = b
 	end
@@ -579,7 +579,7 @@ local function Build(page, holder)
 	e.name:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
 	e.save = ns.Button(c, "Save as preset", 130, Save)
 	e.save:SetPoint("LEFT", e.name, "RIGHT", 8, 0)
-	ns.Tooltip(e.save, "Save as preset", "Saves your answers as your own preset and puts it on, like any preset. Back to before on the Presets tab undoes it.")
+	ns.Tooltip(e.save, "Save as preset", "Saves your answers as a preset and applies it. Back to before on the Presets tab undoes it.")
 	e.back = ns.Button(c, "Back to before eye test", 160, function()
 		local ok, err = ET.Back()
 		if not ok and err then
@@ -606,9 +606,9 @@ end
 local function ResultText(st)
 	local lines = {}
 	if st.live then
-		lines[1] = "Your answers are on now. Save as preset keeps them. Back to before eye test undoes them."
+		lines[1] = "Your answers are in use, not saved yet."
 	else
-		lines[1] = "Your settings are back as they were. Save as preset still saves your answers and puts them on."
+		lines[1] = "Your settings are back. Save as preset still saves your answers, and applies them."
 	end
 	for _, line in ipairs(ET.PickLines()) do lines[#lines + 1] = line end
 	return table.concat(lines, "\n")

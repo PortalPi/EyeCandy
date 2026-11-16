@@ -420,7 +420,7 @@ function ns.ApplyPresetById(id)
 	for _, s in ipairs(result.skipped) do ns.Print("  " .. s) end
 	for _, c in ipairs(result.changed) do ns.Print("  " .. c) end
 	if scaleBefore and not ns.Same(scaleBefore, ns.GetInfo("RenderScale")) then
-		ns.Print("Render scale changed. If the picture doesn't change, restart the game so it takes effect.")
+		ns.Print("Render scale changed. If the picture looks the same, restart the game.")
 	end
 	ns.NoteOnPreset(p)
 	if ns.RefreshUI then ns.RefreshUI() end
@@ -521,18 +521,18 @@ function ns.ExportPreset(id)
 	return PREFIX .. text
 end
 
-local DAMAGED = "This string is damaged or cut short. Copy it again."
+local DAMAGED = "This code is damaged or cut short. Copy it again."
 
 -- Open a share string. Returns the payload table, or nil and a reason.
 local function Decode(text)
 	if type(text) ~= "string" then return nil, "Paste an Eye Candy share code first." end
-	if #text > TEXT_MAX then return nil, "This string is too long to be an Eye Candy preset." end
+	if #text > TEXT_MAX then return nil, "This is too long to be an Eye Candy share code." end
 	text = text:gsub("%s+", "")
 	if text == "" then return nil, "Paste an Eye Candy share code first." end
 	local version = text:match("^!EC(%d+)!")
 	if not version then return nil, "This isn't an Eye Candy share code." end
 	if tonumber(version) > FORMAT then
-		return nil, "This string was made by a newer Eye Candy. Update the addon to import it."
+		return nil, "This code was made by a newer Eye Candy. Update the addon to import it."
 	end
 	if tonumber(version) ~= FORMAT then return nil, "This isn't an Eye Candy share code." end
 	local E = Encoder()
@@ -545,7 +545,7 @@ local function Decode(text)
 	local ok3, payload = pcall(E.DeserializeCBOR, cbor)
 	if not ok3 or type(payload) ~= "table" then return nil, DAMAGED end
 	if type(payload.v) == "number" and payload.v > FORMAT then
-		return nil, "This string was made by a newer Eye Candy. Update the addon to import it."
+		return nil, "This code was made by a newer Eye Candy. Update the addon to import it."
 	end
 	if payload.v ~= FORMAT then return nil, DAMAGED end
 	if type(payload.name) ~= "string" or type(payload.values) ~= "table" then return nil, DAMAGED end
@@ -633,7 +633,7 @@ local function Plan(text)
 	local given, skipped, count = {}, {}, 0
 	for key, value in pairs(payload.values) do
 		count = count + 1
-		if count > ENTRIES_MAX then return nil, "This string holds too many settings to be an Eye Candy preset." end
+		if count > ENTRIES_MAX then return nil, "This code has too many settings to be an Eye Candy preset." end
 		local label = (type(key) == "string" or type(key) == "number") and CleanText(tostring(key), 60) or "(bad entry)"
 		local good = type(key) == "string" and managed[key] and GoodValue(key, value, lim)
 		if type(key) == "string" and managed[key] and good then
@@ -781,9 +781,9 @@ function ns.PresetSlash(msg, raw)
 		-- Read the string straight back, so a fault in the game's encoder shows up here, not on a friend's PC.
 		local check = ns.PreviewImport(text)
 		if check.ok and check.name == p.name then
-			ns.Print(string.format("share code for \"%s\": %d characters. It reads back correctly. Copy it from the box.", p.name, #text))
+			ns.Print(string.format("share code for \"%s\" is in the box. Copy it with Ctrl+C.", p.name))
 		else
-			ns.Print("the share code did not read back (" .. tostring(check.err) .. "). Please report this with /ec report.")
+			ns.Print("the share code came out broken (" .. tostring(check.err) .. "). Report it with /ec report.")
 		end
 		return true
 	end

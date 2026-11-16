@@ -41,8 +41,8 @@ check(g("useTargetFPS") == "1", "target FPS left alone"); check(g("ResampleAlway
 check(g("groundEffectDensity") == "256" and g("groundEffectDist") == "500", "grass 256 / 500")
 check(g("farclip") == "10000", "farclip 10000")
 check(g("graphicsParticleDensity") == "4", "particle density stepped down to supported max (4)")
-check(any("not in this client" in x and "Horizon start" in x for x in c), "missing horizonStart reported, not set")
-check(any("client kept 2.6" in x for x in c), "zoom clamp reported")
+check(any("not in this game" in x and "Horizon start" in x for x in c), "missing horizonStart reported, not set")
+check(any("the game kept 2.6" in x for x in c), "zoom clamp reported")
 check(lua.eval('NS.OriginalBackup() ~= nil and NS.OriginalBackup().values.groundEffectDensity') == "48", "backup holds pre-apply grass value")
 
 # 2. Graphics menu overwrites grass, then Options closes -> hidden re-applied
@@ -62,7 +62,7 @@ chat(lua)
 lua.execute('SlashCmdList.EYECANDY("export")')
 txt = lua.eval('EyeCandyExportFrame.text')
 check("RTX 3090" in txt and "Experience preset: Enhanced" in txt and "Render scale range: 0.33 to 2" in txt, "export header (GPU, preset, render range)")
-check("horizonStart" in txt and "(not in this client)" in txt, "export flags missing CVars")
+check("horizonStart" in txt and "(not in this game)" in txt, "export flags missing CVars")
 check("--- Changed graphics CVars" in txt, "export includes changed-CVar scan")
 print("---- export sample ----"); print("\n".join(txt.split("\n")[:22]))
 
@@ -141,7 +141,7 @@ lua7 = boot(svdb='EyeCandyDB = { tiers = { distant = 5 }, keepApplied = true, ne
 bv = lambda n: lua7.eval('NS.OriginalBackup().values.%s' % n)
 check([bv(k) for k in ["doodadLodScale","lodObjectFadeScale","lodObjectCullSize","terrainLodDist","TerrainLodDiv","wmoLodDist","dynamicLod"]] == ["150","150","14","650","768","400","1"], "backup corrected to Graphics-menu values")
 check(bv("RenderScale") == "1.5", "unrelated backup values untouched")
-check(any("corrected your Restore backup" in x for x in chat(lua7)), "user told about the correction")
+check(any("fixed your Original backup" in x for x in chat(lua7)), "user told about the correction")
 lua8 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { doodadLodScale = "150" } } } }')
 check(not any("corrected" in x for x in chat(lua8)), "no message when the backup is already fine")
 

@@ -462,7 +462,7 @@ local function RowTooltip(row, shown)
 	if row.master then
 		plain = "Moving this sets every Graphics Quality row below to the game's own values for that level."
 	elseif row.kind == "info" then
-		plain = "Change this in the game's own Options menu (it can move or resize the game window)."
+		plain = "Change this in the game's Options menu. It can move or resize the window."
 	end
 	local default = row.cvar and select(2, ns.GetInfo(row.cvar))
 	local more = {}
@@ -472,8 +472,8 @@ local function RowTooltip(row, shown)
 	end
 	if row.ignoredWhen and row.ignoredNote and row.ignoredWhen() == true then more[#more + 1] = "|cffffd100" .. row.ignoredNote .. "|r" end
 	if row.restart then more[#more + 1] = "|cffffd100Takes effect after you restart the game.|r" end
-	if row.device then more[#more + 1] = "|cff9d9d9dYour PC's own setup: never saved in presets or backups.|r" end
-	if row.own then more[#more + 1] = "|cff9d9d9dYour own choice: presets never change it, and backups don't hold it.|r" end
+	if row.device then more[#more + 1] = "|cff9d9d9dNot saved in presets or backups.|r" end
+	if row.own then more[#more + 1] = "|cff9d9d9dPresets never change it. Backups don't save it.|r" end
 	if row.master then more[#more + 1] = "|cff9d9d9dPresets and backups save the rows below, not this slider.|r" end
 	return ns.SettingTip({
 		quote = Text(row.tip), plain = plain,
@@ -498,7 +498,7 @@ local function RefreshStdRow(r)
 	end
 	local value = Current(row)
 	if value == nil then
-		r.valueText:SetText("|cff9d9d9dnot in this client|r")
+		r.valueText:SetText("|cff9d9d9dnot in this game|r")
 		if r.control then r.control:Hide(); r.control:SetAlpha(1) end
 		r.dot:Hide()
 		r.ignored = false

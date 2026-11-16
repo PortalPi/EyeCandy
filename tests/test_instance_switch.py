@@ -71,7 +71,7 @@ go(lua, "none")
 # Turn it on outside: nothing changes yet.
 X('SlashCmdList.EYECANDY("instance")')
 out = chat(lua)
-check(ev('NS.IsAutoSituationOn("raid")') == True and any("puts them back when you leave" in l for l in out), "/ec instance turns it on and says what it does")
+check(ev('NS.IsAutoSituationOn("raid")') == True and any("until you leave" in l for l in out), "/ec instance turns it on and says what it does")
 check(g("graphicsShadowQuality") == "5", "turned on in Elwynn: nothing changes yet")
 
 # Into a dungeon: down to Raid & PvP's, only where yours are higher. No backup.
@@ -103,7 +103,7 @@ go(lua, "raid")
 X('SetCVar("graphicsViewDistance", "6"); CHAT = {}')
 go(lua, "none")
 check(g("graphicsViewDistance") == "6" and g("graphicsShadowQuality") == "5", "your own change in the raid stays; the rest go back")
-check(any("Left 1 alone that changed while you were there" in l for l in chat(lua)), "chat says how many were left alone")
+check(any("1 setting changed while you were there, so it stays" in l for l in chat(lua)), "chat says how many were left alone")
 X('SetCVar("graphicsViewDistance", "9")')
 
 # Arenas and battlegrounds count too.
@@ -223,7 +223,7 @@ go(lua, "none")
 # Help lists it.
 X('SlashCmdList.EYECANDY("help")')
 out = chat(lua)
-check(any("/ec instance  lower" in l for l in out) and any("/ec city" in l for l in out), "help lists /ec instance and /ec city")
+check(any("/ec instance  in dungeons" in l for l in out) and any("/ec city" in l for l in out), "help lists /ec instance and /ec city")
 check(any("the Raid & PvP preset's settings" in l for l in out) and not any("PvP's in" in l for l in out),
       "the help says \"the Raid & PvP preset's settings\", not \"Raid & PvP's\"")
 
@@ -231,12 +231,12 @@ check(any("the Raid & PvP preset's settings" in l for l in out) and not any("PvP
 X('NS.RefreshUI()')
 P ='EyeCandyMainFrame.pages.presets'
 box = P + '.instanceBox'
-check(ev(box + '.shown') == True and ev(box + '.text.text') == "Switch in dungeons, raids, battlegrounds and arenas by itself", "a tick box sits under Raid & PvP, its label naming arenas too (%r)" % ev(box + '.text.text'))
+check(ev(box + '.shown') == True and ev(box + '.text.text') == "Lower settings in dungeons, raids, battlegrounds and arenas", "a tick box sits under Raid & PvP, its label naming arenas too (%r)" % ev(box + '.text.text'))
 check(ev(box + '.note.shown') == True and "dungeons, raids, battlegrounds and arenas" in ev(box + '.note.text') and "go back when you leave" in ev(box + '.note.text'),
       "a grey line under it says what it does (%r)" % ev(box + '.note.text'))
 check(len(ev(box + '.note.text')) <= 115, "the line is no longer than the city one plus a little (%d)" % len(ev(box + '.note.text')))
 X('TIP = {}; GameTooltip.AddLine = function(self, t) TIP[#TIP + 1] = t end; %s.scripts.OnEnter(%s); GameTooltip.AddLine = nil' % (box, box))
-check("Never in combat" in ev('TIP[2]') and "Raid and Battleground settings" in ev('TIP[2]'), "its tooltip says when, and how it works with the game's own raid settings")
+check("never in a fight" in ev('TIP[2]') and "Raid and Battleground settings" in ev('TIP[2]'), "its tooltip says when, and how it works with the game's own raid settings")
 check("PvP's." not in ev('TIP[2]') and "PvP's." not in ev(box + '.note.text'), "neither the tooltip nor the line says \"Raid & PvP's.\"")
 X('%s.scripts.OnClick(%s)' % (box, box))
 check(ev('NS.IsAutoSituationOn("raid")') == True, "ticking the box turns it on")
