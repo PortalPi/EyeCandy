@@ -1,0 +1,38 @@
+name: feedback-answer
+
+# Every 10 minutes, reads the maintainer's taps on the feedback-ask phone notifications.
+# Yes adds the label claude-fix to the issue, which starts the fix routine. No closes the issue as
+# not planned. A tap with a wrong code is ignored. How: .github/scripts/feedback_phone.py.
+#
+# GitHub runs schedules late when it is busy, so a tap can take longer than 10 minutes. Taps stay
+# on ntfy.sh for 12 hours, and each run reads all 12. Each answer leaves a marker comment, so a tap
+# read again never acts twice.
+
+on:
+  schedule:
+    - cron: "4-59/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: feedback-answer
+  cancel-in-progress: false
+
+jobs:
+  answer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Act on Yes and No
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APPROVE_KEY: ${{ secrets.APPROVE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/feedback_phone.py answer
