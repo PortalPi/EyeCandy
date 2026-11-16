@@ -1759,7 +1759,9 @@ end
 local FPS_W = 50
 local function FPSFits()
 	if not main.shrunk then return true end
-	local w = tonumber(main.titleText:GetStringWidth()) or 0
+	-- Through a local: a call that gives back nothing would make tonumber() an error.
+	local w = main.titleText:GetStringWidth()
+	w = tonumber(w) or 0
 	return (SHRUNK_W - w) / 2 >= 12 + FPS_W + 8
 end
 
