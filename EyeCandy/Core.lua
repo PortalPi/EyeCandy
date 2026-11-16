@@ -688,6 +688,8 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
 			-- Delay: account settings from the server can land a moment after login.
 			C_Timer.After(4, function() ns.ApplyAll(true, true) end)
 		end
+		-- Settings changed while the game was closed (PatchWatch.lua).
+		if ns.PatchWatchLogin then ns.PatchWatchLogin(isLogin, isReload) end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		if pendingAfterCombat then
 			pendingAfterCombat = false
@@ -695,6 +697,7 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
 		end
 	elseif event == "PLAYER_LOGOUT" then
 		ns.SaveMirror()
+		if ns.PatchWatchLogout then ns.PatchWatchLogout() end
 	end
 end)
 
@@ -781,7 +784,7 @@ SlashCmdList.EYECANDY = function(msg)
 		ns.Print("/ec find <word>  search CVars, with the client's own descriptions")
 		ns.Print("/ec report  copy box with a bug report to paste into GitHub")
 		ns.Print("/ec peek  hide the game's UI and Eye Candy to see the world. Back or Esc brings it back")
-		ns.Print("/ec compare  flip between before your last change and now. compare stop  end on now")
+		ns.Print("/ec compare  flip between before your last preset and now. compare stop  end on now")
 		ns.Print("/ec apply  re-apply your chosen levels and settings")
 		ns.Print("/ec restore  put back the values from before Eye Candy's first apply")
 		ns.Print("/ec backups  list backups. backup <name>  make one. restore <number>  restore one")

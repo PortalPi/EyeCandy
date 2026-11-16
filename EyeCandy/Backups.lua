@@ -274,6 +274,11 @@ end
 local STEPS_MAX = 10
 ns.STEPS_MAX = STEPS_MAX
 
+-- Goes up each time the list itself changes, so the window can tell when to redraw it, even for two
+-- changes in the same second.
+local stepsChanged = 0
+function ns.StepsVersion() return stepsChanged end
+
 -- Today's date and the time now ("2026-11-16", "14:32"), from one clock reading.
 local function Today()
 	local now = tostring(date("%Y-%m-%d %H:%M"))
@@ -287,7 +292,10 @@ local function Steps()
 	local list, day = db.steps, Today()
 	for i = #list, 1, -1 do
 		local s = list[i]
-		if type(s) ~= "table" or type(s.values) ~= "table" or s.day ~= day or i > STEPS_MAX then table.remove(list, i) end
+		if type(s) ~= "table" or type(s.values) ~= "table" or s.day ~= day or i > STEPS_MAX then
+			table.remove(list, i)
+			stepsChanged = stepsChanged + 1
+		end
 	end
 	return list
 end
@@ -327,6 +335,7 @@ function ns.NoteBeforeStep(kind, name)
 		values = Capture(), state = AppliedState(), on = OnCopy(ns.db.onPreset) }
 	table.insert(list, 1, step)
 	for i = #list, STEPS_MAX + 1, -1 do table.remove(list, i) end
+	stepsChanged = stepsChanged + 1
 	ns.awaitingAfter = step
 	return step
 end
@@ -367,7 +376,9 @@ end
 -- Returns how many settings changed, or nil and a plain reason.
 function ns.RestoreStep(step)
 	local list = Steps()
-	local at = type(step) == "table" and step.live and 0 or nil
+	-- Your own changes (live) are only still there while the step under them is still the newest: a
+	-- question left open while a preset went on must not put back what an older step left.
+	local at = type(step) == "table" and step.live and list[1] and step.values == list[1].after and 0 or nil
 	for i, s in ipairs(list) do
 		if s == step then at = i end
 	end
@@ -375,6 +386,7 @@ function ns.RestoreStep(step)
 	local n, err = Restore(step, true)
 	if not n then return nil, err end
 	for i = at, 1, -1 do table.remove(list, i) end
+	if at > 0 then stepsChanged = stepsChanged + 1 end
 	return n
 end
 

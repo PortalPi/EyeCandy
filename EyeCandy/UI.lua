@@ -970,6 +970,8 @@ local function PresetRow(content)
 		GameTooltip:AddLine(p.name, 1, 1, 1)
 		local body = p.look and ns.LookTooltip(p.look) or p.desc
 		if body and body ~= "" then GameTooltip:AddLine(body, nil, nil, nil, true) end
+		local last = ns.FPS and ns.FPS.PresetLine(p.id) -- "Last time: 63 FPS in Goldshire." (FPS.lua)
+		if last then GameTooltip:AddLine(last, 0.62, 0.62, 0.62, true) end
 		GameTooltip:Show()
 	end)
 	row:SetScript("OnLeave", function(self)
@@ -1110,27 +1112,54 @@ function ns.ImportFromStrip(page, mode)
 	if scroll and scroll.SetVerticalScroll then pcall(scroll.SetVerticalScroll, scroll, top) end
 end
 
--- Under the Capital city row: let Eye Candy switch it on in a capital city and off when you leave.
-local CITY_TIP = "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat."
-local CITY_LINE = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave."
-local function CityBox(page)
-	if page.cityBox then return page.cityBox end
+-- Under the Capital city and Raid & PvP rows: let Eye Candy switch it on by itself, and off when you
+-- leave (Situations.lua). field is the page's name for the box; key the Situation's.
+local SITUATION_BOXES = {
+	["look:city"] = {
+		field = "cityBox", key = "city", label = "Switch in cities by itself",
+		tip = "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat.",
+		line = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave.",
+	},
+	["look:raid"] = {
+		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids and battlegrounds by itself",
+		tip = "In a dungeon, raid, battleground or arena, lowers your settings to Raid & PvP's. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
+		line = "In dungeons, raids, battlegrounds and arenas, lowers costly settings to Raid & PvP's. They go back when you leave.",
+	},
+}
+local function SituationBox(page, spec)
+	if page[spec.field] then return page[spec.field] end
 	local box = CreateFrame("CheckButton", nil, page.content, "UICheckButtonTemplate")
 	box:SetSize(22, 22)
 	box:SetScript("OnClick", function(self)
-		ns.SetAutoSituation("city", self:GetChecked() and true or false)
+		ns.SetAutoSituation(spec.key, self:GetChecked() and true or false)
 	end)
 	box.text = Label(box, "", "GameFontHighlightSmall")
 	box.text:SetPoint("LEFT", box, "RIGHT", 2, 0)
-	Tooltip(box, "Switch in cities by itself", CITY_TIP)
+	Tooltip(box, spec.label, spec.tip)
 	-- What it does, on the screen (rule 23). The tooltip has the detail.
-	local note = Label(page.content, CITY_LINE, "GameFontHighlightSmall")
+	local note = Label(page.content, spec.line, "GameFontHighlightSmall")
 	note:SetTextColor(0.62, 0.62, 0.62)
 	note:SetWidth(ns.ROW_W - 50)
 	if note.SetWordWrap then note:SetWordWrap(false) end
 	box.note = note
-	page.cityBox = box
+	page[spec.field] = box
 	return box
+end
+
+-- The box's words: its label, then "On now" while its switch has settings lowered, or that it waits
+-- for a fight to end (rule 25).
+local function SituationBoxText(spec)
+	local text = spec.label
+	if ns.IsAutoSituationOn(spec.key) and ns.SituationWaiting and ns.SituationWaiting() then
+		return text .. "  |cff9d9d9dWaits for the fight to end|r"
+	end
+	if ns.ActiveSituationKey and ns.ActiveSituationKey() == spec.key then
+		local where = ns.SituationPlace and ns.SituationPlace()
+		local none = ns.SituationNote and ns.SituationNote() == false
+		return text .. "  |cffffd100On now" .. (where and (": in " .. where) or "") .. "|r"
+			.. (none and "  |cff9d9d9dNothing needed lowering|r" or "")
+	end
+	return text
 end
 
 local function RefreshPresetList(page)
@@ -1140,6 +1169,8 @@ local function RefreshPresetList(page)
 	local entries = {}
 	local function AddGroup(title, note, items, opts)
 		entries[#entries + 1] = { header = title, note = note, opts = opts }
+		-- Help me pick (Helper.lua): its strip, while open, goes under the heading its button is on.
+		if opts and opts.help and ns.HelperOpen and ns.HelperOpen(page) then entries[#entries + 1] = { helper = true } end
 		if #items == 0 and opts and opts.empty then entries[#entries + 1] = { empty = opts.empty } end
 		for _, p in ipairs(items) do entries[#entries + 1] = { p = p } end
 		if opts and opts.strip then entries[#entries + 1] = { strip = true } end
@@ -1155,7 +1186,7 @@ local function RefreshPresetList(page)
 	for _, e in ipairs(ns.StepEntries and ns.StepEntries(page) or {}) do entries[#entries + 1] = e end
 	AddGroup("Your presets", nil, list.user or {}, { save = true, strip = true,
 		empty = "No presets of your own yet. Save your settings as one, or import one from a friend below." })
-	AddGroup("Quality levels", "Every system at one level.", tiers)
+	AddGroup("Quality levels", "Every system at one level.", tiers, { help = true })
 	AddGroup("Looks", "Styles picked by eye.", looks)
 	if #situations > 0 then AddGroup("Situations", "Made for one job or place.", situations) end
 	if #other > 0 then AddGroup("More built-in presets", nil, other) end
@@ -1168,7 +1199,7 @@ local function RefreshPresetList(page)
 	page.rows = page.rows or {}
 	page.empties = page.empties or {}
 	local y, nh, nr, ne = 0, 0, 0, 0
-	local cityShown = false
+	local boxShown, helperShown = {}, false
 	for _, e in ipairs(entries) do
 		if e.header then
 			nh = nh + 1
@@ -1190,10 +1221,19 @@ local function RefreshPresetList(page)
 				page.saveButton:SetPoint("TOPRIGHT", -4, -6)
 				page.saveButton:Show()
 			end
+			if e.opts and e.opts.help and ns.HelperButton then ns.HelperButton(page, h) end
 			if e.opts and e.opts.steps then ns.PlaceStepsMore(page, h, e.opts.steps) end
 			y = y + h.h
 		elseif e.step then
 			y = ns.PlaceStepRow(page, e, y)
+		elseif e.helper then
+			local s = ns.HelperStrip(page)
+			s:ClearAllPoints()
+			s:SetPoint("TOPLEFT", 0, -(y + 4))
+			s.top = y + 4
+			s:Show()
+			helperShown = true
+			y = y + 4 + s.h + 8
 		elseif e.empty then
 			ne = ne + 1
 			local f = page.empties[ne]
@@ -1249,23 +1289,27 @@ local function RefreshPresetList(page)
 			row.top = y
 			row:Show()
 			y = y + ROW_H + ROW_GAP
-			if p.id == "look:city" and ns.SetAutoSituation then
-				local box = CityBox(page)
+			local spec = SITUATION_BOXES[p.id]
+			if spec and ns.SetAutoSituation then
+				local box = SituationBox(page, spec)
 				box:ClearAllPoints()
 				box:SetPoint("TOPLEFT", 10, -(y - ROW_GAP + 2))
-				box:SetChecked(ns.IsAutoSituationOn("city"))
-				local active = ns.ActiveSituationName and ns.ActiveSituationName()
-				box.text:SetText("Switch in cities by itself" .. (active and "  |cffffd100On now: in a city|r" or ""))
+				box:SetChecked(ns.IsAutoSituationOn(spec.key))
+				box.text:SetText(SituationBoxText(spec))
 				box:Show()
 				box.note:ClearAllPoints()
 				box.note:SetPoint("TOPLEFT", 34, -(y - ROW_GAP + 2 + 20))
 				box.note:Show()
-				cityShown = true
+				boxShown[spec.field] = true
 				y = y + 26 + 14
 			end
 		end
 	end
-	if page.cityBox and not cityShown then page.cityBox:Hide(); page.cityBox.note:Hide() end
+	for _, spec in pairs(SITUATION_BOXES) do
+		local box = page[spec.field]
+		if box and not boxShown[spec.field] then box:Hide(); box.note:Hide() end
+	end
+	if page.helperStrip and not helperShown then page.helperStrip:Hide() end
 	for i = nr + 1, #page.rows do page.rows[i]:Hide() end
 	for i = ne + 1, #page.empties do page.empties[i]:Hide() end
 	if ns.EndStepRows then ns.EndStepRows(page) end
@@ -1337,7 +1381,12 @@ end
 function ns.RunningNote()
 	local at = ns.AutotuneNote and ns.AutotuneNote()
 	if at then return at end
-	if ns.ActiveSituationName and ns.ActiveSituationName() then return "In a city: some settings lowered" end
+	if ns.ActiveSituationName and ns.ActiveSituationName() then
+		-- false: a switch is on here but lowered nothing, so there is nothing to say.
+		local note = ns.SituationNote and ns.SituationNote()
+		if note == false then return nil end
+		return note or "In a city: some settings lowered"
+	end
 end
 
 -- The "On now" card at the top of the Presets tab.
@@ -1382,8 +1431,9 @@ end
 
 -- What the card's result line was said about. Once any of it changes (a fight ends, a setting moves,
 -- Autotune or the city switch starts), the line is out of date and goes.
-local function CardState(onKey)
-	local steps = ns.StepsKey and ns.StepsKey() or ""
+-- stepsKey: ns.StepsKey() when the caller already has it (it reads every setting).
+local function CardState(onKey, stepsKey)
+	local steps = stepsKey or (ns.StepsKey and ns.StepsKey()) or ""
 	return table.concat({ onKey, tostring(InCombatLockdown()), ns.RunningNote() or "", steps }, "|")
 end
 
@@ -1705,6 +1755,14 @@ local function PlaceBarButtons()
 	end
 end
 
+-- Shrunk, the FPS number needs the left end of the title row clear of the title, which is centred.
+local FPS_W = 50
+local function FPSFits()
+	if not main.shrunk then return true end
+	local w = tonumber(main.titleText:GetStringWidth()) or 0
+	return (SHRUNK_W - w) / 2 >= 12 + FPS_W + 8
+end
+
 -- Apply only means something on the Hidden tab (every other tab applies at once), so it shows there and on
 -- the shrunk bar. Create backup is left off the Backups tab, which has its own. The rest close up.
 local function PlaceBottomBar()
@@ -1723,6 +1781,19 @@ local function PlaceBottomBar()
 	end
 	main.keep:ClearAllPoints()
 	if prev then main.keep:SetPoint("LEFT", prev, "RIGHT", 10, 0) else main.keep:SetPoint("BOTTOMLEFT", 12, 12) end
+	-- Live FPS: left of Peek and Compare on the full bar. The shrunk bar's row is full, so there it
+	-- sits at the left end of the title row, while the title leaves room (FPSFits).
+	if main.fps then
+		main.fps:ClearAllPoints()
+		if main.shrunk then
+			main.fps:SetPoint("TOPLEFT", 12, -7)
+			main.fps:SetJustifyH("LEFT")
+		else
+			main.fps:SetPoint("RIGHT", main.barButtons[#main.barButtons] or main.export, "LEFT", -8, 0)
+			main.fps:SetJustifyH("RIGHT")
+		end
+		main.fps:SetShown(FPSFits())
+	end
 end
 
 -- Say a bottom bar result in red above the bar (nil clears it). True when the window took it, so a
@@ -2002,7 +2073,7 @@ function ns.BuildMain()
 			if label then
 				return label .. ".\nClick to flip. Right-click, or closing Eye Candy, ends on now."
 			end
-			return "Flips your settings between before your last change and now, so you can see the difference in the same spot. Click again to flip."
+			return "Flips your settings between before your last preset and now, so you can see the difference in the same spot. Click again to flip."
 		end)
 		main.compare = compare
 		tinsert(main.barButtons, compare)
@@ -2018,6 +2089,14 @@ function ns.BuildMain()
 		tinsert(main.barButtons, peek)
 	end
 	PlaceBarButtons()
+
+	-- Live FPS (FPS.lua), grey, twice a second while the window is open (PlaceBottomBar places it).
+	if ns.FPS then
+		main.fps = Label(main, "", "GameFontHighlightSmall")
+		main.fps:SetSize(FPS_W, 14)
+		main.fps:SetTextColor(0.62, 0.62, 0.62)
+		main.fps:SetWordWrap(false)
+	end
 
 	main:SetScript("OnShow", function()
 		main:SetAlpha(1)
@@ -2035,6 +2114,8 @@ function ns.BuildMain()
 		end
 	end)
 	main:SetScript("OnUpdate", ns.MainTick)
+	-- After the SetScript calls above, so its OnShow and OnHide hooks sit on top of them.
+	if main.fps then ns.FPS.ShowOn(main.fps, main, FPSFits) end
 end
 
 -- Every frame while the window is open: the fade, then the Compare button. Compare can end on
@@ -2064,8 +2145,10 @@ function ns.MainTick(self, elapsed)
 			local p, changed = nil, 0
 			if (on or msg) and ns.OnPreset then p, changed = ns.OnPreset() end
 			local onKey = p and (p.id .. ":" .. changed) or ""
-			if (back and ns.StepsKey() ~= page.stepsKey) or (on and onKey ~= page.onKey)
-				or (msg and CardState(onKey) ~= page.cardMsgKey) then
+			-- Read once a tick: it reads every setting.
+			local stepsKey = (back or msg) and ns.StepsKey and ns.StepsKey() or nil
+			if (back and stepsKey ~= page.stepsKey) or (on and onKey ~= page.onKey)
+				or (msg and CardState(onKey, stepsKey) ~= page.cardMsgKey) then
 				ns.TAB_REFRESH.presets(page)
 				SetTitle()
 			end

@@ -15,7 +15,7 @@ function ns.StepsKey(steps)
 	steps = steps or (ns.BackSteps and ns.BackSteps()) or {}
 	local top = steps[1]
 	if not top then return "" end
-	return #steps .. ":" .. (top.live and "live" or tostring(top.stamp))
+	return #steps .. ":" .. tostring(ns.StepsVersion and ns.StepsVersion() or top.stamp) .. (top.live and ":live" or "")
 end
 
 local function Plural(n, word)

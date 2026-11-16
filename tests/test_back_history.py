@@ -158,6 +158,25 @@ check(lua4.eval('#NS.BackSteps()') == 0 and lua4.eval('EyeCandyDB.lastBefore') i
 lua5 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, steps = { "junk", { kind = "preset", name = "X", day = "2026-11-06" } } }')
 lua5.execute(REG)
 check(lua5.eval('#NS.BackSteps()') == 0, "a damaged step is dropped")
+lua6 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, steps = { { kind = "preset", name = "Odd", day = "2026-11-06", time = "09:00", stamp = 1, values = { farclip = "4321" }, state = "junk", after = "junk", on = "junk" } } }')
+lua6.execute(REG)
+lua6.execute('SetCVar("farclip", "1000"); CHAT = {}; SlashCmdList.EYECANDY("back")')
+check(lua6.eval('GetCVar("farclip")') == "4321" and lua6.eval('#NS.BackSteps()') == 0, "a step with a damaged state, after or preset still goes back")
+lua7 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, steps = "junk", lastBefore = { name = "Moody", values = { farclip = "1" } } }')
+lua7.execute(REG)
+check(lua7.eval('#NS.BackSteps()') == 0 and lua7.eval('EyeCandyDB.lastBefore') is None, "a damaged list, and an old record with no time, are dropped")
+
+# Review fixes: a Back on your own changes left open while a preset went on puts nothing back, and
+# two changes to the list in the same second still redraw it.
+lua8 = boot()
+lua8.execute(REG)
+lua8.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS()')
+lua8.execute('NS.ApplyPresetById("tier2"); SetCVar("farclip", "2222"); LIVE = NS.BackSteps()[1]; time = function() return 5 end; NS.ApplyPresetById("tier3")')
+check(lua8.eval('LIVE.live') == True, "set-up: your own changes were the newest step when the question opened")
+n8, line8 = lua8.eval('NS.GoBack(LIVE)')
+check(n8 is None and line8 == "That step is gone from today's list." and lua8.eval('NS.BackSteps()[1].name') == "High", "accepting it after a new preset changes nothing and says why (%r)" % line8)
+lua8.execute('K1 = NS.StepsKey(); NS.GoBack(); NS.ApplyPresetById("tier3"); K2 = NS.StepsKey()')
+check(lua8.eval('K1') != lua8.eval('K2'), "Back and a new preset in the same second still change what the list shows (%s, %s)" % (lua8.eval('K1'), lua8.eval('K2')))
 
 # ---------------------------------------------------------------- the window
 lua = boot()
