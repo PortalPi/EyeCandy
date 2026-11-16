@@ -1,13 +1,15 @@
--- Eye Candy: switch for a Situation by itself. Off until you turn it on (/ec city).
+-- Eye Candy: switch for a Situation by itself. Off until you turn it on (/ec city, /ec instance).
 --
--- In a capital city, the settings that cost most in a crowd (a Situation's auto.caps in Data.lua) come
--- down on top of your own, and only where yours are higher. Nothing else changes and no backup is taken.
--- When you leave, each one goes back to what it was, unless you changed it yourself while you were there.
--- Never in combat: a switch waits until the fight ends.
+-- In a capital city (Capital city) or a dungeon, raid, battleground or arena (Raid & PvP), the settings
+-- in that Situation's auto.caps (Data.lua) come down on top of your own, and only where yours are higher.
+-- Nothing else changes and no backup is taken. When you leave, each one goes back to what it was, unless
+-- you changed it yourself while you were there. Never in combat: a switch waits until the fight ends.
+-- It also waits while Autotune is testing settings.
 --
--- Saved: EyeCandyDB.autoSituations[key] = true (on), EyeCandyDB.situationActive = { key, set } where
--- set[cvar] = { was = your value, now = the value Eye Candy set }. Kept across a reload or logout, so a
--- logout in a city still puts your settings back on the next login outside it.
+-- Saved: EyeCandyDB.autoSituations[key] = true (on), EyeCandyDB.situationActive = { key, place, set } where
+-- set[cvar] = { was = your value, now = the value Eye Candy set }, and place is the instance type for
+-- Raid & PvP. Kept across a reload or logout, so a logout in a city or a dungeon still puts your settings
+-- back on the next login outside it.
 --
 -- Backups, saved presets and Back see your own values, not the lowered ones: ns.SituationValue.
 
@@ -62,7 +64,46 @@ function ns.InCapitalCity()
 	return false
 end
 
-local TESTS = { city = ns.InCapitalCity }
+-- The instance types Raid & PvP switches in, and the words for them. IsInInstance gives
+-- (inInstance, instanceType) (InstanceDocumentation.lua, forever branch). Forever's own UI also checks
+-- "neighborhood" and "interior" (player housing) and the game has "scenario": none of those is a fight
+-- this is for, so only these four count.
+local PLACES = {
+	party = { a = "a dungeon", the = "the dungeon" },
+	raid = { a = "a raid", the = "the raid" },
+	pvp = { a = "a battleground", the = "the battleground" },
+	arena = { a = "an arena", the = "the arena" },
+}
+
+-- The instance type when in a dungeon, raid, battleground or arena, else false.
+function ns.InstanceType()
+	if not IsInInstance then return false end
+	local inside, kind = IsInInstance()
+	if inside and PLACES[kind] then return kind end
+	return false
+end
+
+-- The game's own Raid and Battleground settings (Options > Graphics, "Enable Raid and Battleground
+-- Settings", RAIDsettingsEnabled). Its tooltip: "an alternate graphic setting for Raids and
+-- Battlegrounds". When it is on, the game uses its raidGraphics twin of each of these graphics menu
+-- settings in a raid or a battleground (Blizzard_Settings_Shared/Mainline/GraphicsOverrides.lua, forever
+-- branch), so Eye Candy leaves them to the game there. Dungeons are not covered (players report it), and
+-- arenas are unconfirmed, so there Eye Candy lowers them as usual: if the game swaps after all, the
+-- lowered value just goes unused and goes back when you leave.
+local GAME_RAID_TWINS = {
+	graphicsShadowQuality = true, graphicsLiquidDetail = true, graphicsPBRLiquidDetail = true,
+	graphicsParticleDensity = true, graphicsSSAO = true, graphicsDepthEffects = true,
+	graphicsComputeEffects = true, graphicsOutlineMode = true, graphicsTextureResolution = true,
+	graphicsSpellDensity = true, graphicsProjectedTextures = true, graphicsLightMode = true,
+	graphicsViewDistance = true, graphicsEnvironmentDetail = true, graphicsGroundClutter = true,
+}
+local GAME_RAID_PLACES = { raid = true, pvp = true }
+
+local function GameRaidOn(place)
+	return GAME_RAID_PLACES[place] == true and GetCVarBool ~= nil and GetCVarBool("RAIDsettingsEnabled") == true
+end
+
+local TESTS = { city = ns.InCapitalCity, instance = ns.InstanceType }
 
 local function Find(key)
 	for _, s in ipairs(ns.SITUATIONS or {}) do
@@ -88,6 +129,29 @@ function ns.ActiveSituationName()
 	return s and s.name or nil
 end
 
+-- Its key ("city", "raid"), or nil.
+function ns.ActiveSituationKey()
+	local st = Active()
+	return st and Find(st.key) and st.key or nil
+end
+
+-- Where the active switch is: "a dungeon", "a city". nil when none is.
+function ns.SituationPlace()
+	local st = Active()
+	if not (st and Find(st.key)) then return nil end
+	local place = PLACES[st.place]
+	return place and place.a or "a city"
+end
+
+-- One short line for the card and the title while a switch has lowered settings. false while one is on
+-- but had nothing to lower (yours were all at or under its values), nil when none is on.
+function ns.SituationNote()
+	local where = ns.SituationPlace()
+	if not where then return nil end
+	if next(Active().set) == nil then return false end
+	return "In " .. where .. ": some settings lowered"
+end
+
 -- Your own value for a setting the switch has lowered, else value. Backups, saved presets and Back's
 -- "has anything changed" use this, so none of them records the lowered values as yours.
 function ns.SituationValue(cvar, value)
@@ -98,12 +162,15 @@ function ns.SituationValue(cvar, value)
 end
 
 -- Lowers each cap where the setting is higher. Records what it was, so leaving can put it back.
--- only (optional): a set of CVars to look at.
-local function Lower(s, set, only)
+-- only (optional): a set of CVars to look at. place: the instance type, so the game's own raid settings
+-- are left to the game.
+local function Lower(s, set, only, place)
 	local n = 0
+	local gameRaid = GameRaidOn(place)
 	for cvar, cap in pairs(s.auto.caps) do
 		local now = ns.GetInfo(cvar)
-		if tonumber(now) and tonumber(now) > cap + 0.001 and (not only or only[cvar]) then
+		if tonumber(now) and tonumber(now) > cap + 0.001 and (not only or only[cvar])
+			and not (gameRaid and GAME_RAID_TWINS[cvar]) then
 			SetCVar(cvar, cap)
 			local after = ns.GetInfo(cvar)
 			if not ns.Same(after, now) then
@@ -119,13 +186,20 @@ local function Plural(n, one, many)
 	return n == 1 and one or many
 end
 
-local function Enter(s)
+local function Enter(s, place)
 	local set = {}
-	local n = Lower(s, set)
-	ns.db.situationActive = { key = s.key, set = set }
+	local n = Lower(s, set, nil, place)
+	ns.db.situationActive = { key = s.key, place = place, set = set }
 	if n > 0 then
-		ns.Print(string.format("%s: lowered %d %s for steadier frames. %s back when you leave.",
-			s.name, n, Plural(n, "setting", "settings"), Plural(n, "It goes", "They go")))
+		local where = PLACES[place]
+		if where then
+			ns.Print(string.format("In %s: lowered %d %s to %s's for steadier frames. %s back when you leave.%s",
+				where.a, n, Plural(n, "setting", "settings"), s.name, Plural(n, "It goes", "They go"),
+				GameRaidOn(place) and " The game's own Raid and Battleground settings look after the rest." or ""))
+		else
+			ns.Print(string.format("%s: lowered %d %s for steadier frames. %s back when you leave.",
+				s.name, n, Plural(n, "setting", "settings"), Plural(n, "It goes", "They go")))
+		end
 	end
 	if ns.RefreshUI then ns.RefreshUI() end
 end
@@ -148,7 +222,12 @@ local function Leave()
 	local s = Find(st.key)
 	local name = s and s.name or "Situation"
 	if back > 0 then
-		ns.Print(string.format("%s over: put back %d %s.", name, back, Plural(back, "setting", "settings")))
+		local where = PLACES[st.place]
+		if where then
+			ns.Print(string.format("Left %s: put back %d %s.", where.the, back, Plural(back, "setting", "settings")))
+		else
+			ns.Print(string.format("%s over: put back %d %s.", name, back, Plural(back, "setting", "settings")))
+		end
 	end
 	if kept > 0 then
 		ns.Print(string.format("Left %d alone that changed while you were there.", kept))
@@ -160,24 +239,39 @@ local pending = false -- a switch waits for combat to end
 local retries = 0     -- the game didn't know the map yet
 local RETRY_LIMIT = 5
 local retryArmed = false
+local autotuneArmed = false -- waiting for Autotune to finish
 
--- Works out where you are and switches to match.
+-- true while a switch waits for a fight to end (the tick boxes say so).
+function ns.SituationWaiting()
+	return pending
+end
+
+local function AutotuneRunning()
+	return ns.Autotune ~= nil and ns.Autotune.IsRunning ~= nil and ns.Autotune.IsRunning() == true
+end
+
+local function SetPending(on)
+	if pending == on then return end
+	pending = on
+	if ns.RefreshUI then ns.RefreshUI() end
+end
+
+-- Works out where you are and switches to match. Only reads until it knows a switch is needed, so a
+-- zone change in a fight with nothing to switch never says it is waiting.
 function ns.UpdateSituations()
 	if not ns.db then return end
-	if InCombatLockdown() then
-		pending = true
-		return
-	end
-	pending = false
 	local st = Active()
-	local want, unsure
+	local want, wantPlace, unsure
+	local result = {}
 	for _, s in ipairs(ns.SITUATIONS or {}) do
 		if s.auto and ns.IsAutoSituationOn(s.key) and TESTS[s.auto.test] then
 			local r = TESTS[s.auto.test]()
+			result[s.key] = r
 			if r == nil then
 				unsure = true
 			elseif r then
 				want = s
+				wantPlace = type(r) == "string" and r or nil
 				break
 			end
 		end
@@ -192,25 +286,48 @@ function ns.UpdateSituations()
 				ns.UpdateSituations()
 			end)
 		end
-		-- Stay as you are, unless the switch was turned off.
-		if not st or ns.IsAutoSituationOn(st.key) then return end
+		-- Stay as you are while the switch you are in can't tell. One that can (you are out of the
+		-- dungeon) or was turned off ends now.
+		if not st or (ns.IsAutoSituationOn(st.key) and result[st.key] == nil) then
+			SetPending(false)
+			return
+		end
 	else
 		retries = 0
 	end
-	if st and want and want.key == st.key then return end
-	if not st and not want then return end
+	if (st and want and want.key == st.key and wantPlace == st.place) or (not st and not want) then
+		SetPending(false)
+		return
+	end
+	-- A switch is needed. Never in combat: PLAYER_REGEN_ENABLED looks again.
+	if InCombatLockdown() then
+		SetPending(true)
+		return
+	end
+	SetPending(false)
+	-- Autotune is testing your settings: step aside, and look again once it is done.
+	if AutotuneRunning() then
+		if not autotuneArmed then
+			autotuneArmed = true
+			C_Timer.After(5, function()
+				autotuneArmed = false
+				ns.UpdateSituations()
+			end)
+		end
+		return
+	end
 	-- A Compare showing "before" ends first, so the switch reads, lowers and puts back your real settings.
 	if ns.IsComparing and ns.IsComparing() and ns.StopCompare then ns.StopCompare() end
 	if st then Leave() end
-	if want then Enter(want) end
+	if want then Enter(want, wantPlace) end
 end
 
 local function Pack(...)
 	return { n = select("#", ...), ... }
 end
 
--- Runs fn(...) and, in a city, lowers again only what it raised: a setting you raised yourself before
--- it, which fn left as it was, stays yours. The raised value is remembered as your newest one.
+-- Runs fn(...) and, while a switch is on, lowers again only what it raised: a setting you raised yourself
+-- before it, which fn left as it was, stays yours. The raised value is remembered as your newest one.
 -- Every apply (below, and a preset of yours in Presets.lua) and every restore (Backups.lua, Back
 -- included) go through this.
 function ns.KeepSituationLowered(fn, ...)
@@ -228,7 +345,7 @@ function ns.KeepSituationLowered(fn, ...)
 		for cvar, was in pairs(before) do
 			if not ns.Same(ns.GetInfo(cvar), was) then raised[cvar] = true end
 		end
-		if next(raised) and Lower(s, st.set, raised) > 0 and ns.RefreshUI then ns.RefreshUI() end
+		if next(raised) and Lower(s, st.set, raised, st.place) > 0 and ns.RefreshUI then ns.RefreshUI() end
 	end
 	if not res[1] then error(res[2], 0) end
 	return unpack(res, 2, res.n)
@@ -240,7 +357,7 @@ function ns.ApplyAll(...)
 	return ns.KeepSituationLowered(coreApplyAll, ...)
 end
 
--- Turn the switch on or off. Called by the Presets tab and /ec city.
+-- Turn the switch on or off. Called by the Presets tab, /ec city and /ec instance.
 function ns.SetAutoSituation(key, on)
 	local s = Find(key)
 	if not s or not ns.db then return false end
@@ -277,8 +394,9 @@ events:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_REGEN_ENABLED" then
 		if pending then ns.UpdateSituations() end
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		-- After a loading screen, once the map is known. Eye Candy's own login re-apply (4 seconds,
-		-- Core.lua) goes through the ApplyAll wrapper above, so it can't undo a switch.
+		-- After a loading screen (every way into or out of an instance has one), once the map is known.
+		-- Eye Candy's own login re-apply (4 seconds, Core.lua) goes through the ApplyAll wrapper above, so
+		-- it can't undo a switch.
 		retries = 0
 		C_Timer.After(2, ns.UpdateSituations)
 	else
@@ -287,25 +405,39 @@ events:SetScript("OnEvent", function(_, event)
 end)
 
 ----------------------------------------------------------------------
--- /ec city
+-- /ec city and /ec instance
 ----------------------------------------------------------------------
+
+local SLASH = {
+	city = {
+		key = "city",
+		on = "In a capital city, Eye Candy now lowers view distance, environment detail, fog and far-away character detail, and puts them back when you leave. /ec city turns it off.",
+		off = "Eye Candy no longer changes settings in capital cities.",
+		help = "/ec city  lower the costly settings in capital cities by itself, and put them back when you leave",
+	},
+	instance = {
+		key = "raid",
+		on = "In dungeons, raids, battlegrounds and arenas, Eye Candy now lowers costly settings to Raid & PvP's, and puts them back when you leave. /ec instance turns it off.",
+		off = "Eye Candy no longer changes settings in dungeons, raids, battlegrounds and arenas.",
+		help = "/ec instance  lower the costly settings to Raid & PvP's in dungeons, raids, battlegrounds and arenas by itself, and put them back when you leave",
+	},
+}
 
 local coreSlash = SlashCmdList.EYECANDY
 SlashCmdList.EYECANDY = function(msg)
 	local m = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
-	if m == "city" or m == "city on" or m == "city off" then
+	local word, arg = m:match("^(%a+)%s*(%a*)$")
+	local cmd = word and SLASH[word]
+	if cmd and (arg == "" or arg == "on" or arg == "off") then
 		local on
-		if m == "city" then on = not ns.IsAutoSituationOn("city") else on = (m == "city on") end
-		if not ns.SetAutoSituation("city", on) then return end
-		if on then
-			ns.Print("In a capital city, Eye Candy now lowers view distance, environment detail, fog and far-away character detail, and puts them back when you leave. /ec city turns it off.")
-		else
-			ns.Print("Eye Candy no longer changes settings in capital cities.")
-		end
+		if arg == "" then on = not ns.IsAutoSituationOn(cmd.key) else on = (arg == "on") end
+		if not ns.SetAutoSituation(cmd.key, on) then return end
+		ns.Print(on and cmd.on or cmd.off)
 		return
 	end
 	coreSlash(msg)
 	if m == "help" then
-		ns.Print("/ec city  lower the costly settings in capital cities by itself, and put them back when you leave")
+		ns.Print(SLASH.city.help)
+		ns.Print(SLASH.instance.help)
 	end
 end
