@@ -659,6 +659,33 @@ local function SaidBackup(ok, err, ...)
 	return ok, err, ...
 end
 
+local ASK_H = 160
+
+-- A refusal in red under the name box (or under the question when there is none), with the box made
+-- taller for every line it wraps to. 12px a line when the game cannot measure it.
+local function AskError(text)
+	local fs = askFrame.errFS
+	fs:ClearAllPoints()
+	if askFrame.edit:IsShown() then
+		fs:SetPoint("TOPLEFT", askFrame.edit, "BOTTOMLEFT", -8, -6)
+	else
+		fs:SetPoint("TOPLEFT", askFrame.textFS, "BOTTOMLEFT", 0, -8)
+	end
+	if not text or text == "" then
+		fs:SetText("")
+		fs:Hide()
+		askFrame:SetHeight(ASK_H)
+		return
+	end
+	fs:SetText("|cffff4040" .. text .. "|r")
+	fs:Show()
+	local h = math.ceil(tonumber((fs:GetStringHeight())) or 0)
+	if h <= 0 then h = 12 * math.ceil(#text / 64) end
+	askFrame:SetHeight(ASK_H + math.max(0, h - 12))
+end
+
+-- onAccept may return a reason (a string) to refuse what was typed: then the box stays open and says
+-- why under it, in red (docs/ui-rules.md rule 6). Anything else (nothing, true) closes it as before.
 local function AskAccept()
 	local opts = askFrame.opts
 	askFrame:Hide()
@@ -667,12 +694,22 @@ local function AskAccept()
 		if opts.edit then
 			text = (askFrame.edit:GetText() or ""):gsub("^%s+", ""):gsub("%s+$", "")
 		end
-		opts.onAccept(text)
+		local err = opts.onAccept(text)
+		-- A box that onAccept opened itself (a new question) is left as it is.
+		if type(err) == "string" and err ~= "" and askFrame.opts == opts then
+			askFrame:Show()
+			askFrame:Raise()
+			AskError(err)
+			if opts.edit then
+				askFrame.edit:SetFocus()
+				askFrame.edit:HighlightText()
+			end
+		end
 	end
 end
 
 local function BuildAsk()
-	askFrame = MakeWindow("EyeCandyAskFrame", 420, 160, "Eye Candy")
+	askFrame = MakeWindow("EyeCandyAskFrame", 420, ASK_H, "Eye Candy")
 	askFrame:SetFrameStrata("FULLSCREEN_DIALOG")
 	askFrame.textFS = Label(askFrame, "", "GameFontHighlight")
 	askFrame.textFS:SetPoint("TOPLEFT", 18, -32)
@@ -686,6 +723,9 @@ local function BuildAsk()
 	edit:SetScript("OnEnterPressed", AskAccept)
 	edit:SetScript("OnEscapePressed", function() askFrame:Hide() end)
 	askFrame.edit = edit
+	askFrame.errFS = Label(askFrame, "", "GameFontHighlightSmall")
+	askFrame.errFS:SetWidth(384)
+	askFrame.errFS:Hide()
 
 	askFrame.cancel = Button(askFrame, "Cancel", 100, function() askFrame:Hide() end)
 	askFrame.cancel:SetPoint("BOTTOMRIGHT", -16, 14)
@@ -693,13 +733,16 @@ local function BuildAsk()
 	askFrame.accept:SetPoint("RIGHT", askFrame.cancel, "LEFT", -6, 0)
 end
 
--- opts: { title, text, edit = starting text (shows the name box), accept = button label, onAccept = function(text) }
+-- opts: { title, text, edit = starting text (shows the name box), accept = button label,
+-- danger = true for red button text (Delete, rule 15), onAccept = function(text) }.
+-- onAccept returns nothing to close the box, or a reason (a string) to keep it open and say why under it.
 function ns.Ask(opts)
 	if not askFrame then BuildAsk() end
 	askFrame.opts = opts
 	askFrame.titleText:SetText(opts.title or "Eye Candy")
 	askFrame.textFS:SetText(opts.text or "")
-	askFrame.accept:SetText(opts.accept or "OK")
+	local accept = opts.accept or "OK"
+	askFrame.accept:SetText(opts.danger and ("|cffff4040" .. accept .. "|r") or accept)
 	if opts.edit then
 		askFrame.edit:Show()
 		askFrame.edit:SetText(opts.edit)
@@ -708,6 +751,7 @@ function ns.Ask(opts)
 	else
 		askFrame.edit:Hide()
 	end
+	AskError(nil)
 	askFrame:Show()
 	askFrame:Raise()
 end
@@ -821,12 +865,15 @@ local function PresetAction(p, action)
 	elseif action == "rename" then
 		ns.Ask({ title = "Rename preset", text = "New name for \"" .. p.name .. "\":", edit = p.name, accept = "Rename",
 			onAccept = function(name)
-				if name ~= "" then Said(ns.RenamePreset(p.id, name)) end
+				-- A refused name stays in the box, with the reason under it (rule 6).
+				if name == "" then return "Type a name first." end
+				local ok, err = ns.RenamePreset(p.id, name)
 				ns.RefreshUI()
+				if not ok and err then return tostring(err) end
 			end })
 		return
 	elseif action == "delete" then
-		ns.Ask({ title = "Delete preset", text = "Delete \"" .. p.name .. "\"? This can't be undone.", accept = "Delete",
+		ns.Ask({ title = "Delete preset", text = "Delete \"" .. p.name .. "\"? This can't be undone.", accept = "Delete", danger = true,
 			onAccept = function()
 				Said(ns.DeletePreset(p.id))
 				ns.RefreshUI()
@@ -847,15 +894,16 @@ function ns.PresetMenuItems(p)
 	return items
 end
 
--- The game's own context menu when it has one, else a small list of buttons by the owner.
+-- A "..." menu: the game's own context menu when it has one, else a small list of buttons by the owner.
+-- items: { { key, label }, ... }, Delete last; onPick(key) runs for the one clicked. Photo mode's
+-- screenshot preset rows use it too (PhotoMode.lua).
 local menuFrame
-function ns.OpenPresetMenu(owner, p)
-	local items = ns.PresetMenuItems(p)
+function ns.OpenMenu(owner, title, items, onPick)
 	if MenuUtil and MenuUtil.CreateContextMenu then
 		MenuUtil.CreateContextMenu(owner, function(_, root)
-			if root.CreateTitle then root:CreateTitle(p.name) end
+			if root.CreateTitle and title then root:CreateTitle(title) end
 			for _, it in ipairs(items) do
-				root:CreateButton(it[2], function() PresetAction(p, it[1]) end)
+				root:CreateButton(it[2], function() onPick(it[1]) end)
 			end
 		end)
 		return
@@ -891,7 +939,7 @@ function ns.OpenPresetMenu(owner, p)
 		b:SetText(it[2])
 		b:SetScript("OnClick", function()
 			menuFrame:Hide()
-			PresetAction(p, it[1])
+			onPick(it[1])
 		end)
 		b:Show()
 	end
@@ -899,15 +947,20 @@ function ns.OpenPresetMenu(owner, p)
 	menuFrame:SetHeight(8 + #items * 26)
 	menuFrame:ClearAllPoints()
 	menuFrame:SetPoint("TOPRIGHT", owner, "BOTTOMRIGHT", 0, -2)
-	menuFrame.p = p
+	menuFrame.title = title
 	menuFrame:Show()
 	menuFrame:Raise()
+end
+
+function ns.OpenPresetMenu(owner, p)
+	ns.OpenMenu(owner, p.name, ns.PresetMenuItems(p), function(key) PresetAction(p, key) end)
 end
 
 -- A row's name box and the length ShortName cuts to agree: 26 characters is about 170px at
 -- GameFontHighlight (about 6.5px a character), inside the 180px box. The full name is in the row's
 -- tooltip. Where the game can measure the text, a name of wide letters is cut again until it fits.
 local ROW_NAME_X, ROW_NAME_W, ROW_NAME_CHARS = 14, 180, 26
+ns.ROW_NAME_X, ns.ROW_NAME_W = ROW_NAME_X, ROW_NAME_W -- Photo mode's rows line up with these (PhotoMode.lua)
 
 -- GetStringWidth stops at the box's width when the text cannot wrap (warcraft.wiki.gg
 -- API:FontString_GetStringWidth), so the unbounded width is the one to read.
@@ -926,6 +979,7 @@ local function FitRowName(fs, name)
 		w = TextWidth(fs)
 	end
 end
+ns.FitRowName = FitRowName
 
 local function PresetRow(content)
 	local row = CreateFrame("Button", nil, content)
@@ -1121,9 +1175,9 @@ local SITUATION_BOXES = {
 		line = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave.",
 	},
 	["look:raid"] = {
-		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids and battlegrounds by itself",
-		tip = "In a dungeon, raid, battleground or arena, lowers your settings to Raid & PvP's. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
-		line = "In dungeons, raids, battlegrounds and arenas, lowers costly settings to Raid & PvP's. They go back when you leave.",
+		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids, battlegrounds and arenas by itself",
+		tip = "In a dungeon, raid, battleground or arena, lowers your settings to the Raid & PvP preset's settings. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
+		line = "In dungeons, raids, battlegrounds and arenas, lowers costly settings to Raid & PvP. They go back when you leave.",
 	},
 }
 local function SituationBox(page, spec)
@@ -1482,8 +1536,11 @@ ns.TAB_BUILD.presets = function(page)
 		ns.Ask({ title = "Save as preset", text = "Name this preset. It saves all your graphics settings as they are now.", edit = "", accept = "Save",
 			onAccept = function(name)
 				page.cardMsg, page.cardMsgKey = nil, nil
-				if name ~= "" then Said(ns.SaveCurrentAsPreset(name)) end
+				-- A refused name stays in the box, with the reason under it (rule 6).
+				if name == "" then return "Type a name first." end
+				local p, err = ns.SaveCurrentAsPreset(name)
 				ns.RefreshUI()
+				if not p and err then return tostring(err) end
 			end })
 	end)
 	Tooltip(page.saveButton, "Save my settings as a preset", "Saves all your graphics settings as they are now, under a name you pick.", "ANCHOR_LEFT")
@@ -1604,7 +1661,7 @@ local function BackupRow(content, index)
 	row.restore:SetPoint("RIGHT", -2, 0)
 	Tooltip(row.restore, "Restore", "Puts these settings back. Asks first and shows how many settings change.")
 	row.delete = Button(row, "|cffff4040Delete|r", 62, function()
-		ns.Ask({ title = "Delete backup", text = "Delete the backup \"" .. tostring(row.b.label) .. "\"? This can't be undone.", accept = "Delete",
+		ns.Ask({ title = "Delete backup", text = "Delete the backup \"" .. tostring(row.b.label) .. "\"? This can't be undone.", accept = "Delete", danger = true,
 			onAccept = function()
 				local ok, err = ns.DeleteBackup(row.b.id)
 				local page = main and main.pages and main.pages.backups
