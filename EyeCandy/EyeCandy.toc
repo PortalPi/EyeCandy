@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: Eye Candy |cff9d9d9dGraphics Presets & Hidden Settings|r
-## Notes: Graphics presets, curated looks and hidden graphics settings, with backups. Type /ec to open it.
+## Notes: Graphics presets, Looks and hidden graphics settings, with backups. Type /ec to open it.
 ## Author: PortalPi
 ## Version: 1.0.1
 ## SavedVariables: EyeCandyDB

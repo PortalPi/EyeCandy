@@ -63,7 +63,7 @@ walk(lua, 37)
 # Turn it on outside a city: nothing changes yet.
 lua.execute('SlashCmdList.EYECANDY("city")')
 out = chat(lua)
-check(ev('NS.IsAutoSituationOn("city")') == True and any("puts them back when you leave" in l for l in out), "/ec city turns it on and says what it does")
+check(ev('NS.IsAutoSituationOn("city")') == True and any("until you leave" in l for l in out), "/ec city turns it on and says what it does")
 check(g("graphicsViewDistance") == "9", "turned on in Elwynn: nothing changes yet")
 
 # Walk into Stormwind: the four crowd costs come down, only where yours are higher. No backup.
@@ -98,7 +98,7 @@ lua.execute('SetCVar("graphicsViewDistance", "8"); CHAT = {}')
 walk(lua, 37)
 out = chat(lua)
 check(g("graphicsViewDistance") == "8" and g("graphicsComputeEffects") == "4", "your own change in the city stays; the rest go back")
-check(any("Left 1 alone that changed while you were there" in l for l in out), "chat says how many were left alone")
+check(any("1 setting changed while you were there, so it stays" in l for l in out), "chat says how many were left alone")
 lua.execute('SetCVar("graphicsViewDistance", "9")')
 
 # A login with no map yet, then the map arrives: the retry switches.
