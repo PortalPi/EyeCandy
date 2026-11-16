@@ -179,7 +179,7 @@ local function Build(n)
 
 	frame.keep = ns.Button(frame, "Keep the changes", 130, function() PW.Keep() end)
 	frame.keep:SetPoint("BOTTOMRIGHT", -16, 14)
-	ns.Tooltip(frame.keep, "Keep the changes", "Changes nothing. The settings stay as the game set them.", "ANCHOR_LEFT")
+	ns.Tooltip(frame.keep, "Keep the changes", "Leaves them as the game set them.", "ANCHOR_LEFT")
 	frame.back = ns.Button(frame, "Put them back", 130, function() PW.PutBack() end)
 	frame.back:SetPoint("RIGHT", frame.keep, "LEFT", -8, 0)
 	ns.Tooltip(frame.back, "Put them back",

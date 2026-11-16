@@ -789,7 +789,7 @@ function ns.ImportPreviewText(text)
 	if p.clash then
 		lines[#lines + 1] = "You already have a preset called \"" .. tostring(p.name) .. "\". Replace it, or keep both."
 	else
-		lines[#lines + 1] = "It's saved as a new preset. Nothing changes until you press Apply on it."
+		lines[#lines + 1] = "Import saves it as a new preset. Nothing changes until you press Apply."
 	end
 	return table.concat(lines, "\n"), true, p.clash and true or false
 end
@@ -859,7 +859,7 @@ local function PresetAction(p, action)
 	elseif action == "share" then
 		local text = Said(ns.ExportPreset(p.id))
 		if text then
-			ns.ShowText(text, "Everything is selected. Press Ctrl+C, then paste it to a friend. They paste it into Import on the Presets tab.")
+			ns.ShowText(text, "Press Ctrl+C to copy, then send it to a friend. They paste it into Import on the Presets tab.")
 		end
 		return
 	elseif action == "rename" then
@@ -998,7 +998,7 @@ local function PresetRow(content)
 
 	row.more = Button(row, "...", 30, function() ns.OpenPresetMenu(row.more, row.p) end)
 	row.more:SetPoint("RIGHT", -4, 0)
-	Tooltip(row.more, "More", "Share, Duplicate, and for your own presets Rename and Delete. Right-clicking the row opens this too.", "ANCHOR_LEFT")
+	Tooltip(row.more, "More", "Share, Duplicate, Rename and Delete. Right-click the row to open it too.", "ANCHOR_LEFT")
 	row.apply = Button(row, "Apply", 70, function() PresetAction(row.p, "apply") end)
 	row.apply:SetPoint("RIGHT", row.more, "LEFT", -4, 0)
 	Tooltip(row.apply, "Apply", "Applies this preset now. Back to before undoes it.", "ANCHOR_LEFT")
@@ -1100,7 +1100,7 @@ local function BuildImportStrip(page)
 	bg:SetColorTexture(1, 1, 1, 0.04)
 	s.title = Label(s, "Import a preset", "GameFontNormal")
 	s.title:SetPoint("TOPLEFT", 14, -8)
-	s.hint = Label(s, "Got a code from a friend? Paste it here. It's saved as a new preset in this list.", "GameFontHighlightSmall")
+	s.hint = Label(s, "Paste a share code from a friend.", "GameFontHighlightSmall")
 	s.hint:SetPoint("LEFT", s.title, "RIGHT", 10, 0)
 	s.hint:SetTextColor(0.62, 0.62, 0.62)
 
@@ -1115,7 +1115,7 @@ local function BuildImportStrip(page)
 
 	s.import = Button(s, "Import", 80, function() ns.ImportFromStrip(page, "keep") end)
 	s.import:SetPoint("LEFT", box, "RIGHT", 10, 0)
-	Tooltip(s.import, "Import", "Saves the code as a new preset in Your presets. Nothing changes until you press Apply on it.", "ANCHOR_LEFT")
+	Tooltip(s.import, "Import", "Saves the code as a new preset in Your presets.", "ANCHOR_LEFT")
 	s.keep = Button(s, "Keep both", 90, function() ns.ImportFromStrip(page, "keep") end)
 	s.keep:SetPoint("LEFT", box, "RIGHT", 10, 0)
 	Tooltip(s.keep, "Keep both", "Keeps yours and saves the new one with \"(2)\" on the end.", "ANCHOR_LEFT")
@@ -1153,7 +1153,7 @@ function ns.ImportFromStrip(page, mode)
 	page.newId = p.id
 	s.box:SetText("")
 	s.box:ClearFocus()
-	page.importMsg = "|cff7cff7cSaved \"" .. p.name .. "\" in Your presets, marked New.|r Press Apply on it to use it."
+	page.importMsg = "|cff7cff7cSaved \"" .. p.name .. "\" in Your presets.|r Press Apply to use it."
 	ns.UpdateImportStrip(page)
 	ns.RefreshUI()
 	-- Scroll the new row into view, with its heading's worth of room above it.
@@ -1170,13 +1170,13 @@ end
 -- leave (Situations.lua). field is the page's name for the box; key the Situation's.
 local SITUATION_BOXES = {
 	["look:city"] = {
-		field = "cityBox", key = "city", label = "Switch in cities by itself",
-		tip = "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat.",
+		field = "cityBox", key = "city", label = "Lower settings in capital cities",
+		tip = "Lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher, and never in a fight.",
 		line = "In a capital city, lowers some costly settings where yours are higher. They go back when you leave.",
 	},
 	["look:raid"] = {
-		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids, battlegrounds and arenas by itself",
-		tip = "In a dungeon, raid, battleground or arena, lowers your settings to the Raid & PvP preset's settings. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
+		field = "instanceBox", key = "raid", label = "Lower settings in dungeons, raids, battlegrounds and arenas",
+		tip = "Lowers your settings to the Raid & PvP preset's settings, only where yours are higher, and never in a fight.\nIf the game's own Raid and Battleground settings are on, Eye Candy lowers only the settings they don't cover.",
 		line = "Lowers settings to the Raid & PvP preset in dungeons, raids, battlegrounds and arenas. They go back when you leave.",
 	},
 }
@@ -1374,7 +1374,7 @@ end
 -- The Showcase button's tooltip on that fallback page. Render scale is asked for, but the game
 -- won't go above its highest, so its line says so.
 function ns.ShowcaseTooltip()
-	local lines = { "The best-looking setup Eye Candy knows about. Sets every system to Cinematic, the Hidden tab's settings to their Showcase values (the furthest far detail, terrain and building detail), then:" }
+	local lines = { "Cinematic on every system, the Hidden tab at Showcase's values, then:" }
 	for _, ex in ipairs(ns.EXTRAS) do
 		local v = ns.SHOWCASE_EXTRAS[ex.key]
 		if v ~= nil then
@@ -1382,13 +1382,13 @@ function ns.ShowcaseTooltip()
 		end
 	end
 	lines[#lines + 1] = " "
-	lines[#lines + 1] = "Above 100% the cost climbs fast: 200% is roughly 1.8x the GPU work of 150%."
+	lines[#lines + 1] = "Above 100% the FPS cost climbs fast."
 	lines[#lines + 1] = "Applies straight away. Back to before undoes it."
 	return table.concat(lines, "\n")
 end
 
 local function BuildPresetButtons(page)
-	local intro = Label(page, "One click sets every system at once and applies straight away. Fine-tune anything after on the Standard and Hidden tabs.", "GameFontNormalSmall")
+	local intro = Label(page, "Each button sets every system and applies straight away.", "GameFontNormalSmall")
 	intro:SetPoint("TOPLEFT", 4, -34)
 	intro:SetWidth(ns.PAGE_W - 8)
 
@@ -1427,7 +1427,7 @@ function ns.LookTooltip(look)
 	lines[#lines + 1] = "Contrast " .. v("Contrast") .. ", brightness " .. v("Brightness") .. ", gamma " .. v("Gamma") .. ", bloom " .. v("bloomUserMult")
 	lines[#lines + 1] = "Field of view " .. v("cameraFov") .. ", soft particles (depth effects) " .. v("graphicsDepthEffects")
 	lines[#lines + 1] = " "
-	lines[#lines + 1] = "|cff9d9d9dStarts from " .. (look.base > #ns.TIERS and "Showcase" or ns.TIERS[look.base]) .. ". Applies straight away. Tweak anything after on the Hidden tab.|r"
+	lines[#lines + 1] = "|cff9d9d9dStarts from " .. (look.base > #ns.TIERS and "Showcase" or ns.TIERS[look.base]) .. ". Applies straight away.|r"
 	return table.concat(lines, "\n")
 end
 
@@ -1505,7 +1505,7 @@ local function RefreshCard(page)
 	else
 		c.name:SetText("|cff9d9d9dNo preset yet|r")
 		-- Back to before shows only once a preset has been applied, so it is not named here.
-		c.detail:SetText("Pick one below. A preset applies when you press Apply on it.")
+		c.detail:SetText("Pick one below and press Apply.")
 		c.bar:Hide()
 	end
 	-- Autotune and the city switch call RefreshUI when they change, so the timed check needs only this.
@@ -1543,7 +1543,7 @@ ns.TAB_BUILD.presets = function(page)
 				if not p and err then return tostring(err) end
 			end })
 	end)
-	Tooltip(page.saveButton, "Save my settings as a preset", "Saves all your graphics settings as they are now, under a name you pick.", "ANCHOR_LEFT")
+	Tooltip(page.saveButton, "Save my settings as a preset", "Saves your settings as they are now as a preset, under a name you pick.", "ANCHOR_LEFT")
 	BuildImportStrip(page)
 	page.relayout = function() RefreshPresetList(page) end
 	-- "New" and the import message last until you leave the tab.
@@ -1597,7 +1597,7 @@ function ns.AskRestore(b)
 		title = "Restore backup",
 		text = string.format("Restore %d %s from %s?", count, count == 1 and "setting" or "settings", tostring(b.time or "earlier"))
 			-- A restore is one of today's steps (Backups.lua), so Back undoes it until the day ends.
-			.. (ns.BackSteps and "\nIt makes no backup of your settings now. Back on the Presets tab can undo it today."
+			.. (ns.BackSteps and "\nBack on the Presets tab can undo it today."
 				or "\nThis can't be undone. Create a backup first if you want to keep your settings now."),
 		accept = "Restore",
 		onAccept = function()
@@ -1670,20 +1670,20 @@ local function BackupRow(content, index)
 			end })
 	end)
 	row.delete:SetPoint("RIGHT", row.restore, "LEFT", -12, 0)
-	Tooltip(row.delete, "Delete", "Removes this backup for good. Asks first.", "ANCHOR_LEFT")
+	Tooltip(row.delete, "Delete", "Deletes this backup. Asks first.", "ANCHOR_LEFT")
 	return row
 end
 
 ns.TAB_BUILD.backups = function(page)
 	local intro = Label(page, ns.CreateBackup
-		and "Original = your settings before Eye Candy, kept for good. Create backup saves your settings now, under a name you choose."
-		or "Original = your settings before Eye Candy, kept for good.", "GameFontNormalSmall")
+		and "Original is your settings from before Eye Candy. It can't be deleted. Create backup saves your settings now."
+		or "Original is your settings from before Eye Candy. It can't be deleted.", "GameFontNormalSmall")
 	intro:SetPoint("TOPLEFT", 4, -4)
 	intro:SetWidth(ns.PAGE_W - 150)
 	local create = Button(page, "Create backup", 130, ns.AskCreateBackup)
 	create:SetPoint("TOPRIGHT", -2, 0)
 	create:SetEnabled(ns.CreateBackup ~= nil)
-	Tooltip(create, "Create backup", "Saves every setting Eye Candy manages, as they are now, under a name you choose.")
+	Tooltip(create, "Create backup", "Saves your settings as they are now, under a name you pick.")
 	-- What Restore or Delete just did, under the intro. It lasts until you leave the tab.
 	page.result = Label(page, "", "GameFontHighlightSmall")
 	page.result:SetPoint("TOPLEFT", 4, -34)
@@ -2087,7 +2087,7 @@ function ns.BuildMain()
 	main.createBackup = Button(main, "Create backup", 120, ns.AskCreateBackup)
 	main.createBackup:SetPoint("LEFT", apply, "RIGHT", 6, 0)
 	Tooltip(main.createBackup, "Create backup", function()
-		return ns.CreateBackup and "Saves all your graphics settings as they are now, under a name you pick."
+		return ns.CreateBackup and "Saves your settings as they are now, under a name you pick."
 			or "Not available. The backups list didn't load."
 	end)
 
@@ -2099,11 +2099,11 @@ function ns.BuildMain()
 	end)
 	local keepText = Label(main, "Keep my settings applied", "GameFontHighlightSmall")
 	keepText:SetPoint("LEFT", main.keep, "RIGHT", 2, 0)
-	Tooltip(main.keep, "Keep my settings applied", "The game's own Graphics menu resets some hidden settings (grass, weather, distances). With this on, Eye Candy puts yours back after login and after you close Options.")
+	Tooltip(main.keep, "Keep my settings applied", "The game's Graphics menu resets some hidden settings, like grass and distances. With this on, Eye Candy sets yours again after login and after you close Options.")
 
 	local export = Button(main, "Copy my settings", 124, function() ns.BarSay(nil); ns.ShowExport(IsShiftKeyDown()) end)
 	export:SetPoint("BOTTOMRIGHT", -16, 14)
-	Tooltip(export, "Copy my settings", "Opens a box with your graphics settings, already selected. Press Ctrl+C to copy. Shift-click to include every setting, not just the changed ones.")
+	Tooltip(export, "Copy my settings", "Opens a box with your changed settings to copy. Shift-click for every setting.")
 	for _, fr in ipairs({ main.createBackup, main.keep, keepText, export }) do tinsert(main.rollUp, fr) end
 	main.export = export
 
@@ -2131,9 +2131,9 @@ function ns.BuildMain()
 		Tooltip(compare, "Compare", function()
 			local label = ns.CompareLabel and ns.CompareLabel()
 			if label then
-				return label .. ".\nClick to flip. Right-click, or closing Eye Candy, ends on now."
+				return label .. ".\nClick to flip. Right-click or close Eye Candy to end on now."
 			end
-			return "Flips your settings between before your last preset and now, so you can see the difference in the same spot. Click again to flip."
+			return "Flips between your settings from before your last preset and now. Click again to flip back."
 		end)
 		main.compare = compare
 		tinsert(main.barButtons, compare)
@@ -2144,7 +2144,7 @@ function ns.BuildMain()
 			local ok, err = ns.TogglePeek()
 			if not ok and err then ns.BarSay(err) end
 		end)
-		Tooltip(peek, "Peek", "Hides the game's UI and Eye Candy so you can see the world. Press Back or Esc to bring it all back.")
+		Tooltip(peek, "Peek", "Hides all UI so you can see the world. Back or Esc brings it back.")
 		main.peek = peek
 		tinsert(main.barButtons, peek)
 	end

@@ -43,7 +43,7 @@ end
 
 -- What the player reads when render scale is held: why, and what to do.
 RC.HELD = "held at 100% until you restart the game"
-RC.TELL = "The game holds render scale at 100% until you restart it. Eye Candy lifts that hold, so after a restart it can go up to 200%."
+RC.TELL = "The game holds render scale at 100% until you restart it. After a restart it can go up to 200%."
 
 -- Never in a fight: a setting the game guards in combat would show a "blocked" warning that pcall
 -- can't stop. A clear due in a fight waits for it to end.

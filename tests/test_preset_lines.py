@@ -25,5 +25,5 @@ check(not long, "every row line is 50 characters or fewer, so none is cut even b
 classic = next((l for n, l, d in rows if n == "Classic"), None)
 check(classic == "Closer to how WoW used to feel.", "Classic's line is whole: %r" % classic)
 cdesc = next((d for n, l, d in rows if n == "Classic"), "")
-check("Low bloom (guides suggest Low" in cdesc and "approximation" in cdesc, "and its full description is still there for the tooltip")
+check("Low bloom, sparse grass" in cdesc and "only close" in cdesc, "and its full description is still there for the tooltip")
 done()
