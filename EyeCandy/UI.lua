@@ -1155,9 +1155,10 @@ local function SituationBoxText(spec)
 		return text .. "  |cff9d9d9dWaits for the fight to end|r"
 	end
 	if ns.ActiveSituationKey and ns.ActiveSituationKey() == spec.key then
-		local note = ns.SituationNote and ns.SituationNote()
-		local where = note and note:match("^In (.-):") or (spec.key == "city" and "a city")
+		local where = ns.SituationPlace and ns.SituationPlace()
+		local none = ns.SituationNote and ns.SituationNote() == false
 		return text .. "  |cffffd100On now" .. (where and (": in " .. where) or "") .. "|r"
+			.. (none and "  |cff9d9d9dNothing needed lowering|r" or "")
 	end
 	return text
 end
@@ -1364,7 +1365,10 @@ function ns.RunningNote()
 	local at = ns.AutotuneNote and ns.AutotuneNote()
 	if at then return at end
 	if ns.ActiveSituationName and ns.ActiveSituationName() then
-		return ns.SituationNote and ns.SituationNote() or "In a city: some settings lowered"
+		-- false: a switch is on here but lowered nothing, so there is nothing to say.
+		local note = ns.SituationNote and ns.SituationNote()
+		if note == false then return nil end
+		return note or "In a city: some settings lowered"
 	end
 end
 

@@ -173,7 +173,22 @@ X('SlashCmdList.EYECANDY("")')
 check("Waits for the fight to end" in ev('EyeCandyMainFrame.pages.presets.instanceBox.text.text'), "the box says it waits for the fight")
 X('INCOMBAT = false; FIRE("PLAYER_REGEN_ENABLED")')
 check(g("graphicsShadowQuality") == "4" and not ev('NS.SituationWaiting()'), "after the fight it switches")
+# A zone change in a fight with nothing to switch: it is not waiting for anything.
+X('INCOMBAT = true; FIRE("ZONE_CHANGED_INDOORS"); RUNTIMERS(); NS.RefreshUI()')
+check(not ev('NS.SituationWaiting()') and "Waits" not in ev('EyeCandyMainFrame.pages.presets.instanceBox.text.text'),
+      "a zone change mid-fight in the same raid: no waiting line")
+X('INCOMBAT = false')
 go(lua, "none")
+
+# Yours already at or under Raid & PvP's: it is on, but says nothing was lowered.
+X('LOW = {}; for k, v in pairs(NS.SITUATIONS[1].auto.caps) do LOW[k] = GetCVar(k); SetCVar(k, v) end; CHAT = {}')
+go(lua, "party")
+check(ev('NS.ActiveSituationKey()') == "raid" and chat(lua) == [], "nothing to lower: on, and chat says nothing")
+check(ev('NS.SituationNote()') is False and ev('NS.RunningNote()') is None, "the card and title claim nothing")
+X('NS.RefreshUI()')
+check("Nothing needed lowering" in ev('EyeCandyMainFrame.pages.presets.instanceBox.text.text'), "the box says nothing needed lowering")
+go(lua, "none")
+X('for k, v in pairs(LOW) do SetCVar(k, v) end')
 
 # Steps aside while Autotune runs, and switches once it is done.
 X('REAL_RUN = NS.Autotune.IsRunning; NS.Autotune.IsRunning = function() return true end')

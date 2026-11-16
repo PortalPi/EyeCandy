@@ -135,12 +135,21 @@ function ns.ActiveSituationKey()
 	return st and Find(st.key) and st.key or nil
 end
 
--- One short line for the card and the title while a switch has lowered settings, or nil.
-function ns.SituationNote()
+-- Where the active switch is: "a dungeon", "a city". nil when none is.
+function ns.SituationPlace()
 	local st = Active()
 	if not (st and Find(st.key)) then return nil end
 	local place = PLACES[st.place]
-	return "In " .. (place and place.a or "a city") .. ": some settings lowered"
+	return place and place.a or "a city"
+end
+
+-- One short line for the card and the title while a switch has lowered settings. false while one is on
+-- but had nothing to lower (yours were all at or under its values), nil when none is on.
+function ns.SituationNote()
+	local where = ns.SituationPlace()
+	if not where then return nil end
+	if next(Active().set) == nil then return false end
+	return "In " .. where .. ": some settings lowered"
 end
 
 -- Your own value for a setting the switch has lowered, else value. Backups, saved presets and Back's
@@ -241,31 +250,16 @@ local function AutotuneRunning()
 	return ns.Autotune ~= nil and ns.Autotune.IsRunning ~= nil and ns.Autotune.IsRunning() == true
 end
 
--- Works out where you are and switches to match.
+local function SetPending(on)
+	if pending == on then return end
+	pending = on
+	if ns.RefreshUI then ns.RefreshUI() end
+end
+
+-- Works out where you are and switches to match. Only reads until it knows a switch is needed, so a
+-- zone change in a fight with nothing to switch never says it is waiting.
 function ns.UpdateSituations()
 	if not ns.db then return end
-	if InCombatLockdown() then
-		if not pending then
-			pending = true
-			if ns.RefreshUI then ns.RefreshUI() end
-		end
-		return
-	end
-	if pending then
-		pending = false
-		if ns.RefreshUI then ns.RefreshUI() end
-	end
-	-- Autotune is testing your settings: step aside, and look again once it is done.
-	if AutotuneRunning() then
-		if not autotuneArmed then
-			autotuneArmed = true
-			C_Timer.After(5, function()
-				autotuneArmed = false
-				ns.UpdateSituations()
-			end)
-		end
-		return
-	end
 	local st = Active()
 	local want, wantPlace, unsure
 	local result = {}
@@ -294,12 +288,34 @@ function ns.UpdateSituations()
 		end
 		-- Stay as you are while the switch you are in can't tell. One that can (you are out of the
 		-- dungeon) or was turned off ends now.
-		if not st or (ns.IsAutoSituationOn(st.key) and result[st.key] == nil) then return end
+		if not st or (ns.IsAutoSituationOn(st.key) and result[st.key] == nil) then
+			SetPending(false)
+			return
+		end
 	else
 		retries = 0
 	end
-	if st and want and want.key == st.key and wantPlace == st.place then return end
-	if not st and not want then return end
+	if (st and want and want.key == st.key and wantPlace == st.place) or (not st and not want) then
+		SetPending(false)
+		return
+	end
+	-- A switch is needed. Never in combat: PLAYER_REGEN_ENABLED looks again.
+	if InCombatLockdown() then
+		SetPending(true)
+		return
+	end
+	SetPending(false)
+	-- Autotune is testing your settings: step aside, and look again once it is done.
+	if AutotuneRunning() then
+		if not autotuneArmed then
+			autotuneArmed = true
+			C_Timer.After(5, function()
+				autotuneArmed = false
+				ns.UpdateSituations()
+			end)
+		end
+		return
+	end
 	-- A Compare showing "before" ends first, so the switch reads, lowers and puts back your real settings.
 	if ns.IsComparing and ns.IsComparing() and ns.StopCompare then ns.StopCompare() end
 	if st then Leave() end
