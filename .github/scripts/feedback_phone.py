@@ -1,8 +1,8 @@
 """The maintainer's phone side of the feedback pipeline: the ask, and the Yes or No coming back.
 
-- ask (run by .github/workflows/feedback-ask.yml): the sort routine's comment on an issue starts
-  with <!-- eyecandy-sort: ask --> and has a line "Phone: ...". This sends that line to the
-  maintainer's ntfy topic as a phone notification. Tapping it opens the comment (the readable page). It has two
+- ask (sent by routine_say.py when it posts the sort routine's comment): the comment starts with
+  <!-- eyecandy-sort: ask --> and has a line "Phone: ...". That line goes to the maintainer's ntfy
+  topic as a phone notification. Tapping it opens the comment (the readable page). It has two
   buttons, "Yes, fix it" and "No", each posting "<yes|no> <issue> <code>" to the topic's reply
   topic, "<topic>-reply".
 - answer (run by .github/workflows/feedback-answer.yml every 10 minutes): reads the last 12 hours
@@ -118,17 +118,6 @@ def notify(topic, title, line):
     http(SERVER + "/", {"topic": topic, "title": title, "message": line})
 
 
-def ask():
-    body = os.environ.get("COMMENT_BODY", "")
-    if not is_ask(body):
-        print("Not an ask; nothing sent.")
-        return
-    issue = int(os.environ["ISSUE"])
-    http(SERVER + "/", ask_message(os.environ["NTFY_TOPIC"], issue, phone_line(body),
-                                   os.environ["COMMENT_URL"], os.environ["APPROVE_KEY"]))
-    print(f"Asked about #{issue}.")
-
-
 def answer():
     topic, key = os.environ["NTFY_TOPIC"], os.environ["APPROVE_KEY"]
     repo, token = os.environ["GITHUB_REPOSITORY"], os.environ["GH_TOKEN"]
@@ -178,6 +167,6 @@ def act(repo, token, topic, when, verb, n):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2 or sys.argv[1] not in ("ask", "answer"):
-        sys.exit("Use: feedback_phone.py ask|answer")
-    ask() if sys.argv[1] == "ask" else answer()
+    if sys.argv[1:] != ["answer"]:
+        sys.exit("Use: feedback_phone.py answer")
+    answer()
