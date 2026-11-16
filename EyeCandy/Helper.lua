@@ -233,7 +233,7 @@ local function PickText(p)
 	if #ups > 0 then lines[#lines + 1] = "Higher: " .. H.List(ups) .. "." end
 	if #downs > 0 then lines[#lines + 1] = "Lower: " .. H.List(downs) .. "." end
 	lines[#lines + 1] = n == 0 and "Nothing would change."
-		or string.format("About %d of your settings change. Back to before undoes it.", n)
+		or string.format("Changes up to %d of your settings. Back to before undoes it.", n)
 	return table.concat(lines, "\n")
 end
 
@@ -247,7 +247,7 @@ end
 -- and the line names all three.
 -- Where to stand and how long is the tab's own text (HowText in AutotuneTab.lua); this line only says
 -- what was picked. It goes once the goal is changed on the tab, so it never names an old pick.
-H.AUTO_LINE = "Help me pick chose Best balance and Best look, from the lowest settings. Press Start when you're ready."
+H.AUTO_LINE = "Help me pick chose Best balance and Best look, from the lowest settings. Press Start."
 
 local picked -- the goal table Let Eye Candy pick set, while its line is showing
 
@@ -282,7 +282,7 @@ end
 ----------------------------------------------------------------------
 
 local QUESTION = "What matters more to you?"
-local ASK_TEXT = "Prettier or Faster: I suggest one preset and show what it changes. Nothing changes until you press Apply. Let Eye Candy pick opens Autotune."
+local ASK_TEXT = "Prettier and Faster suggest one preset and show what it changes. Nothing changes until you press Apply. Let Eye Candy pick opens Autotune."
 
 local waiting -- { page, p } while an Apply waits for a fight to end
 
@@ -309,13 +309,13 @@ local function Applied(page, p)
 	else
 		-- The row's Apply puts a refusal's reason on the card; say it here too, where it was pressed.
 		local why = page and page.cardMsg and page.cardMsg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
-		H.Set(page, "none", p, RED .. p.name .. " didn't go on." .. (why and why ~= "" and (" " .. why) or "") .. "|r")
+		H.Set(page, "none", p, RED .. p.name .. " didn't apply." .. (why and why ~= "" and (" " .. why) or "") .. "|r")
 	end
 end
 
 local function Apply(page, p)
 	if InCombatLockdown() then
-		H.Set(page, "waiting", p, GREY .. "Waiting for the fight to end. " .. p.name .. " goes on then. Close this to cancel.|r")
+		H.Set(page, "waiting", p, GREY .. "Waiting for the fight to end. Then " .. p.name .. " applies. Close this to cancel.|r")
 		waiting = { page = page, p = p }
 		return
 	end
@@ -359,9 +359,9 @@ local function Build(page)
 	s.body:SetJustifyH("LEFT")
 
 	s.prettier = ns.Button(s, "Prettier", 100, function() Answer(page, "prettier") end)
-	ns.Tooltip(s.prettier, "Prettier", "Suggests the next preset up from where you are, and shows what it changes. Nothing changes yet.")
+	ns.Tooltip(s.prettier, "Prettier", "Suggests the next preset up and shows what it would change.")
 	s.faster = ns.Button(s, "Faster", 100, function() Answer(page, "faster") end)
-	ns.Tooltip(s.faster, "Faster", "Suggests the next preset down from where you are, and shows what it changes. Nothing changes yet.")
+	ns.Tooltip(s.faster, "Faster", "Suggests the next preset down and shows what it would change.")
 	s.auto = ns.Button(s, "Let Eye Candy pick", 150, function() H.LetEyeCandyPick() end)
 	ns.Tooltip(s.auto, "Let Eye Candy pick", "Opens Autotune on the Experimental tab with Best balance picked. It starts only when you press Start.")
 	s.apply = ns.Button(s, "Apply", 160, function() if s.p then Apply(page, s.p) end end)
@@ -442,7 +442,7 @@ function ns.HelperButton(page, header)
 				H.Set(page, "ask")
 			end
 		end)
-		ns.Tooltip(b, "Help me pick", "Asks what matters more to you, then suggests one preset. Nothing changes until you press Apply.", "ANCHOR_LEFT")
+		ns.Tooltip(b, "Help me pick", "Asks what matters more to you, then suggests one preset.", "ANCHOR_LEFT")
 		page.helperButton = b
 	end
 	b.header = header

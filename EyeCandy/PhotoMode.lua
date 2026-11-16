@@ -153,10 +153,6 @@ function PM.Settle(s, elapsed)
 	return s.waited >= PM.MAX
 end
 
-local function Waited(s)
-	return string.format("It waited %.1f seconds for the new settings to load.", s.waited)
-end
-
 -- Ends the peek and puts your settings back. Returns the closing words: what came back, or what waits.
 local function Restore()
 	local uiBack = true
@@ -177,7 +173,7 @@ local function Finish(result)
 	local ui = s.uiShown and " The game's UI came back while the photo was taken, so it may be in it." or ""
 	if result == "saved" then
 		Say(all and "done" or "waiting", "Photo saved at " .. date("%H:%M:%S") .. ". " .. PM.WHERE
-			.. (s.mine and "" or " " .. Waited(s)) .. ui .. " " .. closing)
+			.. ui .. " " .. closing)
 	elseif result == "failed" then
 		Say("refused", "The game couldn't save the photo. " .. closing)
 	else
@@ -323,7 +319,7 @@ end
 -- Ends a Compare.
 local function Blocked(what)
 	if shot then return "Photo mode is already taking a photo." end
-	if edit then return "A screenshot preset is on for you to adjust. Save it or press Cancel first." end
+	if edit then return "Save or cancel the screenshot preset you are adjusting first." end
 	if InCombatLockdown() then
 		return what == "change" and "You can't change a screenshot preset in a fight. Try again after it."
 			or "You can't take a photo in a fight. Try again after it."
@@ -536,7 +532,7 @@ end
 
 -- One short line for the window's title and the Presets card while a screenshot preset is on, or nil.
 function PM.Note()
-	if edit then return "Screenshot preset on: save it in Photo mode" end
+	if edit then return "Screenshot preset not saved: see Photo mode" end
 	local saved = ns.db and ns.db.photo
 	if saved and saved.afterCombat then return "Photo mode puts your settings back after the fight" end
 end
@@ -625,7 +621,7 @@ end
 local saveCurrent = ns.SaveCurrentAsPreset
 if saveCurrent then
 	ns.SaveCurrentAsPreset = function(...)
-		if edit then return nil, "A screenshot preset is on. Save it or press Cancel in Photo mode first." end
+		if edit then return nil, "Save or cancel the screenshot preset in Photo mode first." end
 		return saveCurrent(...)
 	end
 end
@@ -644,7 +640,7 @@ end
 -- Compare, Autotune and the eye test change settings too: none starts while it takes a photo, or while
 -- the photo settings are on for you to adjust.
 local REFUSE = "Photo mode is taking a photo. Wait a few seconds."
-local REFUSE_EDIT = "A screenshot preset is on. Save it or press Cancel in Photo mode first."
+local REFUSE_EDIT = "Save or cancel the screenshot preset in Photo mode first."
 local function Refuse() return shot and REFUSE or (edit and REFUSE_EDIT) or nil end
 local toggleCompare = ns.ToggleCompare
 if toggleCompare then
@@ -763,19 +759,19 @@ end
 local GOLD, WHITE = "|cffffd100", "|cffffffff"
 
 PM.WHY = "One click takes a photo with no UI on the screen. Pick what it uses: your settings as they are, or a screenshot preset."
-PM.HOW = "Stand where you want the photo and point the camera first. It hides the UI, waits a few seconds if settings change, "
-	.. "takes the photo and puts everything back. Expect low FPS for those seconds. A fight, a loading screen or Esc stops it."
-PM.EDIT = "Change its settings on the Standard and Hidden tabs. Then come back here and press Save screenshot preset. "
-	.. "Cancel puts your own settings back and saves nothing. A fight or a loading screen cancels it too."
-PM.EDIT_DEFAULT = "Default stays as it is: saving makes a new screenshot preset with a name you pick."
+PM.HOW = "Point the camera first. If settings change, it waits a few seconds, and FPS drops for that time. "
+	.. "A fight, a loading screen or Esc stops it."
+PM.EDIT = "Set it up on the Standard and Hidden tabs, then come back and press Save screenshot preset. "
+	.. "Cancel, a fight or a loading screen saves nothing and puts your settings back."
+PM.EDIT_DEFAULT = "Saving makes a new screenshot preset. Default stays as it is."
 
 -- What the photo uses now, in a line.
 local function ChoiceText()
 	if PM.Choice() == "mine" then
-		return "The photo uses your settings as they are now. Nothing changes. Only the UI hides."
+		return "The photo uses your settings as they are. Only the UI hides."
 	end
 	return "The photo uses \"" .. PM.Name(PM.Pick()) .. "\". Your settings come back after. "
-		.. "Change puts one on so you can adjust it."
+		.. "Click a name to use another, or Change to adjust one."
 end
 
 -- Save screenshot preset, or Save as new: a new one asks for its name first. A refused name stays in the
@@ -870,7 +866,7 @@ local function PresetRow(e, i)
 	end
 	r.change = ns.Button(r, "Change", 80, function() Said(PM.Change(i)) end)
 	r.change:SetPoint("RIGHT", -38, 0)
-	ns.Tooltip(r.change, "Change", "Puts this screenshot preset on so you can adjust it on the Standard and Hidden tabs. Your settings are saved first and come back when you save or cancel.", "ANCHOR_LEFT")
+	ns.Tooltip(r.change, "Change", "Applies this screenshot preset so you can adjust it on the Standard and Hidden tabs. Your settings come back when you save or cancel.", "ANCHOR_LEFT")
 	r.line = ns.Label(r, "", "GameFontHighlightSmall")
 	r.line:SetPoint("LEFT", NAME_X + NAME_W + 10, 0)
 	r.line:SetPoint("RIGHT", r.change, "LEFT", -10, 0)
@@ -938,7 +934,7 @@ local function Build(page, holder)
 	Under(e.how, e.why, 0, 8)
 	-- The choice: what the photo uses.
 	e.mine = ns.Button(c, "My settings now", 130, function() PM.SetChoice("mine") end)
-	ns.Tooltip(e.mine, "My settings now", "The photo uses your settings as they are. No setting changes. Only the UI hides.")
+	ns.Tooltip(e.mine, "My settings now", "Uses your settings as they are. Only the UI hides.")
 	e.mine.label = "My settings now"
 	e.shotChoice = ns.Button(c, "Screenshot preset", 130, function() PM.SetChoice("screenshot") end)
 	e.shotChoice:SetPoint("LEFT", e.mine, "RIGHT", ROW, 0)
@@ -964,14 +960,14 @@ local function Build(page, holder)
 		Said(PM.SavePreset(false))
 	end)
 	ns.Tooltip(e.save, "Save screenshot preset", function()
-		if (PM.EditingIndex() or 0) == 0 then return "Saves every setting on Eye Candy's list, as it is now, as a new screenshot preset. You pick its name. Then your own settings come back." end
-		return "Keeps every setting on Eye Candy's list, as it is now, in this screenshot preset. Then your own settings come back."
+		if (PM.EditingIndex() or 0) == 0 then return "Saves the settings in use as a new screenshot preset with a name you pick. Then yours come back." end
+		return "Saves the settings in use into this screenshot preset. Then yours come back."
 	end)
 	e.saveNew = ns.Button(c, "Save as new", 110, AskName)
 	e.saveNew:SetPoint("LEFT", e.save, "RIGHT", ROW, 0)
 	ns.Tooltip(e.saveNew, "Save as new", "Saves what is on now as a new screenshot preset with a name you pick. The one you changed stays as it was.")
 	e.cancel = ns.Button(c, "Cancel", 90, function() PM.CancelEdit() end)
-	ns.Tooltip(e.cancel, "Cancel", "Saves nothing. Your own settings come back as they were.")
+	ns.Tooltip(e.cancel, "Cancel", "Saves nothing and puts your settings back.")
 	e.status = Text(c)
 end
 
@@ -1008,7 +1004,7 @@ local function Refresh_(page)
 	local last
 	if editing then
 		for _, r in pairs(e.rows or {}) do r:Hide() end
-		local big = "Screenshot preset is on: " .. (PM.EditingName() or PM.DEFAULT)
+		local big = "Adjusting: " .. (PM.EditingName() or PM.DEFAULT)
 		e.bigText:SetText(big)
 		local text = PM.EDIT .. (changing == 0 and ("\n" .. PM.EDIT_DEFAULT) or "")
 		e.editText:SetText(text)
@@ -1063,6 +1059,6 @@ end
 if ns.AddExperiment then
 	ns.AddExperiment({
 		key = "photo", name = "Photo mode", build = Build, refresh = Refresh_,
-		tip = "One click: a photo with no UI, using your settings or a screenshot preset, then everything back.",
+		tip = "Takes a photo with no UI, then puts everything back.",
 	})
 end
