@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **Help me pick.** Not sure which preset to use? Press Help me pick on the Presets tab, by Quality levels. It asks one question: Prettier, Faster, or Let Eye Candy pick. Prettier and Faster suggest one preset, a step up or down from where you are, and show what it changes. Nothing changes until you press Apply, and Back to before undoes it. In a fight, Apply waits until the fight ends. Let Eye Candy pick opens Autotune on the Experimental tab with Best balance picked, ready for you to press Start. It only opens when you press the button.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.
