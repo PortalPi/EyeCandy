@@ -1,5 +1,10 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **Live FPS on the window.** The bottom bar shows your FPS, updated twice a second, so you can watch it move while you drag a slider. On the shrunk bar it sits at the top left. It costs next to nothing, and nothing at all while the window is closed.
+- **Each preset remembers its FPS.** A few seconds after you apply a preset, once you stand still out of a fight, Eye Candy notes the FPS it gives and where. The preset's tooltip then says "Last time: 63 FPS in Goldshire." Moving, turning, a fight or changing a setting first means it isn't noted.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.

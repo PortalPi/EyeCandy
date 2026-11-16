@@ -973,6 +973,8 @@ local function PresetRow(content)
 		GameTooltip:AddLine(p.name, 1, 1, 1)
 		local body = p.look and ns.LookTooltip(p.look) or p.desc
 		if body and body ~= "" then GameTooltip:AddLine(body, nil, nil, nil, true) end
+		local last = ns.FPS and ns.FPS.PresetLine(p.id) -- "Last time: 63 FPS in Goldshire." (FPS.lua)
+		if last then GameTooltip:AddLine(last, 0.62, 0.62, 0.62, true) end
 		GameTooltip:Show()
 	end)
 	row:SetScript("OnLeave", function(self)
@@ -1725,6 +1727,14 @@ local function PlaceBarButtons()
 	end
 end
 
+-- Shrunk, the FPS number needs the left end of the title row clear of the title, which is centred.
+local FPS_W = 50
+local function FPSFits()
+	if not main.shrunk then return true end
+	local w = tonumber(main.titleText:GetStringWidth()) or 0
+	return (SHRUNK_W - w) / 2 >= 12 + FPS_W + 8
+end
+
 -- Apply only means something on the Hidden tab (every other tab applies at once), so it shows there and on
 -- the shrunk bar. Create backup is left off the Backups tab, which has its own. The rest close up.
 local function PlaceBottomBar()
@@ -1743,6 +1753,19 @@ local function PlaceBottomBar()
 	end
 	main.keep:ClearAllPoints()
 	if prev then main.keep:SetPoint("LEFT", prev, "RIGHT", 10, 0) else main.keep:SetPoint("BOTTOMLEFT", 12, 12) end
+	-- Live FPS: left of Peek and Compare on the full bar. The shrunk bar's row is full, so there it
+	-- sits at the left end of the title row, while the title leaves room (FPSFits).
+	if main.fps then
+		main.fps:ClearAllPoints()
+		if main.shrunk then
+			main.fps:SetPoint("TOPLEFT", 12, -7)
+			main.fps:SetJustifyH("LEFT")
+		else
+			main.fps:SetPoint("RIGHT", main.barButtons[#main.barButtons] or main.export, "LEFT", -8, 0)
+			main.fps:SetJustifyH("RIGHT")
+		end
+		main.fps:SetShown(FPSFits())
+	end
 end
 
 -- Say a bottom bar result in red above the bar (nil clears it). True when the window took it, so a
@@ -2038,6 +2061,15 @@ function ns.BuildMain()
 		tinsert(main.barButtons, peek)
 	end
 	PlaceBarButtons()
+
+	-- Live FPS (FPS.lua), grey, twice a second while the window is open (PlaceBottomBar places it).
+	if ns.FPS then
+		main.fps = Label(main, "", "GameFontHighlightSmall")
+		main.fps:SetSize(FPS_W, 14)
+		main.fps:SetTextColor(0.62, 0.62, 0.62)
+		main.fps:SetWordWrap(false)
+		ns.FPS.ShowOn(main.fps, main, FPSFits)
+	end
 
 	main:SetScript("OnShow", function()
 		main:SetAlpha(1)
