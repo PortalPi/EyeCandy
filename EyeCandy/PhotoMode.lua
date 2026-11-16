@@ -85,7 +85,7 @@ end
 local function CaptureChoices()
 	local db = ns.db
 	return { tiers = Copy(db.tiers), extras = Copy(db.extras), advanced = Copy(db.advanced), look = db.look,
-		presetExtras = db.presetExtras and Copy(db.presetExtras) or nil }
+		presetExtras = db.presetExtras and Copy(db.presetExtras) or nil, keepApplied = db.keepApplied }
 end
 
 local function RestoreChoices(state)
@@ -94,6 +94,8 @@ local function RestoreChoices(state)
 	db.tiers, db.extras, db.advanced = Copy(state.tiers), Copy(state.extras), Copy(state.advanced)
 	db.look = state.look
 	db.presetExtras = state.presetExtras and Copy(state.presetExtras) or nil
+	-- "Keep my settings applied" can be ticked during the edit too. An older copy has no keepApplied: leave it.
+	if state.keepApplied ~= nil then db.keepApplied = state.keepApplied end
 	if ns.SaveMirror then pcall(ns.SaveMirror) end
 	-- Backups keeps its own record of the choices in force: renew it if the edit applied anything.
 	if noted and ns.NoteApplied then pcall(ns.NoteApplied) end
@@ -185,7 +187,12 @@ function PM.Choice()
 end
 
 function PM.SetChoice(choice)
-	if shot or edit or not ns.db then return nil end
+	if shot then
+		Say("waiting", "Photo mode is taking a photo. Wait a few seconds, then pick.")
+		Refresh()
+		return nil
+	end
+	if edit or not ns.db then return nil end
 	ns.db.photoChoice = choice == "mine" and "mine" or "screenshot"
 	Refresh()
 	return true
@@ -229,6 +236,8 @@ local function Blocked(what)
 	if ns.EyeTest and ns.EyeTest.IsOn() then return "The eye test is on. Finish or stop it first." end
 	local AT = ns.Autotune
 	if AT and AT.IsRunning() then return "Autotune is running. Stop it first." end
+	-- Its result is on until you keep or undo it, and an undo then would be taken back by the way back.
+	if ns.db.autotune then return "Autotune has your settings. Keep or undo its result first." end
 	if ns.IsPeeking and ns.IsPeeking() then return "Peek is on. Press Back first." end
 	if ns.IsComparing and ns.IsComparing() then
 		local ok, err = ns.StopCompare()
@@ -310,12 +319,19 @@ end
 -- Then your own come back. Returns true, or nil and a plain reason.
 function PM.SavePhotoSettings()
 	if not edit then return nil end
+	-- A setting still as it was before the edit (the photo settings don't set it, and it wasn't adjusted) may be
+	-- one the city or instance switch, or Steady FPS, lowered: it is kept as your own value (ns.SituationValue,
+	-- as backups and presets do), so a photo outside the city isn't taken with the city's lowered values.
+	local before = ns.db.photo and ns.db.photo.before or {}
 	local values = {}
 	for _, cvar in ipairs(ns.AllManagedCVars()) do
 		local v = ns.GetInfo(cvar)
+		if v ~= nil and ns.SituationValue and before[cvar] ~= nil and ns.Same(v, before[cvar]) then
+			v = ns.SituationValue(cvar, v)
+		end
 		if v ~= nil then values[cvar] = tostring(v) end
 	end
-	ns.db.photoSettings = { values = values, saved = date("%d %b") }
+	ns.db.photoSettings ={ values = values, saved = date("%d %b") }
 	ns.db.photoChoice = "screenshot"
 	local closing, all = EndEdit()
 	Say(all and "done" or "waiting", "Saved as your photo settings. A photo with the Screenshot choice now uses them. " .. closing)
@@ -414,6 +430,26 @@ for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup",
 			end
 			return orig(...)
 		end
+	end
+end
+
+-- During the edit the city and instance switch waits (it looks again once yours are back), so an apply on the
+-- Standard or Hidden tab must not be lowered by it either: that would cap the photo settings and write the
+-- edited value into the switch's record of your own (Situations.lua).
+local keepLowered = ns.KeepSituationLowered
+if keepLowered then
+	ns.KeepSituationLowered = function(fn, ...)
+		if edit then return fn(...) end
+		return keepLowered(fn, ...)
+	end
+end
+
+-- Save my settings as a preset (the Presets tab, /ec save) would save the photo settings while they are on.
+local saveCurrent = ns.SaveCurrentAsPreset
+if saveCurrent then
+	ns.SaveCurrentAsPreset = function(...)
+		if edit then return nil, "The photo settings are on. Save them or press Cancel on the Photo mode page first." end
+		return saveCurrent(...)
 	end
 end
 

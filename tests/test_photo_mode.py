@@ -302,6 +302,20 @@ lua3.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
 check(lua3.eval("GetCVar('cameraFov')") == "75" and lua3.eval("EyeCandyDB.photo") is None and lua3.eval("EyeCandyDB.advanced.Contrast") == "50"
       and any("didn't finish" in m for m in chat(lua3)), "an edit still saved at the next login puts your settings and choices back")
 
+# --- Review fixes: what an edit must not let through ---------------------------------------------------
+X("EyeCandyDB.keepApplied = true; PM.Change(); EyeCandyDB.keepApplied = false; PM.CancelEdit()")
+check(E("EyeCandyDB.keepApplied") == True, "Keep my settings applied, changed during the edit, comes back with Cancel")
+X("PM.Change(); SP_OK, SP_ERR = NS.SaveCurrentAsPreset('Photo try')")
+check(E("SP_OK") is None and "photo settings are on" in E("SP_ERR"), "Save my settings as a preset is refused while the photo settings are on")
+X("PM.CancelEdit(); SP_OK = NS.SaveCurrentAsPreset('After the edit')")
+check(E("SP_OK") is not None, "and works again once they are gone")
+X("EyeCandyDB.autotune = { before = {} }; AT_OK, AT_ERR = PM.Change(); EyeCandyDB.autotune = nil")
+check(E("AT_OK") is None and "Autotune has your settings" in E("AT_ERR") and not E("PM.IsEditing()"),
+      "Change it waits while an Autotune result is still to keep or undo")
+X(PP + ".take.scripts.OnClick(); SC = PM.SetChoice('screenshot')")
+check(E("SC") is None and "Wait a few seconds" in E("PM.message"), "picking during a photo says to wait, not nothing")
+X("PM.Stop('test'); SetCVar('cameraFov', 70)")
+
 # --- Still saved at the next login: it puts them back ------------------------------------------------
 lua2 = boot(PRE + "EyeCandyDB = { photo = { before = { cameraFov = '75' } } }")
 lua2.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
