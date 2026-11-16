@@ -163,7 +163,7 @@ check(luaM2.eval('NS.OriginalBackup().values.farclip') == "6500" and luaM2.eval(
 luaM2.execute('NS.CreateBackup("manual", "Here"); SlashCmdList.EYECANDY("restore")')
 check(luaM2.eval('GetCVar("farclip")') == "6500" and luaM2.eval('NS.ListBackups()[1].character') == "Tester-Testrealm" and luaM2.eval('NS.OriginalBackup().character') == "Other-Realm", "backups are account-wide: another character's backup restores here")
 luaM3 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { doodadLodScale = "300", lodObjectFadeScale = "300", lodObjectCullSize = "7", terrainLodDist = "1000", TerrainLodDiv = "1024", wmoLodDist = "800", dynamicLod = "0" } } } }')
-check(luaM3.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and any("corrected your Restore backup" in x for x in chat(luaM3)), "an Original holding hand-tested Distant Detail values is corrected")
+check(luaM3.eval('NS.OriginalBackup().values.doodadLodScale') == "150" and any("fixed your Original backup" in x for x in chat(luaM3)), "an Original holding hand-tested Distant Detail values is corrected")
 
 # Automatic backups saved by test builds are removed at load. Back's old record pointed at one by id:
 # its settings move into the record, which becomes today's first step, so Back still works after the update.
@@ -175,7 +175,7 @@ OLD = ('EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 6, lastBef
        ' { id = 5, kind = "auto", label = "Before Apply", time = "e", stamp = 5, character = "", values = { farclip = "2000" }, state = {} } } }')
 luaA = boot(svdb=OLD)
 check([b['kind'] for b in lst(luaA.eval('NS.ListBackups()'))] == ["manual", "original"], "saved automatic backups (and a damaged entry) are removed; the Original and named backups stay")
-check(any("removed 3 automatic backups" in x for x in chat(luaA)), "chat says how many were removed, once")
+check(any("removed 3 old automatic backups" in x for x in chat(luaA)), "chat says how many were removed, once")
 la = luaA.eval('NS.BackSteps()[1]')
 check(la['values']['farclip'] == "4321" and la['state']['tiers']['clarity'] == 2 and la['time'] == "09:00" and luaA.eval('EyeCandyDB.lastBefore') is None, "Back's record took the settings of the backup it pointed at, as today's step")
 check(la['name'] == "Moody", "so Back is still offered after the update")

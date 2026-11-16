@@ -150,7 +150,7 @@ function ns.TakeBackup()
 		end
 		ns.FixDistantBackup(values)
 		NewEntry("original", "Original settings", values, { tiers = {}, extras = {}, advanced = {} })
-		ns.Print("saved your graphics settings from before Eye Candy as the Original backup. Type /reload once so it is saved for good.")
+		ns.Print("saved your graphics settings from before Eye Candy as the Original backup. Type /reload once so a crash can't lose it.")
 		return true
 	end
 	local added = false
@@ -415,7 +415,7 @@ end
 function ns.DeleteBackup(id)
 	local b = Find(id)
 	if not b then return nil, "No such backup." end
-	if b.kind == "original" then return nil, "The Original backup is kept for good, so it can't be deleted." end
+	if b.kind == "original" then return nil, "The Original backup can't be deleted." end
 	local list = List()
 	for i = #list, 1, -1 do
 		if list[i].id == id then table.remove(list, i) end
@@ -467,7 +467,7 @@ local function DropAutomatic(db)
 		db.lastBefore = nil
 	end
 	if n > 0 then
-		ns.Print(string.format("removed %d automatic backups. Eye Candy no longer makes them. Your Original and named backups are kept.", n))
+		ns.Print(string.format("removed %d old automatic backups. Your Original and named backups are kept.", n))
 	end
 	return n
 end
@@ -481,7 +481,7 @@ function ns.LoadBackups()
 	MoveOldRecord(db)
 	local original = ns.OriginalBackup()
 	if original and ns.FixDistantBackup(original.values) > 0 then
-		ns.Print("corrected your Restore backup: Distant Detail will now restore to the Graphics menu's values.")
+		ns.Print("fixed your Original backup: Distant Detail now restores to the Graphics menu's values.")
 	end
 	-- At load, the saved choices are what is in force (the login re-apply puts them back).
 	ns.NoteApplied()

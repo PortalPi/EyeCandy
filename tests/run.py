@@ -141,7 +141,7 @@ lua7 = boot(svdb='EyeCandyDB = { tiers = { distant = 5 }, keepApplied = true, ne
 bv = lambda n: lua7.eval('NS.OriginalBackup().values.%s' % n)
 check([bv(k) for k in ["doodadLodScale","lodObjectFadeScale","lodObjectCullSize","terrainLodDist","TerrainLodDiv","wmoLodDist","dynamicLod"]] == ["150","150","14","650","768","400","1"], "backup corrected to Graphics-menu values")
 check(bv("RenderScale") == "1.5", "unrelated backup values untouched")
-check(any("corrected your Restore backup" in x for x in chat(lua7)), "user told about the correction")
+check(any("fixed your Original backup" in x for x in chat(lua7)), "user told about the correction")
 lua8 = boot(svdb='EyeCandyDB = { tiers = {}, keepApplied = true, nextBackupId = 2, backups = { { id = 1, kind = "original", label = "Original settings", time = "x", stamp = 5, character = "", values = { doodadLodScale = "150" } } } }')
 check(not any("corrected" in x for x in chat(lua8)), "no message when the backup is already fine")
 

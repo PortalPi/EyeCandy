@@ -173,12 +173,11 @@ SP = P + ".steady"
 check(E(P + ".parts.steady.shown") and E(SP + ".head.label.text") == "Steady FPS" and E(SP + ".toggle.text") == "Turn on",
       "Steady FPS shows its own page, off, with Turn on")
 how = E(SP + ".how.text")
-check("Dynamic Render Scale, because the game warns it can cause stutter" in how,
+check("Dynamic Render Scale, which the game warns can stutter" in how,
       "it names the game's own one and why not (%r)" % how)
 # Each number on the page is the code's own.
-nums = {"90% of your goal": E("SF.LOW"), "for 5 seconds": E("SF.SUSTAIN"), "5% at a time": E("SF.STEP"),
-        "once every 30 seconds": E("SF.GAP"), "never below 70%": E("SF.FLOOR")}
-want = {"90% of your goal": 0.9, "for 5 seconds": 5, "5% at a time": 0.05, "once every 30 seconds": 30, "never below 70%": 0.7}
+nums = {"5% at a time": E("SF.STEP"), "never below 70%": E("SF.FLOOR")}
+want = {"5% at a time": 0.05, "never below 70%": 0.7}
 check(all(k in how and abs(nums[k] - want[k]) < 1e-9 for k in want), "the how-to's numbers match the code's (%r)" % nums)
 check(E("NS.RunningNote()") is None, "off, the title and the card say nothing of Steady FPS")
 check(not E("NS.FPS.IsWatching('steady')") and E("not (EyeCandyDB.steady and EyeCandyDB.steady.on)"), "off by default: it isn't watching FPS")

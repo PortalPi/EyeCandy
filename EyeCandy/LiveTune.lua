@@ -481,9 +481,8 @@ local function Pct(x) return math.floor(x * 100 + 0.5) .. "%" end
 SF.WHY = "When FPS stays under your goal, it lowers render scale a little. When FPS comes back, it raises it again, up to your own."
 -- Each number is the code's: SF.LOW (90%), SF.SUSTAIN (5 s), SF.STEP (5%), SF.GAP (30 s), SF.FLOOR (70%).
 -- "Well over" is SF.HIGH (125%), or just under an FPS limit or Vertical Sync.
-SF.HOW = "It waits until FPS has been under 90% of your goal, or well over it, for 5 seconds. "
-	.. "Then it changes render scale 5% at a time, at most once every 30 seconds, and never below 70%. "
-	.. "It changes nothing in a fight. It does not use the game's own Dynamic Render Scale, because the game warns it can cause stutter."
+SF.HOW = "It moves render scale 5% at a time, never below 70%, and never in a fight. "
+	.. "It doesn't use the game's own Dynamic Render Scale, which the game warns can stutter."
 
 -- One short line for the window's title and the Presets card while render scale is lowered from yours, or nil.
 -- Off but still lowered (it waits for a fight to end, or for Autotune and the others): the same, while the
@@ -593,7 +592,7 @@ local function Build(page, holder)
 		else
 			b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
 		end
-		ns.Tooltip(b, g .. " FPS", "Lower render scale when FPS stays under " .. math.floor(g * SF.LOW + 0.5) .. ".")
+		ns.Tooltip(b, g .. " FPS", "Lowers render scale when FPS stays under " .. math.floor(g * SF.LOW + 0.5) .. ".")
 		e.goals[i], prev = b, b
 	end
 	e.toggle = ns.Button(c, "Turn on", 110, function()
@@ -609,7 +608,7 @@ local function Build(page, holder)
 		end
 	end)
 	Under(e.toggle, rowStart, 0, 8) -- under the last row of goals
-	ns.Tooltip(e.toggle, "Steady FPS", "Off until you turn it on. Turning it off puts your own render scale back.")
+	ns.Tooltip(e.toggle, "Steady FPS", "Turning it off puts your own render scale back.")
 	e.status = Text(c)
 	Under(e.status, e.toggle, 0, 8)
 end
