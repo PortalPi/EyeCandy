@@ -696,7 +696,7 @@ function ns.OpenGameOptions()
 	if InCombatLockdown() then
 		-- Said under the button (rule 6, docs/ui-rules.md); chat only when the Standard tab isn't in front.
 		if page and page:IsShown() and page.gameMenuMsg then
-			page.gameMenuMsg:SetText("|cffff4040Can't open it in a fight. Try again after it.|r")
+			page.gameMenuMsg:SetText("|cffff4040Can't open it in a fight.|r")
 		else
 			ns.Print("can't open the game's options in a fight. Try again after it.")
 		end
