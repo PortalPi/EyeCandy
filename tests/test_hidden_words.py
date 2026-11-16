@@ -74,7 +74,7 @@ texts.append(('Showcase', E('(function() for _, p in ipairs(NS.ListPresets().bui
 found = ['%s: %s in %r' % (where, w, t[:90]) for where, t in texts if t for w in bad_words(t)]
 check(len(texts) > 300 and not found, "no tier, dial, Extra, LOD or profile on the Hidden tab (%d texts; %s)" % (len(texts), found[:5]))
 intro = E(page + '.intro.text') or ''
-check(all(E('NS.EXTRAS[%d].name' % i) in intro for i in range(1, E('#NS.EXTRAS') + 1)) and "Levels wait for the Apply button" in intro,
+check(all(E('NS.EXTRAS[%d].name' % i) in intro for i in range(1, E('#NS.EXTRAS') + 1)) and "Levels wait for Apply" in intro,
       "the intro names every setting that waits for Apply")
 
 # The level row is named for its system, and the reset button is plain.

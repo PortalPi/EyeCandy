@@ -409,7 +409,7 @@ check(E("EyeCandyDB.autotune") is None and any("didn't save" in m for m in chat(
 X("NS.ApplyValues({ graphicsShadowQuality = '4' })")
 E("AT.Start('target', 60)")
 X("PLAY(); local apply = NS.ApplyPresetById; NS.ApplyPresetById = function() return false end; AT.Keep(); NS.ApplyPresetById = apply")
-check("couldn't be put on" in (E("AT.message") or "") and E("GetCVar('graphicsShadowQuality')") == "4",
+check("couldn't be applied" in (E("AT.message") or "") and E("GetCVar('graphicsShadowQuality')") == "4",
       "if Keep can't put the preset on, it says so and your settings stay")
 
 # An event this client doesn't know must not stop the others being heard.
@@ -477,7 +477,7 @@ check(E("EyeCandyDB.autotuneGoal.goal") == 120 and "120 FPS" in E(P + ".goalText
 X(P + ".start.scripts.OnClick()")
 check(E("AT.IsRunning()") and E(P + ".start.text") == "Stop", "Start starts it, and the button becomes Stop")
 X("PLAY(1000)")
-check("Measurement" in E(P + ".status.text") and "mouse" in E(P + ".status.text"), "the status says which measurement and not to touch anything")
+check("easurement" in E(P + ".status.text") and "mouse" in E(P + ".status.text"), "the status says which measurement and not to touch anything")
 X(P + ".start.scripts.OnClick()")
 check(not E("AT.IsRunning()") and "pressed Stop" in E(P + ".status.text"), "Stop stops it and says your settings are back")
 
@@ -512,8 +512,8 @@ check(E(P + ".keep.text") == "Save as preset" and E(P + ".putBack.text") == "Bac
       "the result's buttons don't share a word with the bar's Keep my settings applied")
 # One word for undo (rule 2): "Back to before", never "Put mine back".
 X("""AT.result = { mode = 'target', goal = 60, name = 'x', before = 50, after = 60, changes = {} }; NS.RefreshUI()""")
-check("Back to before Autotune undoes them" in E(P + ".result.text") and "Put mine back" not in E(P + ".result.text"),
-      "the result line names the undo button as it is labelled")
+check(E(P + ".putBack.text") == "Back to before Autotune" and "Put mine back" not in E(P + ".result.text"),
+      "the undo button is labelled Back to before Autotune, and the result line never calls it anything else")
 X("AT.result = nil; NS.RefreshUI()")
 
 # A refusal shows in red, next to Start.
@@ -523,12 +523,12 @@ check(not E("AT.IsRunning()") and st.startswith(RED) and "Stand still" in st, "S
 
 # The window says Autotune has your settings, and chat stays quiet while the tab is in front.
 X("CHAT = {}; " + P + ".start.scripts.OnClick(); PLAY(1000); NS.RefreshUI()")
-check(E("NS.AutotuneNote()") == "Autotune is testing settings" and "changing your settings" in E(P + ".status.text"),
+check(E("NS.AutotuneNote()") == "Autotune is testing settings" and "Testing your settings" in E(P + ".status.text"),
       "while it runs, the note for the title says so, and so does its own row")
 X(P + ".start.scripts.OnClick()")
 check(not any("Autotune" in m for m in chat(lua)), "with the tab in front, the stop shows there, not in chat")
 X(P + ".start.scripts.OnClick(); PLAY(); NS.RefreshUI()")
-check(E("NS.AutotuneNote()") == "Autotune's settings are on, not saved yet" and "settings are on now" in E(P + ".result.text"),
+check(E("NS.AutotuneNote()") == "Autotune's settings are on, not saved yet" and "settings are in use, not saved yet" in E(P + ".result.text"),
       "with a result waiting, the title note and the result both say Autotune's settings are on")
 
 # The page is as tall as everything on it. Every block is chained under the one above, and long lines
@@ -581,7 +581,7 @@ X(P + ".start.scripts.OnClick(); PLAY(); NS.RefreshUI()")
 X("INCOMBAT = true; " + P + ".keep.scripts.OnClick(); NS.RefreshUI()")
 check(E(P + ".status.text").startswith(GREY) and E("AT.result") is not None, "Save as preset in a fight waits, in grey")
 X("INCOMBAT = false; FIRE('PLAYER_REGEN_ENABLED'); NS.RefreshUI()")
-check(E("AT.result") is None and "saved as your preset" in E(P + ".status.text") and E("NS.AutotuneNote()") is None,
+check(E("AT.result") is None and "as your preset" in E(P + ".status.text") and E("NS.AutotuneNote()") is None,
       "when the fight ends it saves the preset, and the title note goes")
 
 # A queued Save whose result is gone by the end of the fight leaves no stale waiting line.

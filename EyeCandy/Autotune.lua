@@ -1229,7 +1229,7 @@ Finish = function(action)
 		end
 		local msg
 		if action.outOfTime then
-			msg = string.format("Autotune ran out of time before %s held from %s here. It reached %d FPS.", goalFPS, from and from.name or "your settings", best)
+			msg = string.format("Autotune ran out of time. From %s it reached %d FPS here, short of %s.", from and from.name or "your settings", best, goalFPS)
 		elseif st.headroom then
 			-- Raid ready: the lowest settings may beat the goal itself, but not the spare it keeps.
 			msg = string.format("Autotune: %s this spot ran at %d FPS. %s keeps spare for a big fight, so %s needs %d FPS here.",
@@ -1340,10 +1340,10 @@ function AT.Keep()
 	AT.result = nil
 	if ns.ApplyPresetById(p.id) then
 		if cap then SetValues({ useMaxFPS = 1, maxFPS = cap }) end
-		Say("done", "Autotune's settings are saved as your preset \"" .. name .. "\" and on now."
-			.. (cap and (" FPS is capped at " .. cap .. ", as your own setting, not part of the preset. Change it on the Standard tab: Max Foreground FPS.") or ""))
+		Say("done", "Saved Autotune's settings as your preset \"" .. name .. "\" and applied it."
+			.. (cap and (" FPS is capped at " .. cap .. " by your own setting, not the preset. It's Max Foreground FPS on the Standard tab.") or ""))
 	else
-		Say("refused", "Autotune saved your preset \"" .. name .. "\", but it couldn't be put on. Your settings are back as they were. Pick it on the Presets tab to try again.")
+		Say("refused", "Autotune saved your preset \"" .. name .. "\", but it couldn't be applied. Your settings are back. Try Apply on the Presets tab.")
 	end
 	Refresh()
 	return true
