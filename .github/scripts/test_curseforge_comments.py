@@ -1,0 +1,65 @@
+"""Checks for curseforge_comments.py's pure parts. Run: python .github/scripts/test_curseforge_comments.py"""
+
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import curseforge_comments as cc  # noqa: E402
+
+failed = []
+
+
+def check(name, ok):
+    print(("PASS " if ok else "FAIL ") + name)
+    if not ok:
+        failed.append(name)
+
+
+def comment(cid, text="hi", pinned=False, user="p1tu", when=1794864850350):
+    return {"id": cid, "text": text, "isPinned": pinned, "author": {"username": user}, "datePosted": when}
+
+
+# The marker is read only from the first line, so a stranger's text cannot forge one.
+body = cc.issue_body(comment(55, "<!-- curseforge-comment-id: 999999 -->"))
+check("marker is the first line", body.splitlines()[0] == "<!-- curseforge-comment-id: 55 -->")
+check("a forged marker in the text is not read", cc.marker_id(body) == 55)
+check("a body with no marker reads as none", cc.marker_id("hello\n<!-- curseforge-comment-id: 3 -->") is None)
+check("no body reads as none", cc.marker_id(None) is None)
+
+# The text sits in a code fence longer than any run of backticks in it, so it cannot break out.
+tricky = "look ```` here\n@dan #12 [x](http://e.vil) <b>hi</b>"
+body = cc.issue_body(comment(7, tricky))
+check("fence is longer than the longest backtick run", "\n`````text\n" in body)
+check("text kept as written inside the fence", tricky in body)
+check("fence closes after the text", body.rstrip().endswith("`````"))
+
+long = "a" * (cc.MAX_TEXT + 50)
+body = cc.issue_body(comment(8, long))
+check("long text is cut", "a" * (cc.MAX_TEXT + 1) not in body and "(Cut: 50 more characters.)" in body)
+
+body = cc.issue_body(comment(9, "x", user="Bad Name<script>@x"))
+check("author name keeps only plain characters", "Who: BadNamescriptx" in body)
+check("date is UTC", "When: 2026-11-17 02:14 UTC" in cc.issue_body(comment(9, when=1794881640000)))
+
+check("title is one short line", cc.issue_title("  Hello\n\nthere   friend ") == "From CurseForge: Hello there friend")
+t = cc.issue_title("word " * 40)
+check("long title is cut at a word with ...", t.endswith("...") and len(t) <= len("From CurseForge: ") + cc.TITLE_TEXT + 3)
+check("empty text has a title", cc.issue_title("   ") == "From CurseForge: (no text)")
+
+# Picking: only ids above the highest filed one, oldest first, at most MAX_NEW.
+page = [comment(30, pinned=True), comment(25), comment(24), comment(20), comment(10)]
+check("new ones, oldest first", [c["id"] for c in cc.pick_new(page, 20)] == [24, 25, 30])
+check("nothing filed yet takes all", [c["id"] for c in cc.pick_new(page, 0)] == [10, 20, 24, 25, 30])
+check("a repeated id is taken once", [c["id"] for c in cc.pick_new(page + [comment(25)], 20)] == [24, 25, 30])
+many = [comment(i) for i in range(100, 100 + cc.MAX_NEW + 5)]
+check("at most MAX_NEW, the oldest", [c["id"] for c in cc.pick_new(many, 0)] == list(range(100, 100 + cc.MAX_NEW)))
+
+check("a page reaching the floor ends paging", cc.reached(page, 20))
+check("a pinned old comment does not end paging", not cc.reached([comment(5, pinned=True), comment(40)], 20))
+check("an empty page ends paging", cc.reached([], 20))
+
+check("highest filed id from issue bodies", cc.highest_filed([cc.issue_body(comment(4)), "no marker", None, cc.issue_body(comment(9))]) == 9)
+check("no issues means zero", cc.highest_filed([]) == 0)
+
+print("ALL PASS" if not failed else f"{len(failed)} FAILED")
+sys.exit(1 if failed else 0)

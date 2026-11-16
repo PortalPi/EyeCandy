@@ -29,6 +29,8 @@ tests/      lib.py (shared helpers), harness.lua (a stand-in for the game), test
 docs/       cvar_audit.txt: Blizzard's help text and defaults for each setting
 media/      logo/EyeCandy.png and EyeCandy.psd. Not shipped.
 .github/    workflows/tests.yml (manual), workflows/release.yml (tag push), ISSUE_TEMPLATE/bug.yml
+            workflows/curseforge-comments.yml (hourly): each new CurseForge comment becomes an issue,
+            by scripts/curseforge_comments.py (checks: python .github/scripts/test_curseforge_comments.py)
 .pkgmeta, CHANGELOG.md   what the BigWigs packager ships. CHANGELOG.md is the players' notes.
 ```
 
