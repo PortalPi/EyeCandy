@@ -118,7 +118,7 @@ EndPeek = function(uiAlreadyBack)
 			-- Combat had already locked the UI. Keep the Back bar up with a way out; Esc and Alt+Z are
 			-- Blizzard's own keys, so they still work, and the end of the fight tries again.
 			if back then
-				back.text:SetText("Combat locked the screen. Press Esc or Alt+Z.")
+				back.text:SetText("A fight locked the screen. Press Esc or Alt+Z.")
 				back:Show()
 			end
 			return false
@@ -136,7 +136,7 @@ end
 -- must be hidden, or nothing stays hidden and it returns nil and a reason.
 local function StartPeek(noBar)
 	if InCombatLockdown() then
-		return nil, "Can't hide the screen in combat. Try again after the fight."
+		return nil, "Can't hide the screen in a fight. Try again after it."
 	end
 	peeking = true
 	wipe(hidden)
@@ -181,7 +181,7 @@ end
 function ns.TogglePeek()
 	if peeking then
 		if EndPeek(false) then return true end
-		return nil, "Combat locked the screen. Press Esc or Alt+Z."
+		return nil, "A fight locked the screen. Press Esc or Alt+Z."
 	end
 	return StartPeek()
 end
@@ -209,7 +209,7 @@ events:RegisterEvent("PLAYER_REGEN_DISABLED")
 events:RegisterEvent("PLAYER_REGEN_ENABLED")
 events:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_REGEN_DISABLED" and peeking then
-		if EndPeek(false) then ns.Print("combat started, so your UI is back.") end
+		if EndPeek(false) then ns.Print("a fight started, so your UI is back.") end
 	elseif event == "PLAYER_REGEN_ENABLED" and peeking then
 		EndPeek(false) -- combat locked the UI before Peek could bring it back: try again now
 	end

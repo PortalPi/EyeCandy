@@ -106,7 +106,7 @@ check(len(said) == 1 and "Back to before your own changes: 1 setting put back." 
 before = names()
 X('INCOMBAT = true; CHAT = {}; SlashCmdList.EYECANDY("back"); INCOMBAT = false')
 said = chat(lua)
-check(names() == before and len(said) == 1 and "in combat" in said[0], "in a fight Back says why and keeps every step (%s)" % said)
+check(names() == before and len(said) == 1 and "in a fight" in said[0], "in a fight Back says why and keeps every step (%s)" % said)
 
 # At most ten saved steps: the oldest go.
 for i in range(12):
@@ -249,7 +249,7 @@ check(E(r[0] + '.name.text') == "Your own changes" and E(r[0] + '.line.text') ==
 # In a fight Back says why on the card, in red, and changes nothing.
 X('INCOMBAT = true; %s.back.scripts.OnClick(%s.back); %s.accept.scripts.OnClick(%s.accept); INCOMBAT = false' % (r[0], r[0], A, A))
 refused = E(P + '.card.note.text')
-check(refused.startswith("|cffff4040") and "combat" in refused and E('GetCVar("farclip")') == "1234", "Back in a fight says why on the card, in red (%r)" % refused)
+check(refused.startswith("|cffff4040") and "fight" in refused and E('GetCVar("farclip")') == "1234", "Back in a fight says why on the card, in red (%r)" % refused)
 
 # Only the newest three show, until Show all.
 X('for i = 1, 5 do NS.ApplyPresetById(i % 2 == 0 and "tier1" or "tier2") end; NS.RefreshUI()')

@@ -76,9 +76,9 @@ X('CHAT = {}; NS.RestoreBackupById = function(id) return 4 end; NS.RestoredLine 
 X('NS.AskRestore(NS.ListBackups()[2]); EyeCandyAskFrame.accept.scripts.OnClick(EyeCandyAskFrame.accept)')
 res = E('EyeCandyMainFrame.pages.backups.result.text')
 check(res == '|cff7cff7cRestored 4 settings from "Raid".|r' and len(chat(lua)) == 0, "a restore shows its result in green on the tab, not in chat (%r)" % res)
-X('NS.RestoreBackupById = function() return nil, "Can\'t restore in combat. Try again after the fight." end')
+X('NS.RestoreBackupById = function() return nil, "Can\'t restore in a fight. Try again after it." end')
 X('NS.AskRestore(NS.ListBackups()[2]); EyeCandyAskFrame.accept.scripts.OnClick(EyeCandyAskFrame.accept)')
-check(E('EyeCandyMainFrame.pages.backups.result.text') == "|cffff4040Can't restore in combat. Try again after the fight.|r" and len(chat(lua)) == 0, "a refused restore says why in red on the tab")
+check(E('EyeCandyMainFrame.pages.backups.result.text') == "|cffff4040Can't restore in a fight. Try again after it.|r" and len(chat(lua)) == 0, "a refused restore says why in red on the tab")
 X('EyeCandyMainFrame.pages.backups.hooks.OnHide(EyeCandyMainFrame.pages.backups); NS.RefreshUI()')
 check(E('EyeCandyMainFrame.pages.backups.result.text') == "", "leaving the tab clears the result")
 

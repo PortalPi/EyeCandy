@@ -228,7 +228,7 @@ function ns.SetAdvanced(cvar, value)
 		-- The row says it when the window is open (rule 6, docs/ui-rules.md); chat only when it isn't.
 		local win = _G.EyeCandyMainFrame
 		local page = win and win.pages and win.pages.hidden
-		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in combat.") end
+		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in a fight. Try again after it.") end
 		return false, "not changed in a fight"
 	end
 	ns.TakeBackup(false) -- captures the current value before the first change
