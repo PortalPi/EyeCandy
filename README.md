@@ -22,7 +22,7 @@ Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting fo
 - **Back to before.** The Presets tab lists what you did today: each preset, each restore, and your own changes between them. Each has its own Back, which puts back your settings from just before that step. It asks first and says how many settings change.
 - **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
 - **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
-- **Steadier frames in big fights.** Off until you turn it on (`/ec instance`). In a dungeon, raid, battleground or arena it lowers your settings to Raid & PvP's where yours are higher, and puts them back when you leave.
+- **Steadier frames in big fights.** Off until you turn it on (`/ec instance`). In a dungeon, raid, battleground or arena it lowers your settings to the Raid & PvP preset's where yours are higher, and puts them back when you leave.
 - **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
 - **Easy to find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window. Right-click the minimap button to open Backups.
 
