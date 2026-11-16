@@ -1177,7 +1177,7 @@ local SITUATION_BOXES = {
 	["look:raid"] = {
 		field = "instanceBox", key = "raid", label = "Switch in dungeons, raids, battlegrounds and arenas by itself",
 		tip = "In a dungeon, raid, battleground or arena, lowers your settings to the Raid & PvP preset's settings. Only where yours are higher. They go back when you leave. Never in combat.\nIf the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds. Eye Candy then lowers only the rest there.",
-		line = "In dungeons, raids, battlegrounds and arenas, lowers costly settings to Raid & PvP. They go back when you leave.",
+		line = "Lowers settings to the Raid & PvP preset in dungeons, raids, battlegrounds and arenas. They go back when you leave.",
 	},
 }
 local function SituationBox(page, spec)

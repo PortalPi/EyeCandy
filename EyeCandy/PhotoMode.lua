@@ -595,7 +595,7 @@ end)
 -- apply, and the Original backup they make sure of); the rest end it first, so they hold your settings.
 local ALLOWED_IN_EDIT = { ApplyAll = true, ApplyValues = true, TakeBackup = true }
 -- An apply, a backup, a preset, Back or a restore: each changes or saves your settings.
-local ANOTHER = "another part of Eye Candy changed or saved your settings"
+local ANOTHER = "something else changed or saved your settings"
 for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
 	"RestoreStep", "GoBack", "RestoreBackupById" }) do
 	local orig = ns[name]

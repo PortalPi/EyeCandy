@@ -63,7 +63,7 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | `/ec backup [name]` | Make a backup |
 | `/ec restore <number>` | Restore a backup, no question asked. It makes no backup of now (`/ec restore` alone restores the Original) |
 | `/ec city` | Turn the city switch on or off (`city on`, `city off`) |
-| `/ec instance` | Turn the dungeon, raid and battleground switch on or off (`instance on`, `instance off`) |
+| `/ec instance` | Turn the dungeon, raid, battleground and arena switch on or off (`instance on`, `instance off`) |
 | `/ec apply` | Apply your settings again |
 | `/ec minimap` | Show or hide the minimap button |
 | `/ec fade` | Turn off (or on) the window fading when the mouse is away |
