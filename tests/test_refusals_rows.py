@@ -47,7 +47,7 @@ check(E('STDROW("maxFPS").valueText.text') == "", "and it goes when the fight en
 
 # Window closed: chat is fine.
 X('EyeCandyMainFrame:Hide(); INCOMBAT = true; CHAT = {}')
-check(E('(NS.SetStandard("vsync", "1"))') == False and any("in combat" in m for m in chat(lua)), "with the window closed it still goes to chat")
+check(E('(NS.SetStandard("vsync", "1"))') == False and any("in a fight" in m for m in chat(lua)), "with the window closed it still goes to chat")
 X('INCOMBAT = false; NS.ShowTab("standard")')
 
 # The game-menu button.
@@ -78,7 +78,7 @@ X('INCOMBAT = false; FIRE("PLAYER_REGEN_ENABLED"); CLICK(ADVROW("componentSpecul
 check(E('EyeCandyDB.advanced.componentSpecular') is None and "not changed" not in E('ADVROW("componentSpecular").status.text'), "after the fight the arrow hands it back")
 # The Hidden tab not in front (a slider's delayed commit after a tab change): chat says it.
 X('INCOMBAT = true; CHAT = {}; NS.ShowTab("presets")')
-check(E('(NS.SetAdvanced("componentSpecular", 0))') == False and any("in combat" in m for m in chat(lua)), "a refusal with its tab not in front goes to chat, not nowhere")
+check(E('(NS.SetAdvanced("componentSpecular", 0))') == False and any("in a fight" in m for m in chat(lua)), "a refusal with its tab not in front goes to chat, not nowhere")
 X('INCOMBAT = false; NS.ShowTab("standard"); INCOMBAT = true; CLICK(%s.gameMenu); FIRE("PLAYER_REGEN_ENABLED")' % S)
 check(E(S + '.gameMenuMsg.text') == "", "the game-menu line goes when the fight ends")
 X('INCOMBAT = false')

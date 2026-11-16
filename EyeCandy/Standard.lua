@@ -402,7 +402,7 @@ function ns.SetStandard(cvar, value)
 		-- The row says it when the window is open (rule 6, docs/ui-rules.md); chat only when it isn't.
 		local win = _G.EyeCandyMainFrame
 		local page = win and win.pages and win.pages.standard
-		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in combat. Try again after the fight.") end
+		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in a fight. Try again after it.") end
 		return false, "not changed in a fight"
 	end
 	if not ns.Exists(cvar) then return false end
@@ -696,9 +696,9 @@ function ns.OpenGameOptions()
 	if InCombatLockdown() then
 		-- Said under the button (rule 6, docs/ui-rules.md); chat only when the Standard tab isn't in front.
 		if page and page:IsShown() and page.gameMenuMsg then
-			page.gameMenuMsg:SetText("|cffff4040Can't open it in a fight. Try again after.|r")
+			page.gameMenuMsg:SetText("|cffff4040Can't open it in a fight. Try again after it.|r")
 		else
-			ns.Print("can't open the game's options in combat.")
+			ns.Print("can't open the game's options in a fight. Try again after it.")
 		end
 		return
 	end

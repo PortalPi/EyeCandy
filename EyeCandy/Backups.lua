@@ -222,7 +222,7 @@ local function Restore(b, back)
 	if type(b.values) ~= "table" then return nil, "That backup is damaged, so it can't be restored." end
 	-- No chat here: the window shows the result where you clicked, and the slash commands print it.
 	if InCombatLockdown() then
-		return nil, "Can't restore in combat. Try again after the fight."
+		return nil, "Can't restore in a fight. Try again after it."
 	end
 	ns.awaitingAfter = nil
 	if not back then

@@ -381,7 +381,7 @@ function ns.ApplyPresetById(id)
 		return ok
 	end
 	if InCombatLockdown() then
-		ns.Print("can't change presets in combat. Try again after the fight.")
+		ns.Print("can't change presets in a fight. Try again after it.")
 		return false
 	end
 	-- The record first, so a Compare showing "before" ends before anything reads the settings.
