@@ -209,7 +209,9 @@ luaI.execute('CALLS = {}; local b = EyeCandyMainFrame.pages.hidden.resetAll; CLI
 check(I('#CALLS') == 0, "Reset all with nothing to reset takes no backup")
 # A refused call says why (the API returns nil, "reason")
 luaI.execute('NS.ShowTab("presets"); CHAT = {}; NS.SaveCurrentAsPreset = function() return nil, "Beautiful is a built-in name. Pick another." end; CLICK(%s.saveButton); ACCEPT("Beautiful")' % P)
-check("built-in name" in I(P + '.card.note.text') and not chat(luaI), "a refused save says why on the card")
+check(I('EyeCandyAskFrame.shown') == True and "built-in name" in I('EyeCandyAskFrame.errFS.text') and not chat(luaI),
+      "a refused save keeps the name box open and says why under it")
+luaI.execute('EyeCandyAskFrame:Hide()')
 luaI.execute('if EyeCandyExportFrame then EyeCandyExportFrame:Hide() end; NS.ExportPreset = function() return nil, "Sharing needs the game\'s encoding tools." end')
 menu(1); luaI.execute('CLICK(%s.buttons[1])' % MENU)
 check("encoding tools" in I(P + '.card.note.text') and not I('EyeCandyExportFrame and EyeCandyExportFrame.shown'), "a failed export says why and opens no empty box")

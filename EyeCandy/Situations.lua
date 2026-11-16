@@ -417,9 +417,9 @@ local SLASH = {
 	},
 	instance = {
 		key = "raid",
-		on = "In dungeons, raids, battlegrounds and arenas, Eye Candy now lowers costly settings to Raid & PvP's, and puts them back when you leave. /ec instance turns it off.",
+		on = "In dungeons, raids, battlegrounds and arenas, Eye Candy now lowers costly settings to the Raid & PvP preset's settings, and puts them back when you leave. /ec instance turns it off.",
 		off = "Eye Candy no longer changes settings in dungeons, raids, battlegrounds and arenas.",
-		help = "/ec instance  lower the costly settings to Raid & PvP's in dungeons, raids, battlegrounds and arenas by itself, and put them back when you leave",
+		help = "/ec instance  lower the costly settings to the Raid & PvP preset's settings in dungeons, raids, battlegrounds and arenas by itself, and put them back when you leave",
 	},
 }
 

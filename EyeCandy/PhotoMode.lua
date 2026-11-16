@@ -23,8 +23,9 @@
 -- slow and uneven while the game loads what it now needs. So photo mode waits, as Autotune does after a
 -- render scale change (Autotune.lua, at least 2 seconds, at most 6), until two half-second windows agree:
 -- frame rate within 10%, and no frame in either more than 2.5 times the window's average (a long frame
--- is the game still loading). Those two numbers are a rule of thumb, not measured. It counts the frames it
--- waited and says so on the tab, so a photo that still looks half-loaded can be matched to the count.
+-- is the game still loading). Those two numbers are a rule of thumb, not measured. It says on the tab how
+-- many seconds it waited, and keeps the frame count too (PM.last), so a photo that still looks half-loaded
+-- can be matched to the wait.
 --
 -- Your settings from before are saved in EyeCandyDB.photo first. A fight, a loading screen, Esc or any other
 -- Eye Candy change stops a photo and puts them back. It never changes settings in a fight. With "My settings
@@ -38,7 +39,8 @@ PM.PRESET = "look:screenshot"
 PM.MIN, PM.MAX, PM.WINDOW, PM.AGREE, PM.SPIKE = 2, 6, 0.5, 0.1, 2.5
 PM.SHOT_WAIT = 5 -- seconds to wait for the game to say the photo is saved
 PM.MINE_WAIT = 0.3 -- with your own settings nothing changes: a moment for the UI to hide
-PM.FOLDER = "World of Warcraft\\_forever_\\Screenshots"
+-- Where the game saves it: World of Warcraft\_forever_\Screenshots.
+PM.WHERE = "Find it in the Screenshots folder, inside World of Warcraft\\_forever_."
 
 local shot -- nil, or { phase = "settle" | "shot", waited, frames, wn, wt, prevFps, left, mine }
 local edit = false -- true while the photo settings are on for you to adjust (Change it)
@@ -152,7 +154,7 @@ function PM.Settle(s, elapsed)
 end
 
 local function Waited(s)
-	return string.format("It waited %d frames (%.1f seconds) for the new settings.", s.frames, s.waited)
+	return string.format("It waited %.1f seconds for the new settings to load.", s.waited)
 end
 
 -- Ends the peek and puts your settings back. Returns the closing words: what came back, or what waits.
@@ -172,15 +174,15 @@ local function Finish(result)
 	frame:Hide()
 	local closing, all = Restore()
 	PM.last = { frames = s.frames, seconds = s.waited, result = result }
-	local ui = s.uiShown and " The UI came back before the photo, so it may be in it." or ""
+	local ui = s.uiShown and " The game's UI came back while the photo was taken, so it may be in it." or ""
 	if result == "saved" then
-		Say(all and "done" or "waiting", "Photo saved at " .. date("%H:%M:%S") .. ", in " .. PM.FOLDER
-			.. " where the game is installed." .. (s.mine and "" or " " .. Waited(s)) .. ui .. " " .. closing)
+		Say(all and "done" or "waiting", "Photo saved at " .. date("%H:%M:%S") .. ". " .. PM.WHERE
+			.. (s.mine and "" or " " .. Waited(s)) .. ui .. " " .. closing)
 	elseif result == "failed" then
 		Say("refused", "The game couldn't save the photo. " .. closing)
 	else
-		Say("waiting", "The game didn't say whether the photo was saved. Look in " .. PM.FOLDER
-			.. " where the game is installed." .. ui .. " " .. closing)
+		Say("waiting", "The game didn't say whether the photo was saved. " .. (PM.WHERE:gsub("^Find it", "Look"))
+			.. ui .. " " .. closing)
 	end
 	Tell(PM.message)
 	Refresh()
@@ -226,7 +228,7 @@ function PM.Presets()
 	if old ~= nil then
 		db.photoSettings = nil
 		if type(old) == "table" and type(old.values) == "table" and next(old.values) then
-			table.insert(list, 1, { name = "My photo settings", values = old.values, saved = old.saved })
+			table.insert(list, 1, { name = "My screenshot preset", values = old.values, saved = old.saved })
 			db.photoPick = 1
 		end
 	end
@@ -265,7 +267,8 @@ function PM.SetPick(i)
 	return true
 end
 
--- The values screenshot preset i puts on (the picked one when i is nil), and what to call it.
+-- The values screenshot preset i puts on (the picked one when i is nil), and what to call it in a message
+-- ("Default", or the name in quotes). Default is the built-in Screenshot preset's values (PM.PRESET).
 -- Returns values, name; or nil and a plain reason.
 function PM.PhotoValues(i)
 	i = i or PM.Pick()
@@ -274,8 +277,8 @@ function PM.PhotoValues(i)
 		if p then return Copy(p.values), "\"" .. p.name .. "\"" end
 	end
 	local values = ns.PresetValues and ns.PresetValues(PM.PRESET)
-	if not values then return nil, "The Screenshot preset is missing." end
-	return values, "The Screenshot preset"
+	if not values then return nil, "Default couldn't go on: Eye Candy's built-in Screenshot preset is missing." end
+	return values, PM.DEFAULT
 end
 
 -- A name for a new screenshot preset that no other has.
@@ -283,8 +286,8 @@ function PM.NewName()
 	local taken = {}
 	for _, p in ipairs(PM.Presets()) do taken[p.name:lower()] = true end
 	local n = 1
-	while taken[("Photo preset " .. n):lower()] do n = n + 1 end
-	return "Photo preset " .. n
+	while taken[("Screenshot preset " .. n):lower()] do n = n + 1 end
+	return "Screenshot preset " .. n
 end
 
 -- A typed name, trimmed, or nil and a plain reason. except: the place of the preset being renamed.
@@ -316,11 +319,15 @@ local function Before(values)
 	return before
 end
 
--- What stops photo mode taking a photo or opening an edit, as a plain reason, or nil. Ends a Compare.
+-- What stops photo mode taking a photo ("take") or opening an edit ("change"), as a plain reason, or nil.
+-- Ends a Compare.
 local function Blocked(what)
 	if shot then return "Photo mode is already taking a photo." end
 	if edit then return "A screenshot preset is on for you to adjust. Save it or press Cancel first." end
-	if InCombatLockdown() then return "Not in a fight. Try again after it." end
+	if InCombatLockdown() then
+		return what == "change" and "You can't change a screenshot preset in a fight. Try again after it."
+			or "You can't take a photo in a fight. Try again after it."
+	end
 	if ns.db.photo then return "Photo mode is still putting your settings back. It waits for the fight to end." end
 	if ns.EyeTest and ns.EyeTest.IsOn() then return "The eye test is on. Finish or stop it first." end
 	local AT = ns.Autotune
@@ -337,9 +344,9 @@ end
 
 -- Takes the photo. Returns true (it carries on by itself for a few seconds), or nil and a plain reason.
 function PM.Take()
-	if not shot and not edit and InCombatLockdown() then return nil, "Not in a fight. Try again after it." end
+	if not shot and not edit and InCombatLockdown() then return nil, "You can't take a photo in a fight. Try again after it." end
 	if not shot and not edit and type(Screenshot) ~= "function" then return nil, "This game doesn't let addons take a photo." end
-	local blocked = Blocked()
+	local blocked = Blocked("take")
 	if blocked then return nil, blocked end
 	local mine = PM.Choice() == "mine"
 	local values, name
@@ -357,7 +364,9 @@ function PM.Take()
 		if not ok then
 			shot = nil
 			pcall(PutBack) -- it sets each value back itself even when the apply fails again
-			return nil, name .. " couldn't go on, so no photo was taken. Your settings are back. (" .. tostring(err) .. ")"
+			-- The error itself goes to /ec report's list, not on the screen.
+			if ns.RecordError then ns.RecordError("Eye Candy photo mode: " .. tostring(err)) end
+			return nil, name .. " couldn't go on, so no photo was taken. Your settings are back. Try again, or type /ec report."
 		end
 	end
 	local hid, why = ns.PeekWithoutBar()
@@ -402,7 +411,7 @@ end
 -- Change: your settings are saved, screenshot preset i (the picked one when i is nil) goes on, and you
 -- adjust it on the Standard and Hidden tabs. It is picked for photos too. Returns true, or nil and a plain reason.
 function PM.Change(i)
-	local blocked = Blocked()
+	local blocked = Blocked("change")
 	if blocked then return nil, blocked end
 	i = i or PM.Pick()
 	if not PM.Name(i) then return nil, "That screenshot preset is gone." end
@@ -422,7 +431,8 @@ function PM.Change(i)
 	if not ok then
 		edit = false
 		pcall(PutBack)
-		return nil, name .. " couldn't go on, so nothing changed. Your settings are back. (" .. tostring(err) .. ")"
+		if ns.RecordError then ns.RecordError("Eye Candy photo mode: " .. tostring(err)) end
+		return nil, name .. " couldn't go on, so nothing changed. Your settings are back. Try again, or type /ec report."
 	end
 	Say(nil, nil)
 	Refresh()
@@ -512,11 +522,13 @@ function PM.DeletePreset(i)
 end
 
 -- Cancel, or an end from outside (a fight, a loading screen): nothing is saved, your own come back.
--- why: shown to the player, nil for the Cancel button.
+-- why: shown to the player after "because" ("a fight started"), nil for the Cancel button.
 function PM.CancelEdit(why)
 	if not edit then return end
+	local name = PM.EditingName() or PM.DEFAULT
 	local closing, all = EndEdit()
-	local lead = why and ("The screenshot preset was not saved: " .. why .. ". ") or "Cancelled. Nothing was saved. "
+	local lead = why and ("Your changes to \"" .. name .. "\" weren't saved because " .. why .. ". ")
+		or "Cancelled. Nothing was saved. "
 	Say(all and "done" or "waiting", lead .. closing)
 	Tell(PM.message)
 	Refresh()
@@ -536,14 +548,14 @@ ns.RunningNote = function(...)
 	if runningNote then return runningNote(...) end
 end
 
--- Stops it and puts your settings back. why: shown to the player.
+-- Stops it and puts your settings back. why: shown to the player after "because" ("a fight started").
 function PM.Stop(why)
 	if not shot then return end
 	local before = shot.phase == "settle"
 	shot = nil
 	frame:Hide()
 	local closing, all = Restore()
-	local lead = "Photo mode stopped: " .. why .. ". " .. (before and "No photo was taken. " or "")
+	local lead = "Photo mode stopped because " .. why .. ". " .. (before and "No photo was taken. " or "")
 	Say(all and "done" or "waiting", lead .. closing)
 	Tell(PM.message)
 	Refresh()
@@ -556,7 +568,7 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 	end
 	if shot.phase == "settle" then
 		-- Esc or Alt+Z brought the UI back (Peek.lua ends the peek): no photo.
-		if not (ns.IsPeeking and ns.IsPeeking()) then return PM.Stop("the UI came back") end
+		if not (ns.IsPeeking and ns.IsPeeking()) then return PM.Stop("the game's UI came back") end
 		-- Your own settings: nothing changed, so only a moment for the UI to hide.
 		local ready
 		if shot.mine then
@@ -582,14 +594,16 @@ end)
 -- and a restore. An edit of the photo settings lets the three the Standard and Hidden tabs use through (an
 -- apply, and the Original backup they make sure of); the rest end it first, so they hold your settings.
 local ALLOWED_IN_EDIT = { ApplyAll = true, ApplyValues = true, TakeBackup = true }
+-- An apply, a backup, a preset, Back or a restore: each changes or saves your settings.
+local ANOTHER = "another part of Eye Candy changed or saved your settings"
 for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
 	"RestoreStep", "GoBack", "RestoreBackupById" }) do
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
 			if not busy then
-				if shot then PM.Stop("another setting changed") end
-				if edit and not ALLOWED_IN_EDIT[name] then PM.CancelEdit("another setting changed") end
+				if shot then PM.Stop(ANOTHER) end
+				if edit and not ALLOWED_IN_EDIT[name] then PM.CancelEdit(ANOTHER) end
 			end
 			return orig(...)
 		end
@@ -699,8 +713,8 @@ events:SetScript("OnEvent", function(_, event, isLogin, isReload)
 		if shot then PM.Stop("a fight started") end
 		if edit then PM.CancelEdit("a fight started") end
 	elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
-		if shot then PM.Stop("a loading screen") end
-		if edit then PM.CancelEdit("a loading screen") end
+		if shot then PM.Stop("a loading screen came up") end
+		if edit then PM.CancelEdit("a loading screen came up") end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		if saved and saved.afterCombat and not shot and not edit and PutBack() then
 			Say("done", "Photo mode: the fight is over, so your settings are back as they were.")
@@ -761,15 +775,17 @@ local function ChoiceText()
 		return "The photo uses your settings as they are now. Nothing changes. Only the UI hides."
 	end
 	return "The photo uses \"" .. PM.Name(PM.Pick()) .. "\". Your settings come back after. "
-		.. "Click a name to use another. Change puts one on so you can adjust it."
+		.. "Change puts one on so you can adjust it."
 end
 
--- Save screenshot preset, or Save as new: a new one asks for its name first.
+-- Save screenshot preset, or Save as new: a new one asks for its name first. A refused name stays in the
+-- box, with the reason under it (ns.Ask, rule 6).
 local function AskName()
 	local room, why = PM.RoomForNew()
 	if not room then
 		Say("refused", why)
-		return Refresh()
+		Refresh()
+		return
 	end
 	local token = PM.EditToken()
 	ns.Ask({ title = "Save screenshot preset", text = "Name for the new screenshot preset:", edit = PM.NewName(), accept = "Save",
@@ -777,11 +793,12 @@ local function AskName()
 			-- A fight or a loading screen ended the edit while the box was open, or another edit started.
 			if token == nil or PM.EditToken() ~= token then
 				Say("refused", "That change is over, so nothing was saved. Press Change to start again.")
-				return Refresh()
+				Refresh()
+				return
 			end
 			local ok, err = PM.SavePreset(true, name)
-			if not ok and err then Say("refused", err) end
 			Refresh()
+			if not ok and err then return err end
 		end })
 end
 
@@ -790,40 +807,117 @@ local function Said(ok, err)
 	Refresh()
 end
 
-local LIST_ROW = 28
+-- Rows as the Presets tab's (UI.lua): 34 tall with 4 between, the name where theirs is.
+local ROW_H = 34
+local LIST_ROW = ROW_H + ROW
+local NAME_X, NAME_W = ns.ROW_NAME_X or 14, ns.ROW_NAME_W or 180
 
--- Row i of the screenshot preset list (0 is Default): the name to pick it, Change, and for yours Rename and Delete.
+-- The one line under each name (rule 14), on the screen and not only in the tooltip.
+function PM.RowLine(i)
+	if i == 0 then return "Eye Candy's own. Can't be renamed or deleted." end
+	local p = PM.Presets()[i]
+	return p and p.saved and ("Saved " .. p.saved) or "Saved by you"
+end
+
+-- The "..." menu of a saved screenshot preset: Rename, then Delete last, in red. Default has none.
+PM.MENU = { { "rename", "Rename" }, { "delete", RED .. "Delete|r" } }
+
+local function MenuPick(i, key)
+	local name = PM.Name(i)
+	if not name or i == 0 then return end
+	if key == "rename" then
+		ns.Ask({ title = "Rename screenshot preset", text = "New name for \"" .. name .. "\":", edit = name, accept = "Rename",
+			onAccept = function(text)
+				local ok, err = PM.RenamePreset(i, text)
+				Refresh()
+				if not ok and err then return err end
+			end })
+	elseif key == "delete" then
+		ns.Ask({ title = "Delete screenshot preset", text = "Delete \"" .. name .. "\"? This can't be undone.", accept = "Delete",
+			danger = true, onAccept = function() Said(PM.DeletePreset(i)) end })
+	end
+end
+
+function PM.OpenMenu(owner, i)
+	if i == 0 or not PM.Name(i) or not ns.OpenMenu then return end
+	ns.OpenMenu(owner, PM.Name(i), PM.MENU, function(key) MenuPick(i, key) end)
+end
+
+-- Row i of the screenshot preset list (0 is Default): the name (click it to pick it for photos), a grey
+-- line, Change, and for yours a "..." menu that right-click on the row opens too (rule 14).
 local function PresetRow(e, i)
 	e.rows = e.rows or {}
 	local r = e.rows[i]
 	if r then return r end
-	r = CreateFrame("Frame", nil, e.content)
-	r:SetSize(W, LIST_ROW - ROW)
-	r.pick = ns.Button(r, "", 260, function() PM.SetPick(i) end)
-	r.pick:SetPoint("LEFT", 0, 0)
-	ns.Tooltip(r.pick, function() return PM.Name(i) or "" end, function()
-		if i == 0 then return "Eye Candy's own Screenshot preset. It can't be renamed or deleted. Click to use it for photos." end
-		local p = PM.Presets()[i]
-		return "Your screenshot preset" .. (p and p.saved and (", saved " .. p.saved) or "") .. ". Click to use it for photos."
-	end)
-	r.change = ns.Button(r, "Change", 80, function() Said(PM.Change(i)) end)
-	r.change:SetPoint("LEFT", r.pick, "RIGHT", ROW, 0)
-	ns.Tooltip(r.change, "Change", "Puts this screenshot preset on so you can adjust it on the Standard and Hidden tabs. Your settings are saved first and come back when you save or cancel.")
+	r = CreateFrame("Button", nil, e.content)
+	r:SetSize(W, ROW_H)
+	r.bg = r:CreateTexture(nil, "BACKGROUND")
+	r.bg:SetAllPoints()
+	r.bar = r:CreateTexture(nil, "ARTWORK")
+	r.bar:SetPoint("TOPLEFT")
+	r.bar:SetPoint("BOTTOMLEFT")
+	r.bar:SetWidth(4)
+	r.name = ns.Label(r, "", "GameFontHighlight")
+	r.name:SetPoint("LEFT", NAME_X, 0)
+	r.name:SetWidth(NAME_W)
+	r.name:SetJustifyH("LEFT")
+	if r.name.SetWordWrap then r.name:SetWordWrap(false) end
+	-- Change sits in the same place on every row; Default has no "..." beside it.
 	if i > 0 then
-		r.rename = ns.Button(r, "Rename", 80, function()
-			local name = PM.Name(i)
-			if not name then return end
-			ns.Ask({ title = "Rename screenshot preset", text = "New name for \"" .. name .. "\":", edit = name, accept = "Rename",
-				onAccept = function(text) Said(PM.RenamePreset(i, text)) end })
-		end)
-		r.rename:SetPoint("LEFT", r.change, "RIGHT", ROW, 0)
-		r.delete = ns.Button(r, "Delete", 70, function()
-			local name = PM.Name(i)
-			if not name then return end
-			ns.Ask({ title = "Delete screenshot preset", text = "Delete \"" .. name .. "\"? This can't be undone.", accept = "Delete",
-				onAccept = function() Said(PM.DeletePreset(i)) end })
-		end)
-		r.delete:SetPoint("LEFT", r.rename, "RIGHT", ROW, 0)
+		r.more = ns.Button(r, "...", 30, function() PM.OpenMenu(r.more, i) end)
+		r.more:SetPoint("RIGHT", -4, 0)
+		ns.Tooltip(r.more, "More", "Rename and Delete. Right-clicking the row opens this too.", "ANCHOR_LEFT")
+	end
+	r.change = ns.Button(r, "Change", 80, function() Said(PM.Change(i)) end)
+	r.change:SetPoint("RIGHT", -38, 0)
+	ns.Tooltip(r.change, "Change", "Puts this screenshot preset on so you can adjust it on the Standard and Hidden tabs. Your settings are saved first and come back when you save or cancel.", "ANCHOR_LEFT")
+	r.line = ns.Label(r, "", "GameFontHighlightSmall")
+	r.line:SetPoint("LEFT", NAME_X + NAME_W + 10, 0)
+	r.line:SetPoint("RIGHT", r.change, "LEFT", -10, 0)
+	r.line:SetJustifyH("LEFT")
+	r.line:SetTextColor(0.62, 0.62, 0.62)
+	if r.line.SetWordWrap then r.line:SetWordWrap(false) end
+
+	r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	r:SetScript("OnClick", function(self, button)
+		if button == "RightButton" then return PM.OpenMenu(self.more or self, i) end
+		PM.SetPick(i)
+	end)
+	r:SetScript("OnEnter", function(self)
+		self.hover = true
+		self:Paint()
+		GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
+		GameTooltip:AddLine(PM.Name(i) or "", 1, 1, 1)
+		local tip
+		if i == 0 then
+			tip = "Uses the settings of Eye Candy's built-in Screenshot preset (under Situations on the Presets tab). "
+				.. "It can't be renamed or deleted. Click to use it for photos."
+		else
+			tip = "Your screenshot preset. Click to use it for photos. Right-click for Rename and Delete."
+		end
+		GameTooltip:AddLine(tip, nil, nil, nil, true)
+		GameTooltip:Show()
+	end)
+	r:SetScript("OnLeave", function(self)
+		-- Moving onto Change or "..." still counts as over the row, so the highlight doesn't flicker.
+		if self.IsMouseOver and self:IsMouseOver() then
+			GameTooltip_Hide()
+			return
+		end
+		self.hover = false
+		self:Paint()
+		GameTooltip_Hide()
+	end)
+	-- Gold for the one a photo uses (rule 20: the selected thing), a faint grey otherwise.
+	function r:Paint()
+		if self.picked then
+			self.bg:SetColorTexture(1, 0.82, 0, self.hover and 0.2 or 0.14)
+			self.bar:SetColorTexture(1, 0.82, 0, 1)
+			self.bar:Show()
+		else
+			self.bg:SetColorTexture(1, 1, 1, self.hover and 0.1 or 0.05)
+			self.bar:Hide()
+		end
 	end
 	e.rows[i] = r
 	return r
@@ -851,8 +945,8 @@ local function Build(page, holder)
 	ns.Tooltip(e.shotChoice, "Screenshot preset", "The photo uses the screenshot preset picked in the list below. Your settings come back after.")
 	e.shotChoice.label = "Screenshot preset"
 	e.choiceText = Text(c, "GameFontDisableSmall")
-	e.listHead = Text(c, "GameFontNormal")
-	e.listHead:SetText("Screenshot presets")
+	-- The list's heading (rule 11). Its 12px of room above it, and 4 here, keep the list 16 from the choice.
+	e.listHead, e.listHeadH = ns.Header(c, "Screenshot presets", "Click a name to use it for photos.")
 	e.take = ns.Button(c, "Take photo", 110, function()
 		local ok, err = PM.Take()
 		if not ok and err then
@@ -936,24 +1030,29 @@ local function Refresh_(page)
 		if mine then
 			for _, r in pairs(e.rows or {}) do r:Hide() end
 		else
-			Under(e.listHead, above, 0, 10)
+			-- The heading's frame starts 4 left of the text, so its gold words line up with the rest.
+			Under(e.listHead, above, -4, 4)
 			above = e.listHead
-			height = height + 10 + TextH(e.listHead, "Screenshot presets")
+			height = height + 4 + e.listHeadH
 			for i = 0, #list do
 				local r = PresetRow(e, i)
-				local name = ns.ShortName(PM.Name(i), 34)
-				r.pick:SetText((i == pick and GOLD or WHITE) .. name .. "|r")
-				r.pick.chosen = i == pick
+				local full = PM.Name(i)
+				if ns.FitRowName then ns.FitRowName(r.name, full) else r.name:SetText(ns.ShortName(full, 26)) end
+				r.line:SetText(PM.RowLine(i))
+				r.picked = i == pick
+				r:Paint()
 				r:ClearAllPoints()
-				Under(r, above, 0, ROW)
+				Under(r, above, i == 0 and 4 or 0, ROW)
 				r:Show()
 				above = r
 				height = height + LIST_ROW
 			end
 		end
-		Under(e.take, above, 0, 10)
+		-- Take photo is the next group: 16 under the list (rule 12).
+		local gap = mine and 8 or 16
+		Under(e.take, above, 0, gap)
 		last = e.take
-		height = height + 10 + 24
+		height = height + gap + 24
 	end
 	e.status:ClearAllPoints()
 	Under(e.status, last, 0, 8)
