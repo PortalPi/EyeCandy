@@ -18,6 +18,26 @@
 -- loading screen lets it try again. A raise that drops FPS under the goal again is undone once, and then
 -- it stops raising there, so it never goes up and down all day.
 --
+-- Goals go up to 300, the common screen rates (144, 165, 180, 240, 300) after the usual ones.
+--
+-- FPS limits. The game has an FPS limit for the front (useMaxFPS and maxFPS: default off and 120) and one for
+-- the back (useMaxFPSBk and maxFPSBk: default on and 30); the defaults are from Ketho's CVars.lua, branch
+-- forever. The live values are read at each reading (ns.GetInfo), not Config.wtf. A front limit under the goal
+-- is the goal (and the page says so). In the back, FPS sits at the back limit whatever render scale is, so
+-- lowering would find "didn't help" and stop for the session. There is no API for window focus (none is
+-- documented; the Alt-Tab Toggle addon infers it from OnUpdate stopping, or from low FPS in a window), so
+-- this infers it: the back limit is on, it is under the low line of the goal, and FPS has sat within
+-- SF.CAP_NEAR of it for SF.BK_ENTER seconds (then it holds down to SF.BK_FLOOR of it). Then nothing changes and nothing is
+-- judged, and the page says why. Back in front, FPS is not read for SF.SETTLE seconds, because the smoothed
+-- FPS still holds the low readings. A real FPS of exactly the back limit in front is taken as the back:
+-- a guess that costs a missed lowering, never a wrong one.
+--
+-- Target FPS (targetFPS, useTargetFPS: default 60 and on) is the game's own: "Dynamic actions will be taken
+-- if you fall below the FPS target" (Ketho's CVars.lua). What those actions are isn't documented, and
+-- nothing found (16 Nov 2026) says it sets RenderScale, so it is not held back, but that is a guess. What is
+-- documented is DynamicRenderScale ("Lowers render scale if GPU bound to hit Target FPS ... May cause
+-- hitching", same file): that one moves render scale too, so while it is on, this waits.
+--
 -- It never changes anything in a fight, or while Autotune, Compare, Peek, photo mode or the eye test is on.
 -- Backups, presets, Back and the patch warning see your own render scale, not the lowered one
 -- (ns.SituationValue). Logging out puts your own back, so the game saves yours.
@@ -36,8 +56,11 @@ SF.STEP, SF.FLOOR = 0.05, 0.7 -- one step of render scale, and the lowest it goe
 SF.SKIP, SF.JUDGE, SF.HELP = 3, 5, 0.03 -- after a step down: skip 3 s, then 5 s of FPS must be 3% better
 SF.HITCH_FOR = 2              -- seconds after a change in which the longest frame is its hitch
 SF.CAP_NEAR = 0.97            -- FPS this close to a cap is held there by the cap
-SF.GOALS = { 30, 45, 60, 75, 90, 120, 144 }
+SF.SETTLE = 3                 -- seconds after the game comes back to the front before FPS is read again
+SF.BK_ENTER, SF.BK_FLOOR = 2, 0.9 -- seconds at the background limit before it counts, and how far under it holds
+SF.GOALS = { 30, 45, 60, 75, 90, 120, 144, 165, 180, 240, 300 }
 SF.GOAL = 60
+SF.PER_ROW = 6                -- goal buttons in one row on the page
 
 local function Round(x) return math.floor(x * 100 + 0.5) / 100 end
 
@@ -59,7 +82,7 @@ local function Changed(s, to, why, now)
 end
 
 -- One reading. r: { now (smoothed FPS), raw, frames, seconds, long (longest frame), goal, free (nothing holds
--- it back), top (an FPS limit, or nil), vsync }. Returns the render scale to set and why ("lower", "raise",
+-- it back), top (an FPS limit, or nil), bk (the background FPS limit, or nil), vsync }. Returns the render scale to set and why ("lower", "raise",
 -- "back"), or nil.
 function SF.Step(s, r)
 	local t = r.seconds or 0
@@ -74,10 +97,39 @@ function SF.Step(s, r)
 			if not s.biggest or s.hitch > s.biggest then s.biggest, s.normal = s.hitch, s.hitchNormal end
 		end
 	end
+	-- The game in the background, held at its background FPS limit: that FPS says nothing about render scale.
+	-- The limit counts only when it is under the low line of the goal. A reading in the band round the limit
+	-- (CAP_NEAR either side) is never read as low. After BK_ENTER seconds in that band the game is taken to be
+	-- in the background, and stays so while FPS is between BK_FLOOR of the limit and just over it. FPS under
+	-- that floor is a real low FPS, so one pass through the band never hides a drop to 22 in a city.
+	local goal0 = r.goal or SF.GOAL
+	if r.top and r.top < goal0 then goal0 = r.top end
+	local bk = r.bk and r.bk > 0 and r.bk < goal0 * SF.LOW and r.bk or nil
+	local raw = r.raw or r.now or 0
+	local wasBk = s.bk
+	local inBand = bk ~= nil and raw >= bk * SF.CAP_NEAR and raw <= bk / SF.CAP_NEAR
+	s.bkIn = inBand and (s.bkIn or 0) + t or 0
+	if wasBk then
+		s.bk = bk ~= nil and raw >= bk * SF.BK_FLOOR and raw <= bk / SF.CAP_NEAR
+	else
+		s.bk = s.bkIn >= SF.BK_ENTER
+	end
+	s.top = r.top
+	-- Back in front: the smoothed FPS still holds the low readings, so it is not read for a moment.
+	if wasBk and not s.bk then s.settle = SF.SETTLE end
+	local free = r.free
+	if s.bk or inBand then
+		free = false
+	elseif s.settle and s.settle > 0 then
+		s.settle = s.settle - t
+		free = false
+	else
+		s.settle = nil
+	end
 	-- Did the last step down help?
 	local j = s.judge
 	if j then
-		if not r.free then
+		if not free then
 			s.judge = nil -- held back: what it would measure isn't the step
 		elseif j.skip > 0 then
 			j.skip = j.skip - t
@@ -91,7 +143,7 @@ function SF.Step(s, r)
 			end
 		end
 	end
-	if not r.free then
+	if not free then
 		s.lowFor, s.highFor, s.lowFrames, s.lowTime = 0, 0, 0, 0
 		return nil
 	end
@@ -257,7 +309,9 @@ local function OnReading(now, raw, frames, seconds, long)
 	local s = state
 	if not s then return ns.FPS.Unwatch("steady") end
 	local db = DB()
-	local free = SF.HeldBy() == nil
+	-- The game's own Dynamic Render Scale also moves render scale to chase Target FPS: not at the same time.
+	local dyn = Num("DynamicRenderScale") == 1
+	local free = SF.HeldBy() == nil and not dyn
 	local cur = Scale()
 	-- Changed by someone else: yours now. Only while nothing holds it back: Autotune, photo mode and the
 	-- others put theirs back when they end.
@@ -269,17 +323,19 @@ local function OnReading(now, raw, frames, seconds, long)
 	end
 	local top = Num("useMaxFPS") == 1 and Num("maxFPS") or nil
 	if top and top <= 0 then top = nil end
+	local bk = Num("useMaxFPSBk") == 1 and Num("maxFPSBk") or nil
 	local vsync = Num("vsync") == 1
-	local hitch, stuck, held = s.biggest, s.stuck, s.held
-	s.held = SF.HeldBy()
+	local hitch, stuck, held, wasBk, wasTop, wasDyn = s.biggest, s.stuck, s.held, s.bk, s.top, s.dyn
+	s.held, s.dyn = SF.HeldBy(), dyn
 	local to, why = SF.Step(s, { now = now, raw = raw, frames = frames, seconds = seconds, long = long,
-		goal = SF.Goal(), free = free, top = top, vsync = vsync })
+		goal = SF.Goal(), free = free, top = top, bk = bk, vsync = vsync })
 	if s.biggest ~= hitch and (not session.biggest or s.biggest > session.biggest) then
 		session.biggest, session.normal = s.biggest, s.normal
 	end
 	-- The page says when it stopped, or waits, and the biggest hitch: redraw when one of them changes.
 	if not to then
-		if s.stuck ~= stuck or s.held ~= held or s.biggest ~= hitch then Refresh() end
+		if s.stuck ~= stuck or s.held ~= held or s.biggest ~= hitch or s.bk ~= wasBk or s.top ~= wasTop
+			or s.dyn ~= wasDyn then Refresh() end
 		return
 	end
 	local got = Set(to)
@@ -450,6 +506,18 @@ function SF.Status()
 	end
 	local held = SF.HeldBy()
 	if held then lines[#lines + 1] = GREY .. "Waiting: " .. held .. ".|r" end
+	if s.dyn then
+		lines[#lines + 1] = GREY .. "Waiting: the game's Dynamic Render Scale is on, and it moves render scale too.|r"
+	end
+	if s.bk then
+		lines[#lines + 1] = GREY .. "Waiting: the game is in the background, so FPS is held at its background limit ("
+			.. (Num("maxFPSBk") or "?") .. ").|r"
+	end
+	-- An FPS limit under the goal is the real goal.
+	local goal = SF.Goal()
+	if s.top and s.top < goal then
+		lines[#lines + 1] = "Your FPS limit is " .. s.top .. ", so it aims for " .. s.top .. "."
+	end
 	-- It can't tell FPS held by Vertical Sync from FPS held by the graphics card, so it would lower once for
 	-- nothing (and put it back) with a goal over the screen's refresh rate.
 	if Num("vsync") == 1 then
@@ -480,13 +548,21 @@ local function Build(page, holder)
 	e.goalLabel:SetText("Goal:")
 	Under(e.goalLabel, e.how, 0, 8)
 	e.goals = {}
-	local prev
+	local prev, rowStart
 	for i, g in ipairs(SF.GOALS) do
 		local b = ns.Button(c, g .. " FPS", 66, function()
 			DB().goal = g
 			Refresh()
 		end)
-		if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0) else Under(b, e.goalLabel, 0, 4) end
+		if i == 1 then
+			Under(b, e.goalLabel, 0, 4)
+			rowStart = b
+		elseif (i - 1) % SF.PER_ROW == 0 then
+			Under(b, rowStart, 0, 4) -- the next row
+			rowStart = b
+		else
+			b:SetPoint("LEFT", prev, "RIGHT", 4, 0)
+		end
 		ns.Tooltip(b, g .. " FPS", "Lower render scale when FPS stays under " .. math.floor(g * SF.LOW + 0.5) .. ".")
 		e.goals[i], prev = b, b
 	end
@@ -502,7 +578,7 @@ local function Build(page, holder)
 			end
 		end
 	end)
-	Under(e.toggle, e.goals[1], 0, 8)
+	Under(e.toggle, rowStart, 0, 8) -- under the last row of goals
 	ns.Tooltip(e.toggle, "Steady FPS", "Off until you turn it on. Turning it off puts your own render scale back.")
 	e.status = Text(c)
 	Under(e.status, e.toggle, 0, 8)
@@ -517,7 +593,8 @@ local function Refresh_(page)
 	e.toggle:SetText(state and "Turn off" or "Turn on")
 	local status = SF.Status()
 	e.status:SetText(status)
-	local height = e.headH + ROW + TextH(e.why, SF.WHY) + 8 + TextH(e.how, SF.HOW) + 8 + 14 + 4 + 24 + 8 + 24 + 8
+	local rows = math.ceil(#SF.GOALS / SF.PER_ROW)
+	local height = e.headH + ROW + TextH(e.why, SF.WHY) + 8 + TextH(e.how, SF.HOW) + 8 + 14 + 4 + rows * 24 + (rows - 1) * 4 + 8 + 24 + 8
 		+ TextH(e.status, status)
 	e.content:SetHeight(height + 16)
 end
