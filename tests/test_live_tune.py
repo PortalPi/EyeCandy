@@ -131,6 +131,15 @@ X("""S = SF.New(1); BACK = function(s) return s.clock < 20 and 30 or (s.clock < 
 c = run(20, 30, "{ goal = 144, bk = 30 }")
 c += run(40, "BACK", "{ goal = 144, bk = 30 }")
 check(c == [] and not E("S.bk"), "back in front: nothing is lowered from the stale low readings (%s)" % c)
+# One pass through the limit's band in front, then a real drop: the drop still lowers.
+X("S = SF.New(1)")
+c = run(3, 45, "{ goal = 60, bk = 30 }") + run(1, 30, "{ goal = 60, bk = 30 }")
+c += run(10, 22, "{ goal = 60, bk = 30 }")
+check(c and c[0][2] == "lower" and not E("S.bk"), "FPS passing 30 on its way down to 22 is not taken for the background (%s)" % c)
+# Taken for the background, then a real drop under the floor: it is read again.
+X("S = SF.New(1)")
+c = run(10, 30, "{ goal = 60, bk = 30 }") + run(12, 22, "{ goal = 60, bk = 30 }")
+check(len(c) == 1 and c[0][2] == "lower" and not E("S.bk"), "FPS well under the background limit is a real low FPS (%s)" % c)
 # A background limit that isn't under the goal's low line holds nothing.
 X("S = SF.New(1)")
 c = run(30, 60, "{ goal = 60, bk = 60 }")

@@ -26,8 +26,8 @@
 -- is the goal (and the page says so). In the back, FPS sits at the back limit whatever render scale is, so
 -- lowering would find "didn't help" and stop for the session. There is no API for window focus (none is
 -- documented; the Alt-Tab Toggle addon infers it from OnUpdate stopping, or from low FPS in a window), so
--- this infers it: the back limit is on, it is under the low line of the goal, and FPS sits at it or just
--- under it (SF.CAP_NEAR, and then up to the same distance over it). Then nothing changes and nothing is
+-- this infers it: the back limit is on, it is under the low line of the goal, and FPS has sat within
+-- SF.CAP_NEAR of it for SF.BK_ENTER seconds (then it holds down to SF.BK_FLOOR of it). Then nothing changes and nothing is
 -- judged, and the page says why. Back in front, FPS is not read for SF.SETTLE seconds, because the smoothed
 -- FPS still holds the low readings. A real FPS of exactly the back limit in front is taken as the back:
 -- a guess that costs a missed lowering, never a wrong one.
@@ -57,6 +57,7 @@ SF.SKIP, SF.JUDGE, SF.HELP = 3, 5, 0.03 -- after a step down: skip 3 s, then 5 s
 SF.HITCH_FOR = 2              -- seconds after a change in which the longest frame is its hitch
 SF.CAP_NEAR = 0.97            -- FPS this close to a cap is held there by the cap
 SF.SETTLE = 3                 -- seconds after the game comes back to the front before FPS is read again
+SF.BK_ENTER, SF.BK_FLOOR = 2, 0.9 -- seconds at the background limit before it counts, and how far under it holds
 SF.GOALS = { 30, 45, 60, 75, 90, 120, 144, 165, 180, 240, 300 }
 SF.GOAL = 60
 SF.PER_ROW = 6                -- goal buttons in one row on the page
@@ -97,19 +98,27 @@ function SF.Step(s, r)
 		end
 	end
 	-- The game in the background, held at its background FPS limit: that FPS says nothing about render scale.
-	-- It is held at the limit when FPS sits at it or just under it (once it does, any FPS up to just over the
-	-- limit keeps it so), and the limit is under the low line of the goal.
+	-- The limit counts only when it is under the low line of the goal. A reading in the band round the limit
+	-- (CAP_NEAR either side) is never read as low. After BK_ENTER seconds in that band the game is taken to be
+	-- in the background, and stays so while FPS is between BK_FLOOR of the limit and just over it. FPS under
+	-- that floor is a real low FPS, so one pass through the band never hides a drop to 22 in a city.
 	local goal0 = r.goal or SF.GOAL
 	if r.top and r.top < goal0 then goal0 = r.top end
 	local bk = r.bk and r.bk > 0 and r.bk < goal0 * SF.LOW and r.bk or nil
 	local raw = r.raw or r.now or 0
 	local wasBk = s.bk
-	s.bk = bk ~= nil and raw <= bk / SF.CAP_NEAR and (wasBk or raw >= bk * SF.CAP_NEAR) or false
+	local inBand = bk ~= nil and raw >= bk * SF.CAP_NEAR and raw <= bk / SF.CAP_NEAR
+	s.bkIn = inBand and (s.bkIn or 0) + t or 0
+	if wasBk then
+		s.bk = bk ~= nil and raw >= bk * SF.BK_FLOOR and raw <= bk / SF.CAP_NEAR
+	else
+		s.bk = s.bkIn >= SF.BK_ENTER
+	end
 	s.top = r.top
 	-- Back in front: the smoothed FPS still holds the low readings, so it is not read for a moment.
 	if wasBk and not s.bk then s.settle = SF.SETTLE end
 	local free = r.free
-	if s.bk then
+	if s.bk or inBand then
 		free = false
 	elseif s.settle and s.settle > 0 then
 		s.settle = s.settle - t
