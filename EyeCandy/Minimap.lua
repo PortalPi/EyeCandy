@@ -119,7 +119,7 @@ function ns.CreateOptionsPanel()
 
 	local title = ns.Label(panel, "Eye Candy", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", 16, -16)
-	local text = ns.Label(panel, "Graphics presets, curated Looks, hidden graphics settings and dated backups.\nEverything is in the Eye Candy window. You can also open it with /ec or the minimap button.", "GameFontHighlight")
+	local text = ns.Label(panel, "Graphics presets, Looks, hidden graphics settings and backups.\nOpen the window here, with /ec, or with the minimap button.", "GameFontHighlight")
 	text:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
 	text:SetWidth(560)
 
