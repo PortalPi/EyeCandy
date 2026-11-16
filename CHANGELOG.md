@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **Steadier frames in big fights, by itself.** Tick "Switch in dungeons, raids and battlegrounds by itself" under Raid & PvP on the Presets tab, or type `/ec instance`. In a dungeon, raid, battleground or arena, Eye Candy lowers your settings to Raid & PvP's, only where yours are higher. When you leave they go back. Anything you change yourself inside stays as you set it. It never switches in combat, waits while Autotune is testing, and takes no backup. If the game's own Raid and Battleground settings are on, the game sets its own graphics settings in raids and battlegrounds, and Eye Candy lowers only the rest there. Off until you turn it on.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.
