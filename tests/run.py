@@ -220,7 +220,7 @@ gA = lambda n: luaA.eval('GetCVar("%s")' % n)
 check(gA("groundEffectDensity") == "256", "tier sets grass 256 before override")
 luaA.execute('SlashCmdList.EYECANDY("adv")')
 check(luaA.eval('EyeCandyMainFrame.shown') == True and luaA.eval('EyeCandyMainFrame.tab') == "hidden" and luaA.eval('#NS.advRows') == luaA.eval('#NS.AdvancedCVars()'), "/ec adv opens the Hidden tab with a row per dial")
-check("not in client" in luaA.eval('FINDROW("horizonStart").status.text'), "missing CVar shown as not in client")
+check("not in this game" in luaA.eval('FINDROW("horizonStart").status.text'), "missing CVar shown as not in this game")
 check("level" in luaA.eval('FINDROW("groundEffectDensity").status.text'), "level-managed dial labelled level")
 # drag + snap + debounce
 luaA.execute('SETLOG = {}; DRAG("groundEffectDensity", 120); DRAG("groundEffectDensity", 131.7)')
