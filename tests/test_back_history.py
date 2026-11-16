@@ -217,6 +217,14 @@ check(E(A + '.shown') == True and E(A + '.accept.text') == "Back", "Back on a ro
 check(t.startswith("Put back your settings from just before Raid & PvP? This changes %d settings." % cnt) and "It also undoes the 1 newer step above it." in t, "the question says the count and what else goes (%r)" % t)
 X(A + '.cancel.scripts.OnClick(%s.cancel)' % A)
 check(len(step_rows()) == 2 and E('EyeCandyDB.look') == "laptop", "Cancel changes nothing")
+# With nothing to change, it says so, and doesn't also say it undoes the newer step.
+X('REALCOUNT = NS.CountStepChanges; NS.CountStepChanges = function() return 0 end')
+X('%s.back.scripts.OnClick(%s.back)' % (r[1], r[1]))
+t = E(A + '.textFS.text')
+check("No setting changes" in t and t.endswith(" The 1 newer step above it leaves the list.") and "undoes" not in t,
+      "a step with nothing to change says no setting changes, and the newer step only leaves the list (%r)" % t)
+X(A + '.cancel.scripts.OnClick(%s.cancel)' % A)
+X('NS.CountStepChanges = REALCOUNT')
 X('%s.back.scripts.OnClick(%s.back)' % (r[1], r[1]))
 X(A + '.accept.scripts.OnClick(%s.accept)' % A)
 check(E('GetCVar("weatherDensity")') == "1" and step_rows() == [] and headers()[0] == "Your presets", "accepting goes back, and the list empties")

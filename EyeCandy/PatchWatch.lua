@@ -183,7 +183,7 @@ local function Build(n)
 	frame.back = ns.Button(frame, "Put them back", 130, function() PW.PutBack() end)
 	frame.back:SetPoint("RIGHT", frame.keep, "LEFT", -8, 0)
 	ns.Tooltip(frame.back, "Put them back",
-		"Sets each one back to what it was when you last logged out. Back to before can't undo this.", "ANCHOR_LEFT")
+		"Sets each one back to what it was when you last logged out.", "ANCHOR_LEFT")
 	frame.close = ns.Button(frame, "Close", 100, function() frame:Hide() end)
 	frame.close:SetPoint("BOTTOMRIGHT", -16, 14)
 	frame.close:Hide()

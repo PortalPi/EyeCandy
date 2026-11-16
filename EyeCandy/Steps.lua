@@ -31,9 +31,14 @@ function ns.AskBack(page, step)
 		if s == step or (s.live and step.live) then newer = i - 1 end
 	end
 	local n = ns.CountStepChanges(step)
-	local text = n == 0 and string.format("Put back your settings from just before %s? Nothing changes. Your settings are already as they were.", ns.BackTarget(step))
+	local text = n == 0 and string.format("Put back your settings from just before %s? No setting changes: they are already as they were then.", ns.BackTarget(step))
 		or string.format("Put back your settings from just before %s? This changes %s.", ns.BackTarget(step), Plural(n, "setting"))
-	if newer > 0 then text = text .. string.format(" It also undoes the %d newer %s above it.", newer, newer == 1 and "step" or "steps") end
+	local steps = newer == 1 and "step" or "steps"
+	if newer > 0 and n == 0 then
+		text = text .. string.format(" The %d newer %s above it %s the list.", newer, steps, newer == 1 and "leaves" or "leave")
+	elseif newer > 0 then
+		text = text .. string.format(" It also undoes the %d newer %s above it.", newer, steps)
+	end
 	ns.Ask({ title = "Back to before", text = text, accept = "Back", onAccept = function()
 		local done, line = ns.GoBack(step)
 		page.cardMsg = line and ((done and "|cff7cff7c" or "|cffff4040") .. line .. "|r") or nil
