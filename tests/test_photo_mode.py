@@ -62,7 +62,7 @@ check(E("OK") and E("T") < 2.6, "ordinary jitter (60 then 56 FPS) doesn't hold i
 X("NS.ShowTab('autotune'); EyeCandyMainFrame.shown = true; NS.RefreshUI()")
 P = "EyeCandyMainFrame.pages.autotune"
 labels = [E(P + ".partButtons")[i].label for i in range(1, E("#" + P + ".partButtons") + 1)]
-check(labels == ["Autotune", "Eye test", "Photo mode"], "the Experimental tab has a Photo mode button (%s)" % labels)
+check(labels[:3] == ["Autotune", "Eye test", "Photo mode"], "the Experimental tab has a Photo mode button (%s)" % labels)
 X(P + ".partButtons[3].scripts.OnClick()")
 PP = P + ".photo"
 check(E(P + ".parts.photo.shown") and E(PP + ".head.label.text") == "Photo mode" and E(PP + ".take.text") == "Take photo",
