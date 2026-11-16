@@ -821,7 +821,7 @@ SlashCmdList.EYECANDY = function(msg)
 	elseif msg == "help" then
 		ns.Print("/ec  open the window")
 		if ns.SlashClash() then ns.Print(ns.CLASH_LINE) end
-		ns.Print("/ec export  a box of your changed settings, to copy")
+		ns.Print("/ec export  copy your changed settings from a box")
 		ns.Print("/ec export all  every graphics setting the game has")
 		ns.Print("/ec preset <performance|balanced|high|ultra|cinematic>  set every system and apply")
 		ns.Print("/ec showcase  Cinematic, plus Showcase's hidden settings")
@@ -837,7 +837,7 @@ SlashCmdList.EYECANDY = function(msg)
 		ns.Print("/ec peek  hide all UI to see the world. Back or Esc brings it back")
 		ns.Print("/ec compare  flip between before your last preset and now. compare stop  end on now")
 		ns.Print("/ec apply  re-apply your chosen levels and settings")
-		ns.Print("/ec restore  restore the Original backup")
+		ns.Print("/ec restore  go back to your settings from before Eye Candy")
 		ns.Print("/ec backups  list backups. backup <name>  make one. restore <number>  restore one")
 	else
 		ns.ToggleMain()
