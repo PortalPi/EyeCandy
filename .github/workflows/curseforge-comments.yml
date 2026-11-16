@@ -1,0 +1,37 @@
+name: curseforge-comments
+
+# Every hour, files one GitHub issue for each new comment on Eye Candy's CurseForge page,
+# titled "From CurseForge: <start of the comment>". The script and how it knows what it already
+# filed: .github/scripts/curseforge_comments.py. It uses no Claude usage and no secret.
+# Start it by hand from the Actions tab with "Run workflow".
+#
+# GitHub turns a schedule off after 60 days with no activity in the repository. If that happens,
+# turn it back on from the Actions tab.
+
+on:
+  schedule:
+    - cron: "17 * * * *" # minute 17, away from the busy top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: curseforge-comments # two runs at once could file the same comment twice
+  cancel-in-progress: false
+
+jobs:
+  read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: File new comments as issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CF_PROJECT_ID: "1806597"
+        run: python3 .github/scripts/curseforge_comments.py
