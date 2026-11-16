@@ -26,7 +26,7 @@ jobs:
     # cannot reach the tokens until the maintainer approves the run.
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0 # the packager reads tags and history
 
