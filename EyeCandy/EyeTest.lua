@@ -4,8 +4,9 @@
 -- same save code as Autotune's Save as preset: ns.SaveCurrentAsPreset, then ns.ApplyPresetById).
 -- It flips like Compare (Compare.lua): straight to SetCVar, no backup per flip, and none of Eye Candy's
 -- own choices change. Your settings from before are saved in EyeCandyDB.eyeTest first. A fight, a loading
--- screen, Options, closing the window or any other Eye Candy change ends it and puts them back, and so
--- does the next login after a crash. It never changes settings in a fight.
+-- screen, Options, closing the window or any other Eye Candy change ends it and puts them back. If a test
+-- is still saved at the next login, that puts them back too (saved variables are only written at logout or
+-- /reload, so after a crash there is usually nothing saved). It never changes settings in a fight.
 
 local _, ns = ...
 local ET = {}
@@ -192,6 +193,7 @@ end
 -- Returns true, or nil and a plain reason.
 function ET.Answer(choice)
 	if not (test and test.live and test.phase == "round") then return nil end
+	if InCombatLockdown() then return nil, "Not in a fight." end
 	if not (test.seen[1] and test.seen[2]) then return nil, "Look at both first: press Show 1 and Show 2." end
 	local r = test.rounds[test.i]
 	local keep
@@ -202,7 +204,16 @@ function ET.Answer(choice)
 		for cvar in pairs(r.a) do keep[cvar] = test.before[cvar] end
 	end
 	test.picks[#test.picks + 1] = { round = r, choice = choice, values = keep }
-	SetValues(keep)
+	-- Your settings from before with the answers on top, menu values first: a menu value the round flipped can
+	-- have reset hidden ones, and those come back too.
+	local now = {}
+	for cvar, v in pairs(test.before) do now[cvar] = v end
+	for cvar, v in pairs(ET.Answers()) do now[cvar] = v end
+	busy = true
+	local ok, err = pcall(ns.ApplyValues, now, false)
+	busy = false
+	SetValues(now)
+	if not ok then error(err, 0) end
 	if test.i < #test.rounds then
 		test.i = test.i + 1
 		BeginRound()
@@ -214,11 +225,14 @@ function ET.Answer(choice)
 	return true
 end
 
--- Every answer's values together: the preset the test makes, on top of your own settings.
+-- Every answer's values together: the preset the test makes, on top of your own settings. "Same to me" adds
+-- nothing, so your own value stays (in a city, your own and not the one the city switch lowered).
 function ET.Answers()
 	local out = {}
 	for _, pick in ipairs(test and test.picks or {}) do
-		for cvar, v in pairs(pick.values) do out[cvar] = v end
+		if pick.choice ~= "same" then
+			for cvar, v in pairs(pick.values) do out[cvar] = v end
+		end
 	end
 	return out
 end
@@ -323,8 +337,10 @@ ns.RunningNote = function(...)
 end
 
 -- Any other Eye Candy change ends the test first, so the way back stays right. A backup too: it must hold
--- your settings, not the test's.
-for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup" }) do
+-- your settings, not the test's. So does a preset's record of what was before it (NoteBeforePreset, which a
+-- preset calls before TakeBackup), and every restore.
+for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
+	"RestoreBefore", "RestoreBackupById", "UndoLastPreset" }) do
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
@@ -363,7 +379,12 @@ function ET.HookWindow()
 	if not hookedOptions and SettingsPanel and SettingsPanel.HookScript then
 		hookedOptions = true
 		SettingsPanel:HookScript("OnShow", function()
-			if test and test.live then ET.Stop("Options opened") end
+			if test and test.live then
+				ET.Stop("Options opened")
+				-- Core's own hook noted the game menu's values before this one ran, so it noted the test's. Note
+				-- them again now yours are back, or closing Options would take yours as changes made there.
+				if ns.SnapshotGameMenu then ns.SnapshotGameMenu() end
+			end
 		end)
 	end
 end
@@ -562,6 +583,9 @@ local function Refresh_(page)
 	-- Start shows unless the test has your settings. Answers kept after an ended test stay until a new start.
 	local canStart = not (st and st.live)
 	e.start:SetShown(canStart)
+	-- A hidden Start still holds its place, so the status line moves up under the help text.
+	e.status:ClearAllPoints()
+	Under(e.status, canStart and e.start or e.how, 0, 8)
 	local status = StatusText()
 	e.status:SetText(status)
 	for _, f in ipairs({ e.roundHead, e.roundText, e.show[1], e.show[2], e.picks[1], e.picks[2], e.picks[3], e.pickText, e.stop }) do

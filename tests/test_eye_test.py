@@ -99,8 +99,14 @@ X(EP + ".picks[2].scripts.OnClick()")
 check(cv("graphicsShadowQuality") == "4" and E("ET.State().i") == 2 and E(EP + ".roundHead.label.text") == "Round 2 of 10: Field of view",
       "2 is better keeps side 2 on and goes to round 2")
 X(EP + ".show[2].scripts.OnClick()")
+X("INCOMBAT = true; A_OK, A_ERR = ET.Answer('same'); INCOMBAT = false")
+check(E("A_OK") is None and "fight" in E("A_ERR") and E("ET.State().i") == 2, "an answer in a fight is refused")
+# A menu value flipped in a round can reset hidden settings: an answer puts yours back.
+X("SetCVar('graphicsTextureResolution', 0)")
 X(EP + ".picks[3].scripts.OnClick()")
 check(cv("cameraFov") == "82", "Same to me keeps your own setting")
+check(cv("graphicsTextureResolution") == "2", "an answer puts back your other settings the round changed")
+check(E("ET.Answers().cameraFov") is None, "Same to me adds nothing to the answers, so your own value stays")
 X("ET.Show(1)")
 check(cv("bloomUserMult") == "1", "with the sides swapped at random, side 1 is the second value")
 X("ET.Show(2); ET.Answer(1)")
@@ -149,8 +155,14 @@ begin()
 X("NS.TogglePeek(); EyeCandyMainFrame.hooks.OnHide(EyeCandyMainFrame)")
 check(E("ET.IsOn()"), "Peek hides the window without ending it")
 X("NS.TogglePeek()")
+X("SNAP = nil; local snap = NS.SnapshotGameMenu; NS.SnapshotGameMenu = function() SNAP = GetCVar('graphicsShadowQuality') end")
 X("SettingsPanel.hooks.OnShow(SettingsPanel)")
 check(not E("ET.IsOn()") and cv("graphicsShadowQuality") == "5", "opening Options ends it and puts your settings back")
+check(E("SNAP") == "5", "and the game menu's values are noted again with yours back, so closing Options keeps nothing of the test's")
+begin()
+X("NS.ApplyPresetById('tier1')")
+check(not E("ET.IsOn()") and E("NS.BeforeRecord().values.graphicsShadowQuality") == "5",
+      "a preset applied mid-test ends it first, so its Back to before holds your settings, not the test's")
 begin()
 X("STOPPED = NS.ToggleCompare and select(2, NS.ToggleCompare()); AT_OK, AT_ERR = NS.Autotune.Start('balance')")
 check("eye test" in (E("STOPPED") or "") and E("AT_OK") is False and "eye test" in E("AT_ERR") and E("ET.IsOn()"),
@@ -188,10 +200,10 @@ for i in range(10):
 X(EP + ".back.scripts.OnClick()")
 check(cv("graphicsShadowQuality") == "5" and E("ET.State()") is None, "Back to before eye test puts your settings back and forgets the answers")
 
-# --- A crash: the next login puts them back --------------------------------------------------------------
+# --- A test still saved at the next login: it puts them back -------------------------------------------
 lua2 = boot(PRE + "EyeCandyDB = { eyeTest = { before = { graphicsShadowQuality = '2' } } }")
 lua2.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
 check(lua2.eval("GetCVar('graphicsShadowQuality')") == "2" and lua2.eval("EyeCandyDB.eyeTest") is None
-      and any("didn't finish" in m for m in chat(lua2)), "after a crash mid-test, the next login puts your settings back and says so")
+      and any("didn't finish" in m for m in chat(lua2)), "a test still saved at the next login puts your settings back and says so")
 
 done()
