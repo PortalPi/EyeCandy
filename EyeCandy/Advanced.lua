@@ -507,8 +507,11 @@ local function RefreshExtraRow(row)
 		elseif waiting and not (tonumber(now) and ns.Same(tonumber(now), value)) then
 			status = "|cff9d9d9dnot applied yet, now " .. nowText .. ". Press Apply.|r"
 		elseif tonumber(now) and not ns.Same(tonumber(now), value) then
-			-- An Apply tried it and the game kept its own value. Say it here, not only in chat.
-			status = "|cffff4040the game kept " .. nowText .. "|r"
+			-- An Apply tried it and the game kept its own value. Say it here, not only in chat. Render scale above
+			-- 100% is held until a restart (RenderCap.lua lifts the hold for the next start): say that instead.
+			local held = row.ex.cvar == "RenderScale" and tonumber(value) > tonumber(now)
+				and ns.RenderCap and ns.RenderCap.Held()
+			status = "|cffff4040" .. (held and ns.RenderCap.HELD or ("the game kept " .. nowText)) .. "|r"
 			explained = true
 		else
 			status = "now " .. nowText
