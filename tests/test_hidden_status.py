@@ -39,11 +39,29 @@ X('NS.ApplyAll(false, true); NS.RefreshUI()')
 s = E('EXROW("sharpness").status.text')
 check(s.startswith("now 0.8"), "after Apply it says now 0.8 (%r)" % s)
 
-# The refusal is said on the row; any other note still points to chat.
+# The refusal is said on the row; any other note says "1 note" or its own reason, never "see chat".
 X('NS.lastReport = { ["extra:renderScale"] = { applied = 0, notes = 1 } }')
 s = status("renderScale", "1.75", "RenderScale", "1")
 check("kept" in s and "see chat" not in s, "a refusal alone doesn't send you to chat (%r)" % s)
 X('NS.lastReport = { ["extra:renderScale"] = { applied = 0, notes = 2 } }')
 s = status("renderScale", "1.75", "RenderScale", "1")
-check("kept" in s and "see chat" in s, "a refusal plus another note still says see chat (%r)" % s)
+check("kept" in s and "see chat" not in s and "1 note" in s and "note(s)" not in s, "a refusal plus another note says 1 note, not see chat (%r)" % s)
+
+# A setting the game doesn't have says why on the row (rule 6), for an Extra and for a level.
+X('REALEXISTS = NS.Exists; NS.db.extras.sharpness = 0.5; NS.db.extras.renderScale = nil; SetCVar("ResampleSharpness", "0.5")')
+X('local ex = EXROW("sharpness").ex; NS.Exists = function(c) return c ~= ex.cvar and REALEXISTS(c) end')
+X('NS.lastReport = { ["extra:sharpness"] = { applied = 0, notes = 1 } }; NS.RefreshUI()')
+s = E('EXROW("sharpness").status.text')
+check("not in this game" in s and "see chat" not in s and "note(s)" not in s, "an Extra the game lacks says so on the row (%r)" % s)
+
+X('NS.Exists = REALEXISTS')
+X('TROW = NS.tierRows[1]; NS.db.tiers[TROW.cat.key] = 3; TCV = nil; '
+  'for _, x in ipairs(TROW.cat.cvars) do if not x.scale and x[3][3] ~= nil then TCV = x break end end')
+X('NS.Exists = function(c) return c ~= TCV[1] and REALEXISTS(c) end')
+X('NS.lastReport = { [TROW.cat.key] = { applied = 2, notes = 1 } }; NS.RefreshUI()')
+s = E('TROW.status.text')
+check("not in this game" in s and "see chat" not in s and "note(s)" not in s, "a level with a setting the game lacks says so on the row (%r)" % s)
+X('NS.Exists = REALEXISTS; NS.db.tiers[TROW.cat.key] = 0; NS.lastReport = { [TROW.cat.key] = { applied = 2, notes = 2 } }; NS.RefreshUI()')
+s = E('TROW.status.text')
+check("2 notes" in s and "note(s)" not in s, "when the reason can't be worked out it says how many notes (%r)" % s)
 done()

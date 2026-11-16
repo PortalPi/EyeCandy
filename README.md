@@ -1,6 +1,6 @@
 # Eye Candy
 
-Graphics presets, curated looks, hidden graphics settings and dated backups for World of Warcraft: Forever.
+Graphics presets, Looks, hidden graphics settings and backups for World of Warcraft: Forever.
 
 Version 1.0.1. Open it with `/ec` or `/graphics`.
 
@@ -16,15 +16,22 @@ Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting fo
 
 - **Presets in one click.** Six quality levels (Performance to Showcase), five Looks (Beautiful, Painterly, Crisp, Moody, Classic) and four for a job (Raid & PvP, Laptop, Screenshot, Capital city).
 - **Your own presets.** Save, rename, duplicate and delete. Share one as a short code. A friend imports it and sees what it changes before it saves.
-- **Hidden settings.** About 60 settings the game's menu does not show, each with a plain description. Every number setting is a slider with a typed box.
+- **Hidden settings.** Over 60 settings the game's menu doesn't show, each with a plain description and a slider.
 - **Standard tab.** The game's own Graphics menu in one place.
-- **Dated backups.** Your Original settings (made once and kept for good) and backups you name. Eye Candy makes no other backup by itself. On the Backups tab, Restore shows what will change first.
-- **Back to before.** The Presets tab lists what you did today: each preset, each restore, and your own changes between them. Each has its own Back, which puts back your settings from just before that step. It asks first and says how many settings change.
+- **Backups.** Your Original settings, which can't be deleted, and backups you name. Restore says how many settings change first.
+- **Back to before.** The Presets tab lists what you did today. Back on any step puts your settings back to just before it, after asking.
 - **Peek and Compare.** Peek hides the game's UI to show the picture. Compare flips between before your last preset and now, in the same spot.
-- **Steadier frames in cities.** Off until you turn it on (`/ec city`). In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, and puts them back when you leave.
-- **Steadier frames in big fights.** Off until you turn it on (`/ec instance`). In a dungeon, raid, battleground or arena it lowers your settings to the Raid & PvP preset's where yours are higher, and puts them back when you leave.
-- **Autotune (experimental).** Pick a frame rate, and what to tune for: Best look, Raid ready, Smooth, Sharpest picture or Cool and quiet. Autotune measures as it goes, one setting at a time, and finds the best look your PC can hold at it.
-- **Easy to find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window. Right-click the minimap button to open Backups.
+- **Render scale to 200%.** Since the 14 November patch the game holds render scale at 100% until you restart it. Restart and it can go to 200%.
+- **A warning when the game changes your settings.** If a patch changes them while you're logged out, a small window lists what changed. Put them back, or keep the changes.
+- **Help me pick.** On the Presets tab. Pick Prettier or Faster and it suggests one preset and shows what it changes. Nothing changes until you press Apply.
+- **Live FPS.** The bottom bar shows your FPS as you drag a slider.
+- **Steadier frames in cities.** Off until you tick "Lower settings in capital cities" or type `/ec city`. In a capital city it lowers view distance, environment detail, fog and far-away character detail where yours are higher, until you leave.
+- **Steadier frames in big fights.** Off until you tick "Lower settings in dungeons, raids, battlegrounds and arenas" or type `/ec instance`. In a dungeon, raid, battleground or arena it lowers your settings to the Raid & PvP preset's where yours are higher, until you leave.
+- **Autotune (experimental).** Pick a frame rate and what matters most. Autotune finds the best look your PC can hold at it.
+- **Eye test (experimental).** Like at the optician: which is better, 1 or 2? Your answers make a preset of your own.
+- **Photo mode (experimental).** One button hides the UI and takes a photo, with your settings as they are or with a screenshot preset.
+- **Steady FPS (experimental).** Pick an FPS goal. When FPS stays under it, render scale comes down a little, and goes back up when FPS recovers. Off until you turn it on.
+- **Find your way.** Search the Standard and Hidden tabs. A gold dot marks a setting you changed. Move, resize and shrink every window.
 
 ## The tabs
 
@@ -47,14 +54,14 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | Command | What it does |
 | --- | --- |
 | `/ec` | Open the window |
-| `/ec peek` | Hide the game's UI and Eye Candy to see the picture; Back or Esc returns |
+| `/ec peek` | Hide all UI to see the picture; Back or Esc returns |
 | `/ec compare` | Flip between before your last preset and now; `compare stop` ends on now |
-| `/ec hidden` | Open the Hidden tab (also `advanced`) |
+| `/ec hidden` | Open the Hidden tab (or `/ec advanced`) |
 | `/ec preset <performance\|balanced\|high\|ultra\|cinematic>` | Set every system to one quality level and apply |
-| `/ec showcase` | Cinematic plus the Showcase hidden settings |
+| `/ec showcase` | Cinematic, plus Showcase's hidden settings |
 | `/ec look <beautiful\|painterly\|crisp\|moody\|classic>` | Apply a Look |
 | `/ec look <raid\|laptop\|screenshot\|city>` | Apply a preset for a job |
-| `/ec back` | Go back one step: undo the newest step in today's list |
+| `/ec back` | Undo the newest step in today's list |
 | `/ec presets` | List presets |
 | `/ec save <name>` | Save your current settings as a preset |
 | `/ec use <name>` | Apply a preset |
@@ -62,11 +69,11 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 | `/ec backups` | List backups |
 | `/ec backup [name]` | Make a backup |
 | `/ec restore <number>` | Restore a backup, no question asked. It makes no backup of now (`/ec restore` alone restores the Original) |
-| `/ec city` | Turn the city switch on or off (`city on`, `city off`) |
-| `/ec instance` | Turn the dungeon, raid, battleground and arena switch on or off (`instance on`, `instance off`) |
+| `/ec city` | Turn lowering in capital cities on or off (`city on`, `city off`) |
+| `/ec instance` | Turn lowering in dungeons, raids, battlegrounds and arenas on or off (`instance on`, `instance off`) |
 | `/ec apply` | Apply your settings again |
 | `/ec minimap` | Show or hide the minimap button |
-| `/ec fade` | Turn off (or on) the window fading when the mouse is away |
+| `/ec fade` | Turn window fading on or off |
 | `/ec find <word>` | Search the game's settings, with the game's own descriptions |
 | `/ec export [all]` | Open a box with your settings, to copy |
 | `/ec report` | Open a box with a bug report, to copy |

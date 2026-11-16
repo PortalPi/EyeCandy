@@ -20,7 +20,7 @@ ns.ADVANCED = {
 	},
 	{
 		key = "image", name = "Image & Colour",
-		note = "Normally in the Graphics menu. Set here, they override the menu (Eye Candy re-applies them after you close Options). Reset hands them back.",
+		note = "Also in the Graphics menu. Set here, they win over it, even after you close Options. Reset hands them back.",
 		rows = {
 			{ "Contrast", "Contrast", 0, 100, 1, note = "Menu range 0 to 100, default 50." },
 			{ "Brightness", "Brightness", 0, 100, 1, note = "Menu range 0 to 100, default 50." },
@@ -41,7 +41,7 @@ ns.ADVANCED = {
 	},
 	{
 		key = "ao", name = "Ambient Occlusion",
-		note = "These match Intel's ambient occlusion settings one for one (ranges below are Intel's). Unconfirmed which SSAO menu levels use them; Intel's adaptive mode is its top quality level.",
+		note = "These are Intel's ambient occlusion settings, with Intel's ranges. Which SSAO levels use them is unconfirmed.",
 		rows = {
 			{ "assaoRadius", "Radius", 0.5, 4, 0.025, note = "Intel: 'World (view) space size of the occlusion sphere.' Larger = broader shading; very large values give dark halos." },
 			{ "assaoShadowMult", "Strength", 0.5, 2.5, 0.025, note = "Intel: 'Effect strength linear multiplier' (range 0 to 5). Higher = darker shading." },
@@ -73,7 +73,7 @@ ns.ADVANCED = {
 	},
 	{
 		key = "textures", tier = "textures",
-		note = "Texture levels: 0 = full resolution. Yours are likely already at 0.",
+		note = "Texture levels: 0 = full resolution.",
 		rows = {
 			{ "terrainMipLevel", "Terrain blend detail", 0, 1, 1, note = "The detail of the map that blends ground textures together. 0 = full (best)." },
 			{ "worldBaseMip", "World texture level", 0, 3, 1, note = "0 = full resolution (best)." },
@@ -84,7 +84,7 @@ ns.ADVANCED = {
 	{
 		key = "world", tier = "world",
 		rows = {
-			{ "farclip", "Far clip", 1000, 19600, 50, note = "Overall draw distance. The wiki lists 1000 to 19600. Above 10000 is untested in Forever; the status shows 'kept' if the game refuses." },
+			{ "farclip", "Far clip", 1000, 19600, 50, note = "Overall draw distance, 1000 to 19600. Above 10000 is untested. The row says 'kept' if the game refuses." },
 			{ "horizonClip", "Horizon clip", 1000, 10000, 50, note = "How far the low-detail horizon extends." },
 			{ "horizonStart", "Horizon start", 400, 10000, 50, p = { nil, nil, nil, nil, nil, 10000 },  note = "Where the horizon fog begins. Higher = you see further before the fog. Very low values (100) bring fog right up close." },
 			{ "cameraDistanceMaxZoomFactor", "Max camera zoom", 1, 4, 0.1, note = "How far out the camera can zoom. No graphics cost by itself." },
@@ -101,11 +101,11 @@ ns.ADVANCED = {
 			{ "lodObjectMinSize", "Object min size", 0, 40, 1, p = { nil, nil, nil, 10, 5, 1 }, note = "Smallest object size that gets drawn. Lower = less pop-in (players use 1). Confirmed." },
 			{ "lodObjectSizeScale", "Object size scale (culling)", 0.5, 3, 0.1, p = { 0.8, nil, nil, 1.5, 2, 3 },  note = "Higher = objects count as bigger, so they're culled later. Probably more detail." },
 			{ "terrainLodDist", "Terrain detail distance", 200, 1500, 50, p = { nil, nil, nil, nil, nil, 1500 },  note = "Blizzard (old docs): 'Distance at which to render the lowest LOD for terrain. Will impact performance!' Higher = more detail." },
-			{ "TerrainLodDiv", "Terrain detail divisor", kind = "choice", values = { 256, 512, 768, 1024, 2048 }, note = "Size of the terrain detail chunks. Old docs: powers of 2 only, 256 to 1024. Today's default (768) breaks that rule, so the docs may be outdated. Direction unconfirmed; the game's low-quality raid settings use 512. 2048 is beyond the documented range." },
+			{ "TerrainLodDiv", "Terrain detail divisor", kind = "choice", values = { 256, 512, 768, 1024, 2048 }, note = "Size of the terrain detail chunks. Which way is better is unconfirmed. The default is 768. The game's low raid settings use 512." },
 			{ "wmoLodDist", "Building detail distance", 100, 1500, 50, p = { nil, nil, nil, nil, nil, 1500 },  note = "Probably higher = more detail. Unconfirmed." },
 			{ "wmoLodDistScale", "Building detail scale", 0.5, 3, 0.1, p = { 0.8, nil, nil, 1.5, 2, 3 },  note = "Probably higher = more detail. Unconfirmed." },
 			{ "wmoDoodadDist", "Building prop load distance", 500, 5000, 100, p = { 1000, nil, nil, 3000, 4000, 5000 },  note = "Higher = props in and around buildings load from further away." },
-			{ "entityLodOffset", "Character detail offset", 0, 50, 1, note = "Direction unconfirmed. (Character detail distance itself is the setting above.)" },
+			{ "entityLodOffset", "Character detail offset", 0, 50, 1, note = "Which way is better is unconfirmed. Character detail distance is the setting above." },
 			{ "dynamicLod", "Dynamic detail reduction", kind = "toggle", note = "On = the game lowers detail when under load. Off = steady detail." },
 			{ "animFrameSkipLOD", "Skip animation frames at distance", kind = "toggle", p = { 1, nil, 0, 0, 0, 0 },  note = "On = distant animations run choppier to save CPU. Off = smooth." },
 		},
@@ -115,7 +115,7 @@ ns.ADVANCED = {
 		rows = {
 			{ "groundEffectDensity", "Grass density", 16, 256, 1, note = "Higher = thicker grass. 256 is the engine's limit." },
 			{ "groundEffectDist", "Grass draw distance", 50, 500, 5, note = "Higher = grass further out. One of the bigger FPS costs." },
-			{ "groundEffectFade", "Grass fade distance", 0, 510, 5, note = "Where grass starts fading out. At or above the grass draw distance = no fade: full grass right to the edge, then it stops. Lower = a gradual fade that starts sooner. Which looks better is taste." },
+			{ "groundEffectFade", "Grass fade distance", 0, 510, 5, note = "Where grass starts fading out. Lower = a longer, softer fade. At the grass distance or above = no fade, then a hard edge." },
 		},
 	},
 	{
@@ -327,7 +327,7 @@ local function TierPreview(cat, tier)
 			local now = ns.GetInfo(row[1])
 			local value
 			if now == nil then
-				value = "|cff9d9d9dnot in this client|r"
+				value = "|cff9d9d9dnot in this game|r"
 			elseif ns.db.advanced[row[1]] ~= nil then
 				value = "|cffffd100overridden by your setting (" .. tostring(ns.db.advanced[row[1]]) .. ")|r"
 			elseif v == nil then
@@ -378,7 +378,7 @@ local function RowTooltip(d)
 		parts[#parts + 1] = name .. " " .. (v ~= nil and ns.FormatAdvanced(d, v) or "-")
 	end
 	lines[#lines + 1] = "Presets: " .. table.concat(parts, ", ")
-	if not d.p then lines[#lines + 1] = "|cff9d9d9dPresets hand this setting back (its 'better' direction isn't known).|r" end
+	if not d.p then lines[#lines + 1] = "|cff9d9d9dPresets reset this, since which way is better isn't known.|r" end
 	local _, owner = ns.TierValueFor(d[1])
 	if owner then
 		lines[#lines + 1] = "|cffffd100Overrides the " .. owner .. " level while set.|r"
@@ -406,7 +406,7 @@ function ns.ExtraTooltip(ex)
 	if ex.key == "resample" and ns.RenderScaleAbove100 and ns.RenderScaleAbove100(true) then
 		more[#more + 1] = "|cffffd100Ignored now: render scale is above 100%, so the game uses Bicubic.|r"
 	end
-	more[#more + 1] = "|cff9d9d9dPress Apply after changing. '" .. ex.options[1][2] .. "' keeps whatever value is currently set.|r"
+	more[#more + 1] = "|cff9d9d9dPress Apply after changing. '" .. ex.options[1][2] .. "' keeps the value set now.|r"
 	if ex.slider then more[#more + 1] = "|cff9d9d9dType a value in the box, or use the arrows. Hold Shift for fine steps.|r" end
 	local d = tonumber(default)
 	local defaultText = default ~= nil and tostring(default) or nil
@@ -419,7 +419,7 @@ local function RefreshRow(row)
 	local value, default = ns.GetInfo(d[1])
 	if value == nil then
 		row.valueText:SetText("|cff9d9d9dn/a|r")
-		row.status:SetText("|cff9d9d9dnot in client|r")
+		row.status:SetText("|cff9d9d9dnot in this game|r")
 		if row.control then row.control:Hide(); row.valueText:Show() end
 		if row.slider then row.slider:Hide() end
 		if row.check then row.check:Hide() end
@@ -468,6 +468,36 @@ end
 local tierEditedAt, extraEditedAt = {}, {}
 local function Waiting(edited) return edited ~= nil and edited == (ns.lastReport or false) end
 
+-- Why Apply left one setting short of what was asked, in words for the row (rule 6: not "see chat").
+-- Mirrors ApplyOne in Core.lua; nil when it went through as asked.
+local function WhyShort(cvar, wanted, opts)
+	if not ns.Exists(cvar) then return "not in this game" end
+	local target = wanted
+	if opts.menu then target = ns.ResolveMenuValue(cvar, wanted)
+	elseif opts.scale then target = ns.ClampRenderScale(wanted) end
+	if target == nil then return "not supported by your GPU" end
+	local now = ns.GetInfo(cvar)
+	if not ns.Same(now, target) then return "the game kept " .. tostring(now) end
+	if not ns.Same(target, wanted) then
+		if opts.scale and target < wanted and ns.RenderCap and ns.RenderCap.Held() then return ns.RenderCap.HELD end
+		return opts.scale and ((target < wanted and "the most" or "the least") .. " the game allows now")
+			or "the highest the game supports now"
+	end
+end
+
+-- The row's note text: the first reason, and how many more there are. Falls back to a count when the
+-- reason can no longer be worked out (the game moved on since Apply).
+local function NoteText(count, name, reason, more)
+	local text
+	if reason then
+		text = (name and (ns.ShortName(name, 24) .. ": ") or "") .. reason
+		if more and more > 0 then text = text .. " +" .. more .. " more" end
+	else
+		text = count .. (count == 1 and " note" or " notes")
+	end
+	return ", |cffffd100" .. text .. "|r"
+end
+
 local function RefreshTierRow(row)
 	local tier = ns.db.tiers[row.cat.key] or 0
 	row.value:SetText(TierLabel(tier))
@@ -476,7 +506,23 @@ local function RefreshTierRow(row)
 		row.status:SetText("|cff9d9d9dnot applied yet. Press Apply.|r")
 	elseif r then
 		local status = r.applied .. " set"
-		if r.notes > 0 then status = status .. ", |cffffd100" .. r.notes .. " note(s) in chat|r" end
+		if r.notes > 0 then
+			local first, name, n = nil, nil, 0
+			if tier > 0 then
+				for _, c in ipairs(row.cat.cvars) do
+					local wanted = c[3][tier]
+					local overridden = (c.scale and ns.db.extras.renderScale ~= nil) or ns.db.advanced[c[1]] ~= nil
+					if wanted ~= nil and not overridden then
+						local why = WhyShort(c[1], wanted, c)
+						if why then
+							n = n + 1
+							if not first then first, name = why, c[2] end
+						end
+					end
+				end
+			end
+			status = status .. NoteText(r.notes, name, first, n - 1)
+		end
 		row.status:SetText(status)
 	else
 		row.status:SetText("")
@@ -531,8 +577,11 @@ local function RefreshExtraRow(row)
 			row.ignored = false
 		end
 	end
-	-- The refusal is one note, said on the row. Any other note still needs chat.
-	if r and r.notes > (explained and 1 or 0) then status = status .. ", |cffffd100see chat|r" end
+	-- The refusal is one note, said above. Any other note says its reason here too.
+	if r and r.notes > (explained and 1 or 0) then
+		local why = (not explained) and value ~= nil and WhyShort(row.ex.cvar, value, row.ex)
+		status = status .. NoteText(r.notes - (explained and 1 or 0), nil, why or nil, 0)
+	end
 	row.status:SetText(status)
 	row.dot:SetShown(ns.IsChanged(row.ex.cvar) == true)
 end
@@ -659,13 +708,14 @@ local function BuildDialRow(content, d, index)
 		local ok, err = ns.ResetAdvanced(d[1])
 		row.refused = (not ok) and err or nil
 		RefreshRow(row)
-	end, "Hands this setting back: to its level if one sets it, else your value from before Eye Candy, else the game default.")
+	end, "Back to its level's value, or yours from before Eye Candy, or the game default.")
 	row.reset:SetPoint("LEFT", 484, 0)
 
 	row.status = row:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	row.status:SetPoint("LEFT", 506, 0)
 	row.status:SetPoint("RIGHT", -4, 0)
 	row.status:SetJustifyH("LEFT")
+	row.status:SetWordWrap(false)
 
 	row:EnableMouse(true)
 	ns.Tooltip(row, d[2], function() return RowTooltip(d) end)
@@ -693,6 +743,7 @@ local function StepperRow(content, index, text, onStep)
 	row.status:SetPoint("LEFT", plus, "RIGHT", 8, 0)
 	row.status:SetPoint("RIGHT", -4, 0)
 	row.status:SetJustifyH("LEFT")
+	row.status:SetWordWrap(false)
 	row:EnableMouse(true)
 	-- The wheel steps only after a click on the row, so scrolling the list past it is safe.
 	local function Arm(on) row.armed = on; row:EnableMouseWheel(on) end
@@ -778,6 +829,7 @@ local function ExtraSliderRow(content, index, ex)
 	row.status:SetPoint("LEFT", 506, 0)
 	row.status:SetPoint("RIGHT", -4, 0)
 	row.status:SetJustifyH("LEFT")
+	row.status:SetWordWrap(false)
 	row:EnableMouse(true)
 	return row
 end
@@ -789,8 +841,8 @@ ns.TAB_BUILD.hidden = function(page)
 	for _, ex in ipairs(ns.EXTRAS) do waits[#waits + 1] = ex.name end
 	local last = table.remove(waits)
 	local named = #waits > 0 and (table.concat(waits, ", ") .. " and " .. last) or last
-	local intro = ns.Label(page, "Settings the game's menu doesn't show. Most change at once, over the level above them. "
-		.. "Levels wait for the Apply button" .. (named and (", and so do " .. named) or "") .. ".\n|cffffd100custom|r = set by you   |cfffffffflevel|r = set by a level   |cffff4040kept|r = the game refused it   |TInterface\\Buttons\\WHITE8X8:6:6:0:0:8:8:0:8:0:8:255:209:0|t = changed from the game default", "GameFontNormalSmall")
+	local intro = ns.Label(page, "Settings the game's menu doesn't show. Most change at once and win over the level above them. "
+		.. "Levels wait for Apply" .. (named and (", and so do " .. named) or "") .. ".\n|cffffd100custom|r = set by you   |cfffffffflevel|r = set by a level   |cffff4040kept|r = the game refused it   |TInterface\\Buttons\\WHITE8X8:6:6:0:0:8:8:0:8:0:8:255:209:0|t = changed from the game default", "GameFontNormalSmall")
 	intro:SetPoint("TOPLEFT", 4, -2)
 	intro:SetWidth(ns.PAGE_W - 172)
 	page.intro = intro
@@ -834,7 +886,7 @@ ns.TAB_BUILD.hidden = function(page)
 	page.resetResult:SetJustifyH("RIGHT")
 	page.resetResult:SetWordWrap(false)
 	page:HookScript("OnHide", function() page.resetResult:SetText("") end)
-	ns.Tooltip(resetAll, "Reset hidden settings", "Hands back every setting here that changes at once: to its level, or your value from before Eye Candy. Levels and the settings that wait for Apply stay as they are. Click twice to confirm.")
+	ns.Tooltip(resetAll, "Reset hidden settings", "Resets every setting here that changes at once, to its level or your value from before Eye Candy. Levels and settings that wait for Apply stay. Click twice to confirm.")
 
 	-- The list starts under the intro, however many lines it wraps to (one line is about 12px).
 	local introH = tonumber(intro.GetStringHeight and intro:GetStringHeight()) or 36

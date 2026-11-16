@@ -50,8 +50,8 @@ local STYLE_TEXT = {
 	look = "The best look that holds your goal.",
 	raid = "Keeps a lot more spare FPS, so your goal holds in a big fight. Tune in a quiet spot.",
 	smooth = "Judged by your slowest frames, not the average. Fewer hitches, a little less detail.",
-	sharp = "Spends spare FPS on a clear picture first: render scale, textures, anti-aliasing, sharpening and view distance. Shadows and effects come after.",
-	cool = "Caps FPS at your goal so your graphics card works less: less heat, noise and power. Looks stay as high as they can.",
+	sharp = "Spends spare FPS on a sharp picture first, then shadows and effects.",
+	cool = "Caps FPS at your goal so your graphics card runs cooler and quieter.",
 }
 
 local function StyleText(mode, style)
@@ -89,7 +89,7 @@ local function FromText(from, mode, style)
 	end
 	local kept = #labels > 0 and ("its " .. List(labels) .. ", and every setting Autotune doesn't tune")
 		or "every setting Autotune doesn't tune"
-	local text = "Starts from " .. p.name .. " and keeps " .. kept .. ". Lowers the rest one step at a time, the least look for its cost first, until your goal holds. Never raises anything."
+	local text = "Starts from " .. p.name .. " and keeps " .. kept .. ". Lowers the rest one step at a time until your goal holds. Never raises anything."
 	if mode == "balance" then
 		text = text .. " Best balance then lowers a little more where that gains a lot of FPS."
 	end
@@ -102,11 +102,11 @@ end
 -- Where to stand and how long it takes. Raid ready keeps its own spare, so a quiet spot is fine; Smooth
 -- measures longer and never stops a passing sample early (6 s against 4 s a measurement).
 local function HowText(style)
-	local where = style == "raid" and "Stand anywhere, even somewhere quiet: Raid ready keeps the spare a big fight needs."
+	local where = style == "raid" and "Stand anywhere. Raid ready keeps spare FPS for a big fight."
 		or "Stand somewhere busy, like a city, so the result holds up in play."
 	local long = style == "smooth" and "4 to 10" or "3 to 7"
-	return where .. " Press Start, then let go of the mouse and keys for about " .. long .. " minutes. Autotune changes your settings while it runs.\n"
-		.. "Moving, turning, dragging or zooming the camera, a loading screen or opening Options stops it and puts your settings back. A fight stops it too, and your settings come back when the fight ends."
+	return where .. " It changes your settings while it runs. Press Start, then leave the mouse and keys alone for " .. long .. " minutes.\n"
+		.. "Moving, turning or zooming the camera, a loading screen, Options or a fight stops it. Your settings come back, after the fight if there is one."
 end
 
 -- One line in the result: how it was tuned. nil for Best look.
@@ -173,7 +173,7 @@ local function StatusText()
 	if AT.IsRunning() and p then
 		local what
 		if p.check then
-			what = "Measuring the settings kept so far again, in case your PC has slowed."
+			what = "Measuring the kept settings again."
 		elseif p.again then
 			what = "Close call, so measuring again."
 		elseif p.phase == "now" then
@@ -191,7 +191,7 @@ local function StatusText()
 		else
 			what = "Measuring."
 		end
-		return string.format("Autotune is changing your settings to test them. Measurement %d of up to %d. %s Don't touch the mouse or keys.",
+		return string.format("Testing your settings: measurement %d of up to %d. %s Don't touch the mouse or keys.",
 			p.count, p.max, what)
 	end
 	local text = AT.message or ""
@@ -204,7 +204,7 @@ end
 local function ResultText(r)
 	local goal = r.mode == "balance" and ("best balance, never under " .. AT.BALANCE_MIN .. " FPS") or ("over " .. r.goal .. " FPS")
 	local lines = {
-		"Autotune's settings are on now. Save as preset keeps them as \"" .. r.name .. "\". Back to before Autotune undoes them.",
+		"Autotune's settings are in use, not saved yet.",
 		string.format("%d FPS before, %d FPS now. Goal: %s.", math.floor(r.before or 0), math.floor(r.after or 0), goal),
 	}
 	if r.from then lines[#lines + 1] = "Started from " .. r.from .. ". Each change below is from " .. r.from .. "'s value." end
@@ -270,7 +270,7 @@ local function BuildAutotune(page, holder)
 	page.head, page.headH.head = ns.Header(c, "Autotune", "Experimental")
 	page.head:SetPoint("TOPLEFT", 0, 0)
 	page.why = Text(c)
-	page.whyText = "Finds the best look your PC can hold at the frame rate you pick. It measures as it goes, one setting at a time."
+	page.whyText = "Finds the best look your PC can hold at the frame rate you pick."
 	page.why:SetText(page.whyText)
 	Under(page.why, page.head, 4)
 
@@ -401,7 +401,7 @@ local function BuildAutotune(page, holder)
 	if page.putBack.SetNormalFontObject then page.putBack:SetNormalFontObject("GameFontNormalSmall") end
 	page.putBack:SetPoint("LEFT", page.keep, "RIGHT", 8, 0)
 	ns.Tooltip(page.keep, "Save as preset", function()
-		return "Saves Autotune's settings as your preset \"" .. (AT.result and AT.result.name or "Autotune") .. "\" and keeps them on, like any preset. Back to before on the Presets tab undoes it."
+		return "Saves Autotune's settings as your preset \"" .. (AT.result and AT.result.name or "Autotune") .. "\". Back to before on the Presets tab undoes it."
 	end)
 	ns.Tooltip(page.putBack, "Back to before Autotune", "Puts your settings back as they were before Autotune.")
 end
