@@ -3,11 +3,11 @@
 -- Since the game patch of 14 Nov 2026, Blizzard's servers write ClientSettings_HIGH_MEM_FEATURES_BY_API_MASK
 -- into the game's config (Config.wtf) every session, and GetMaxRenderScale() then says 1 (100%). The game reads
 -- it once, when it starts. Cleared with SetCVar and the game restarted, render scale goes up to 200% again, at
--- the character screen and in the world (checked by Dan in game, 16 Nov 2026). The servers write it back during
--- a session (his Config.wtf had it again the same day), so Eye Candy clears it at every logout, and again a few
+-- the character screen and in the world (checked in game, 16 Nov 2026). The servers write it back during
+-- a session (the same Config.wtf had it again that day), so Eye Candy clears it at every logout, and again a few
 -- seconds after each loading screen in case the game closes without a logout (a crash or Alt+F4).
 --
--- Always on, with no box to tick (Dan, 16 Nov 2026: "Always on"). Its name means "high-memory features":
+-- Always on, with no box to tick (the maintainer's choice, 16 Nov 2026). Its name means "high-memory features":
 -- Blizzard may have held it for memory reasons. That is a guess; nothing public says why.
 
 local _, ns = ...
