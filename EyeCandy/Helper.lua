@@ -232,7 +232,8 @@ local function PickText(p)
 	local n, ups, downs = H.Changes(p.id)
 	if #ups > 0 then lines[#lines + 1] = "Higher: " .. H.List(ups) .. "." end
 	if #downs > 0 then lines[#lines + 1] = "Lower: " .. H.List(downs) .. "." end
-	lines[#lines + 1] = string.format("Up to %d of your settings change. Back to before undoes it.", n)
+	lines[#lines + 1] = n == 0 and "Nothing would change."
+		or string.format("About %d of your settings change. Back to before undoes it.", n)
 	return table.concat(lines, "\n")
 end
 
@@ -281,7 +282,7 @@ end
 ----------------------------------------------------------------------
 
 local QUESTION = "What matters more to you?"
-local ASK_TEXT = "Prettier and Faster suggest one preset and show what it changes. Nothing changes until you press Apply. Let Eye Candy pick opens Autotune on the Experimental tab."
+local ASK_TEXT = "Prettier or Faster: I suggest one preset and show what it changes. Nothing changes until you press Apply. Let Eye Candy pick opens Autotune."
 
 local waiting -- { page, p } while an Apply waits for a fight to end
 
@@ -304,7 +305,7 @@ end
 local function Applied(page, p)
 	local on = ns.OnPreset and ns.OnPreset()
 	if on and on.id == p.id then
-		H.Set(page, "done", p, "Back on " .. p.name .. " under Today, at the top of the list, undoes it.")
+		H.Set(page, "done", p, "To undo it, press Back on the top row under What you did today.")
 	else
 		-- The row's Apply puts a refusal's reason on the card; say it here too, where it was pressed.
 		local why = page and page.cardMsg and page.cardMsg:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
