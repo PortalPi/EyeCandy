@@ -286,7 +286,9 @@ local function ApplyOne(cvar, label, wanted, opts, result)
 			-- Render scale's range is the game's (GetMin/GetMaxRenderScale), not the player's PC.
 			-- A menu value steps down to the highest the game says it supports (IsGraphicsSettingValueSupported,
 			-- which weighs the graphics card and other settings, so neither is named).
-			local why = opts.scale and ((target < wanted and "the most" or "the least") .. " the game allows now")
+			local held = opts.scale and target < wanted and ns.RenderCap and ns.RenderCap.Held()
+			local why = held and ns.RenderCap.HELD
+				or opts.scale and ((target < wanted and "the most" or "the least") .. " the game allows now")
 				or "the highest the game supports now"
 			result.changed[#result.changed + 1] = string.format("%s: %s (%s, asked %s)", label, FormatNumber(target), why, FormatNumber(wanted))
 		end
@@ -529,7 +531,11 @@ end
 function ns.ApplyShowcase()
 	local scaleBefore = ns.GetInfo("RenderScale")
 	if not ns.SetPreset(#ns.TIERS + 1) then return false end
-	ns.Print("Showcase on. If the picture doesn't look sharper, restart the game so the new render scale takes effect.")
+	if ns.RenderCap and ns.RenderCap.Held() then
+		ns.Print("Showcase on. " .. ns.RenderCap.TELL)
+	else
+		ns.Print("Showcase on. If the picture doesn't look sharper, restart the game so the new render scale takes effect.")
+	end
 	if scaleBefore and not Same(scaleBefore, ns.GetInfo("RenderScale")) then
 		ns.Print("Render scale changed. Check your FPS. If it's too low, lower 'Render scale override' on the Hidden tab.")
 	end
@@ -820,7 +826,7 @@ SlashCmdList.EYECANDY = function(msg)
 		ns.Print("/ec preset <performance|balanced|high|ultra|cinematic>  set every system and apply")
 		ns.Print("/ec showcase  everything pushed: Cinematic plus the Showcase hidden settings")
 		ns.Print("/ec look <beautiful|painterly|crisp|moody|classic>  curated styles")
-		ns.Print("/ec look <raid|laptop|screenshot>  presets for a job. /ec back  undo the newest of today's steps")
+		ns.Print("/ec look <raid|laptop|screenshot>  presets for a job. /ec back  go back one step: undo the newest thing in today's list")
 		ns.Print("/ec presets  list presets. save <name>  save your settings. use <name>  apply one. share <name>  make a share code")
 		ns.Print("/ec hidden  open the Hidden tab: system levels and ~60 hidden settings (also: /ec advanced)")
 		ns.Print("/ec minimap  show or hide the minimap button")

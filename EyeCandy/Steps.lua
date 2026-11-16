@@ -8,7 +8,7 @@ local ADDON, ns = ...
 local STEPS_SHOWN = 3
 -- The same sizes as a preset row (UI.lua), so the groups line up.
 local ROW_H, ROW_GAP, NAME_X, NAME_W, NAME_CHARS = 34, 4, 14, 180, 26
-local NOTE = "Newest first. Back puts your settings back to just before that step, and undoes the steps above it."
+local NOTE = "Newest first. Back goes back to just before that step. Newer steps are undone too."
 
 -- What the list shows now, so a timed check can tell when to redraw. "" with no steps.
 function ns.StepsKey(steps)
@@ -31,8 +31,14 @@ function ns.AskBack(page, step)
 		if s == step or (s.live and step.live) then newer = i - 1 end
 	end
 	local n = ns.CountStepChanges(step)
-	local text = string.format("Put back your settings from just before %s? This changes %s.", ns.BackTarget(step), Plural(n, "setting"))
-	if newer > 0 then text = text .. string.format(" It also undoes the %d newer %s above it.", newer, newer == 1 and "step" or "steps") end
+	local text = n == 0 and string.format("Put back your settings from just before %s? No setting changes: they are already as they were then.", ns.BackTarget(step))
+		or string.format("Put back your settings from just before %s? This changes %s.", ns.BackTarget(step), Plural(n, "setting"))
+	local steps = newer == 1 and "step" or "steps"
+	if newer > 0 and n == 0 then
+		text = text .. string.format(" The %d newer %s above it %s the list.", newer, steps, newer == 1 and "leaves" or "leave")
+	elseif newer > 0 then
+		text = text .. string.format(" It also undoes the %d newer %s above it.", newer, steps)
+	end
 	ns.Ask({ title = "Back to before", text = text, accept = "Back", onAccept = function()
 		local done, line = ns.GoBack(step)
 		page.cardMsg = line and ((done and "|cff7cff7c" or "|cffff4040") .. line .. "|r") or nil
@@ -79,7 +85,7 @@ function ns.StepEntries(page)
 	page.stepsKey = ns.StepsKey(steps)
 	page.stepsUsed = 0
 	if #steps == 0 then return {} end
-	local out = { { header = "Today", note = NOTE, opts = { steps = #steps } } }
+	local out = { { header = "What you did today", note = NOTE, opts = { steps = #steps } } }
 	local shown = page.showAllSteps and #steps or math.min(#steps, STEPS_SHOWN)
 	for i = 1, shown do out[#out + 1] = { step = steps[i] } end
 	return out
