@@ -116,6 +116,10 @@ local function PutBack()
 	local ok, err = pcall(ns.ApplyValues, saved.before, false)
 	busy = false
 	SetValues(saved.before)
+	-- An edit that wasn't saved gives back the pick from before it (Save clears pickBefore first).
+	if type(saved.pickBefore) == "table" then
+		ns.db.photoPick, ns.db.photoChoice = saved.pickBefore.pick, saved.pickBefore.choice
+	end
 	ns.db.photo = nil
 	RestoreChoices(saved.state)
 	-- The city or instance switch waited while the photo had your settings: it looks again now.
@@ -187,14 +191,15 @@ function PM.Choice()
 	return (ns.db and ns.db.photoChoice == "mine") and "mine" or "screenshot"
 end
 
--- A pick while a photo is being taken says to wait. Returns true when nothing is in the way.
+-- A pick while a photo is being taken says to wait. Returns true when nothing is in the way, else nil and why.
 local function FreeToPick()
 	if shot then
 		Say("waiting", "Photo mode is taking a photo. Wait a few seconds, then pick.")
 		Refresh()
-		return nil
+		return nil, "Photo mode is taking a photo. Wait a few seconds."
 	end
-	return not edit and ns.db ~= nil
+	if edit then return nil, "Save or cancel the screenshot preset you are adjusting first." end
+	return ns.db ~= nil
 end
 
 function PM.SetChoice(choice)
@@ -286,7 +291,9 @@ end
 local function CheckName(name, except)
 	name = tostring(name or ""):gsub("^%s+", ""):gsub("%s+$", "")
 	if name == "" then return nil, "Type a name first." end
-	if #name > PM.MAX_NAME then return nil, "That name is too long. Keep it to " .. PM.MAX_NAME .. " letters." end
+	-- Letters, not bytes: an accented letter is two or more bytes, and only the first doesn't start with 10.
+	local _, letters = name:gsub("[^\128-\191]", "")
+	if letters > PM.MAX_NAME then return nil, "That name is too long. Keep it to " .. PM.MAX_NAME .. " letters." end
 	if name:lower() == PM.DEFAULT:lower() then return nil, "Default is Eye Candy's own. Pick another name." end
 	for i, p in ipairs(PM.Presets()) do
 		if i ~= except and p.name:lower() == name:lower() then
@@ -367,6 +374,20 @@ end
 function PM.IsEditing() return edit end
 
 local editing = 0 -- which screenshot preset is on for you to adjust: 0 for Default, else its place in the list
+local editGen = 0 -- counts edits, so a name box from an edit that is over saves nothing
+
+-- Which edit is on (a number), or nil: the name box checks it is still the same one.
+function PM.EditToken()
+	if edit then return editGen end
+end
+
+-- Room for one more screenshot preset: true, or nil and a plain reason.
+function PM.RoomForNew()
+	if #PM.Presets() >= PM.MAX_PRESETS then
+		return nil, "You have " .. PM.MAX_PRESETS .. " screenshot presets. Cancel, delete one, then try again."
+	end
+	return true
+end
 
 -- The name of the screenshot preset on for you to adjust, or nil.
 function PM.EditingName()
@@ -387,11 +408,14 @@ function PM.Change(i)
 	if not PM.Name(i) then return nil, "That screenshot preset is gone." end
 	local values, name = PM.PhotoValues(i)
 	if not values then return nil, name end
+	-- The pick from before goes back with Cancel (PutBack), so Cancel keeps nothing.
+	local pickBefore = { pick = ns.db.photoPick, choice = ns.db.photoChoice }
 	ns.db.photoPick, ns.db.photoChoice, editing = i, "screenshot", i
 	-- The Original backup is made first if it is missing, so it holds your settings and not the photo's.
 	if ns.TakeBackup then ns.TakeBackup(false) end
-	ns.db.photo = { before = Before(values), state = CaptureChoices(), editing = true }
+	ns.db.photo = { before = Before(values), state = CaptureChoices(), editing = true, pickBefore = pickBefore }
 	edit, noted = true, false
+	editGen = editGen + 1
 	busy = true
 	local ok, err = pcall(ns.ApplyValues, values, true)
 	busy = false
@@ -424,9 +448,9 @@ function PM.SavePreset(asNew, name)
 		local why
 		name, why = CheckName(name)
 		if not name then return nil, why end
-		if #list >= PM.MAX_PRESETS then
-			return nil, "You have " .. PM.MAX_PRESETS .. " screenshot presets. Cancel, delete one, then try again."
-		end
+		local room
+		room, why = PM.RoomForNew()
+		if not room then return nil, why end
 	end
 	-- A setting still as it was before the edit (the photo settings don't set it, and it wasn't adjusted) may be
 	-- one the city or instance switch, or Steady FPS, lowered: it is kept as your own value (ns.SituationValue,
@@ -448,6 +472,8 @@ function PM.SavePreset(asNew, name)
 		ns.db.photoPick = #list
 	end
 	ns.db.photoChoice = "screenshot"
+	-- Saved: the pick stays on it, not on the one from before the edit.
+	if ns.db.photo then ns.db.photo.pickBefore = nil end
 	local closing, all = EndEdit()
 	Say(all and "done" or "waiting", "Saved as \"" .. into.name .. "\". A photo now uses it. " .. closing)
 	Refresh()
@@ -456,7 +482,8 @@ end
 
 -- Renames saved screenshot preset i. Returns true, or nil and a plain reason.
 function PM.RenamePreset(i, name)
-	if not FreeToPick() then return nil, "Save or cancel the screenshot preset you are adjusting first." end
+	local free, busyWhy = FreeToPick()
+	if not free then return nil, busyWhy end
 	local p = PM.Presets()[i]
 	if not p then return nil, i == 0 and "Default can't be renamed." or "That screenshot preset is gone." end
 	local why
@@ -471,7 +498,8 @@ end
 
 -- Deletes saved screenshot preset i. A photo then uses Default if it used this one.
 function PM.DeletePreset(i)
-	if not FreeToPick() then return nil, "Save or cancel the screenshot preset you are adjusting first." end
+	local free, busyWhy = FreeToPick()
+	if not free then return nil, busyWhy end
 	local list = PM.Presets()
 	local p = list[i]
 	if not p then return nil, i == 0 and "Default can't be deleted." or "That screenshot preset is gone." end
@@ -738,8 +766,19 @@ end
 
 -- Save screenshot preset, or Save as new: a new one asks for its name first.
 local function AskName()
+	local room, why = PM.RoomForNew()
+	if not room then
+		Say("refused", why)
+		return Refresh()
+	end
+	local token = PM.EditToken()
 	ns.Ask({ title = "Save screenshot preset", text = "Name for the new screenshot preset:", edit = PM.NewName(), accept = "Save",
 		onAccept = function(name)
+			-- A fight or a loading screen ended the edit while the box was open, or another edit started.
+			if token == nil or PM.EditToken() ~= token then
+				Say("refused", "That change is over, so nothing was saved. Press Change to start again.")
+				return Refresh()
+			end
 			local ok, err = PM.SavePreset(true, name)
 			if not ok and err then Say("refused", err) end
 			Refresh()

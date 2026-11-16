@@ -299,6 +299,22 @@ check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and cv("graphicsShadow
       and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "85" and E("EyeCandyDB.advanced.cameraFov") is None,
       "Cancel puts your settings back and keeps the saved one as it was")
 check("Nothing was saved" in E(PP + ".status.text"), "and says nothing was saved")
+check(E("PM.Pick()") == 2, "and the pick goes back to the one from before the Change")
+
+# Review fixes: a name box from an edit that is over saves nothing; a full list says so before the box.
+X(CHANGE + "; " + PP + ".save.scripts.OnClick()")
+X('FIRE("PLAYER_REGEN_DISABLED")')
+ask("Too late")
+check(E("#EyeCandyDB.photoPresets") == 2 and "That change is over" in E(PP + ".status.text") and not E("PM.IsEditing()"),
+      "a name typed after a fight ended the edit saves nothing, and says so")
+X("for i = 3, 10 do EyeCandyDB.photoPresets[i] = { name = 'P' .. i, values = { cameraFov = '90' } } end")
+X(CHANGE + "; " + A + ".shown = false; " + PP + ".save.scripts.OnClick()")
+check(not E(A + ".shown") and "You have 10" in E(PP + ".status.text") and E("PM.IsEditing()"),
+      "with 10 saved, Save on Default says so before asking for a name")
+X(PP + ".cancel.scripts.OnClick(); for i = 10, 3, -1 do table.remove(EyeCandyDB.photoPresets, i) end; NS.RefreshUI()")
+X("RN_OK, RN_ERR = PM.RenamePreset(2, string.rep('\\195\\169', 30))")
+check(E("RN_OK") and E("RN_ERR") is None, "a name of 30 accented letters fits: it counts letters, not bytes")
+X("PM.RenamePreset(2, 'Photo preset 1')")
 
 # Pick, rename, delete.
 X(R0 + ".pick.scripts.OnClick()")
