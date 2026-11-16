@@ -477,7 +477,7 @@ check(E("EyeCandyDB.autotuneGoal.goal") == 120 and "120 FPS" in E(P + ".goalText
 X(P + ".start.scripts.OnClick()")
 check(E("AT.IsRunning()") and E(P + ".start.text") == "Stop", "Start starts it, and the button becomes Stop")
 X("PLAY(1000)")
-check("easurement" in E(P + ".status.text") and "mouse" in E(P + ".status.text"), "the status says which measurement and not to touch anything")
+check("measurement" in E(P + ".status.text") and "mouse" in E(P + ".status.text"), "the status says which measurement and not to touch anything")
 X(P + ".start.scripts.OnClick()")
 check(not E("AT.IsRunning()") and "pressed Stop" in E(P + ".status.text"), "Stop stops it and says your settings are back")
 
