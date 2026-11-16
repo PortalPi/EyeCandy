@@ -1,5 +1,5 @@
 -- Eye Candy: a warning when settings change while the game is closed (a game patch, say: the one on
--- 14 November 2026 held render scale at 100%).
+-- 14 November 2026 held render scale at 100%, which RenderCap.lua now lifts).
 --
 -- At logout and /reload (PLAYER_LOGOUT, just before saved data is written: warcraft.wiki.gg) it keeps a
 -- copy of every setting on Eye Candy's list, as your own values: Compare's "now", not "before"; the
