@@ -855,7 +855,7 @@ ns.TAB_BUILD.hidden = function(page)
 			resetAll:SetText("Reset hidden settings")
 			-- In combat the game won't take the values back, so nothing is reset (rule 9: refused is red).
 			if InCombatLockdown() then
-				page.resetResult:SetText("|cffff4040Can't reset in a fight. Try again after it.|r")
+				page.resetResult:SetText("|cffff4040Can't reset in a fight.|r")
 				page.resetRefused = true
 				return
 			end
