@@ -479,6 +479,7 @@ local function WhyShort(cvar, wanted, opts)
 	local now = ns.GetInfo(cvar)
 	if not ns.Same(now, target) then return "the game kept " .. tostring(now) end
 	if not ns.Same(target, wanted) then
+		if opts.scale and target < wanted and ns.RenderCap and ns.RenderCap.Held() then return ns.RenderCap.HELD end
 		return opts.scale and ((target < wanted and "the most" or "the least") .. " the game allows now")
 			or "the highest the game supports now"
 	end
@@ -714,6 +715,7 @@ local function BuildDialRow(content, d, index)
 	row.status:SetPoint("LEFT", 506, 0)
 	row.status:SetPoint("RIGHT", -4, 0)
 	row.status:SetJustifyH("LEFT")
+	row.status:SetWordWrap(false)
 
 	row:EnableMouse(true)
 	ns.Tooltip(row, d[2], function() return RowTooltip(d) end)
@@ -827,6 +829,7 @@ local function ExtraSliderRow(content, index, ex)
 	row.status:SetPoint("LEFT", 506, 0)
 	row.status:SetPoint("RIGHT", -4, 0)
 	row.status:SetJustifyH("LEFT")
+	row.status:SetWordWrap(false)
 	row:EnableMouse(true)
 	return row
 end

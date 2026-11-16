@@ -105,8 +105,8 @@ local function HowText(style)
 	local where = style == "raid" and "Stand anywhere. Raid ready keeps spare FPS for a big fight."
 		or "Stand somewhere busy, like a city, so the result holds up in play."
 	local long = style == "smooth" and "4 to 10" or "3 to 7"
-	return where .. " Press Start, then leave the mouse and keys alone for " .. long .. " minutes.\n"
-		.. "Moving you or the camera, a loading screen, Options or a fight stops it. Your settings come back, after the fight if there is one."
+	return where .. " It changes your settings while it runs. Press Start, then leave the mouse and keys alone for " .. long .. " minutes.\n"
+		.. "Moving, turning or zooming the camera, a loading screen, Options or a fight stops it. Your settings come back, after the fight if there is one."
 end
 
 -- One line in the result: how it was tuned. nil for Best look.

@@ -4,6 +4,7 @@
 
 - **Render scale goes up to 200% again.** Since the 14 November patch the game holds render scale at 100%. Restart the game and it can go to 200%. Until then, the window says it's held. Nothing to turn on.
 - **The window fades further.** With the mouse away it fades to about a third, so the world shows through. `/ec fade` turns this off.
+- **Plainer words.** Buttons, tooltips and chat messages say what they do in fewer words. The city switch under Capital city is now "Lower settings in capital cities".
 - **Fixed: a quality level after a Look kept the Look's render scale.** High after Moody now looks and runs like High. Render scale override, resample filter, sharpness and character detail you set yourself on the Hidden tab still stay.
 - **A warning when the game changes your settings.** If a patch changes your graphics settings while you're logged out, a small window lists what changed. Put them back, or keep the changes.
 - **Help me pick.** On the Presets tab, by Quality levels. Pick Prettier or Faster and it suggests one preset and shows what it changes. Nothing changes until you press Apply. Let Eye Candy pick opens Autotune instead.
