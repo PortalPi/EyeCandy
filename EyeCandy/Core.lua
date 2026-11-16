@@ -389,6 +389,32 @@ function ns.ApplyAll(onlyHidden, quiet)
 	if ns.RefreshUI then ns.RefreshUI() end
 end
 
+-- The Extras a built-in sets: Showcase's (an index past the quality levels, so a Look on Showcase
+-- too), then the Look's on top. A fresh table.
+function ns.BuiltinExtras(index, look)
+	local extras = {}
+	if (index or 0) > #ns.TIERS then
+		for key, value in pairs(ns.SHOWCASE_EXTRAS) do extras[key] = value end
+	end
+	for key, value in pairs(look and look.extras or {}) do extras[key] = value end
+	return extras
+end
+
+-- The Extras chosen once a built-in is applied, and the ones it hands back. ns.db.presetExtras is
+-- what the last built-in set: an Extra still at that value was the preset's, so it goes; one you
+-- set yourself (on the Hidden tab, or changed since) stays. The new built-in's own Extras win.
+function ns.ExtrasAfterBuiltin(index, look)
+	local last = ns.db.presetExtras or {}
+	local after, dropped = {}, {}
+	for key, value in pairs(ns.db.extras) do
+		if last[key] ~= nil and Same(last[key], value) then dropped[key] = true else after[key] = value end
+	end
+	for key, value in pairs(ns.BuiltinExtras(index, look)) do
+		after[key], dropped[key] = value, nil
+	end
+	return after, dropped
+end
+
 -- Best-looking setup: every row at the top tier, plus the Showcase extras.
 -- Apply a preset: 1 to 5 = that tier everywhere, #TIERS + 1 = Showcase (Cinematic plus the Showcase extras).
 -- Also sets the Advanced dials for that preset. Applies straight away.
@@ -408,16 +434,11 @@ function ns.SetPreset(index, look)
 	for _, cat in ipairs(ns.CATEGORIES) do
 		ns.db.tiers[cat.key] = tier
 	end
-	if index > #ns.TIERS then
-		for key, value in pairs(ns.SHOWCASE_EXTRAS) do
-			ns.db.extras[key] = value
-		end
-	end
-	if look then
-		for key, value in pairs(look.extras or {}) do
-			ns.db.extras[key] = value
-		end
-	end
+	-- The last built-in's Extras go (yours stay), then this one's go on and are recorded as its own.
+	local extras, dropped = ns.ExtrasAfterBuiltin(index, look)
+	wipe(ns.db.extras)
+	for key, value in pairs(extras) do ns.db.extras[key] = value end
+	ns.db.presetExtras = ns.BuiltinExtras(index, look)
 	-- One of your presets can keep hidden values that have no dial (Presets.lua); a built-in drops them.
 	for cvar in pairs(ns.db.advanced) do
 		if not (ns.ADVANCED_BY_CVAR and ns.ADVANCED_BY_CVAR[cvar]) then ns.db.advanced[cvar] = nil end
@@ -442,6 +463,18 @@ function ns.SetPreset(index, look)
 					SetCVar(cvar, backup[cvar])
 				end
 			end
+		end
+	end
+	-- An Extra handed back goes to your value from before Eye Candy, else the game default, unless a
+	-- tier row sets its setting (render scale), which the apply below does.
+	for _, ex in ipairs(ns.EXTRAS) do
+		if dropped[ex.key] and not (ns.TierValueFor and ns.TierValueFor(ex.cvar) ~= nil) and ns.db.advanced[ex.cvar] == nil and ns.Exists(ex.cvar) then
+			local want = backup and backup[ex.cvar]
+			if want == nil then
+				local _, default = ns.GetInfo(ex.cvar)
+				want = default
+			end
+			if want ~= nil and not Same(ns.GetInfo(ex.cvar), want) then SetCVar(ex.cvar, want) end
 		end
 	end
 	ns.SaveMirror()

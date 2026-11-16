@@ -204,12 +204,7 @@ function H.Changes(id)
 	local values = ns.PresetValues(id)
 	local ups, downs = {}, {}
 	if not values then return 0, ups, downs end
-	-- A quality level leaves a render scale override in place (Core.lua skips its own render scale
-	-- then), so that one doesn't change. Showcase, a Look and a Situation set their own.
-	local p = ns.FindPreset(id)
-	if p and p.builtin and not p.look and (p.index or 0) <= #ns.TIERS and ns.db.extras and ns.db.extras.renderScale ~= nil then
-		values.RenderScale = nil
-	end
+	-- A render scale override of yours stays through a quality level, and ns.PresetValues says so.
 	local n = 0
 	for cvar, want in pairs(values) do
 		if ns.Exists(cvar) then

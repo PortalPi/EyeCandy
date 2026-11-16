@@ -1344,7 +1344,7 @@ local function BuildPresetButtons(page)
 	for i, name in ipairs(ns.TIERS) do
 		local b = Button(page, "|c" .. ns.TIER_COLOURS[i] .. name .. "|r", 96, function() ns.SetPreset(i) end)
 		if prev then b:SetPoint("LEFT", prev, "RIGHT", 4, 0) else b:SetPoint("TOPLEFT", 4, -88) end
-		Tooltip(b, name, "Sets every system to " .. name .. " and the Hidden tab's settings to " .. name .. "'s values, then applies straight away.\nSettings without a " .. name .. " value go back to default. Settings that wait for Apply aren't changed.")
+		Tooltip(b, name, "Sets every system to " .. name .. " and the Hidden tab's settings to " .. name .. "'s values, then applies straight away.\nSettings without a " .. name .. " value go back to yours from before Eye Candy. A render scale override, resample filter, sharpness or character detail you set yourself stays.")
 		prev = b
 	end
 	local showcase = Button(page, "|cffff7b54Showcase|r", 96, function() ns.ApplyShowcase() end)
