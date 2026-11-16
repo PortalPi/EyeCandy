@@ -29,7 +29,7 @@ lua.execute('SetCVar("RenderScale", "1"); NS.RefreshUI()')
 check(E('STDROW("ResampleQuality").valueText.text') == "", "and goes back to empty when it counts again")
 # A setting this client lacks still says so.
 lua.execute('for _, r in ipairs(NS.stdRows) do if r.def.cvar == "vsync" then r.def.cvar = "notInThisClientXyz"; MISSING = r end end; NS.RefreshUI()')
-check(E('MISSING.valueText.text') == "|cff9d9d9dnot in this client|r", "a setting this client lacks says so (%r)" % E('MISSING.valueText.text'))
+check(E('MISSING.valueText.text') == "|cff9d9d9dnot in this game|r", "a setting this game lacks says so (%r)" % E('MISSING.valueText.text'))
 lua.execute('MISSING.def.cvar = "vsync"; NS.RefreshUI()')
 
 # Info rows keep their value and say where to change it.

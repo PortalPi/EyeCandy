@@ -144,9 +144,9 @@ check(row("A very long preset name that goes on and") is None, "a deleted preset
 
 # Under Capital city: a tick box to switch it in cities by itself.
 box = P + '.cityBox'
-check(E(box + '.shown') == True and E(box + '.text.text') == "Switch in cities by itself", "a city tick box sits under Capital city")
+check(E(box + '.shown') == True and E(box + '.text.text') == "Lower settings in capital cities", "a city tick box sits under Capital city")
 X('TIP = {}; GameTooltip.AddLine = function(self, t) TIP[#TIP + 1] = t end; %s.scripts.OnEnter(%s)' % (box, box))
-check(E('TIP[2]') == "In a capital city, lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher. They go back when you leave. Never in combat.", "the city box's tooltip says what it lowers and when")
+check(E('TIP[2]') == "Lowers view distance, environment detail, fog and far-away character detail. Only where yours are higher, and never in a fight.", "the city box's tooltip says what it lowers and when")
 X('GameTooltip.AddLine = nil; %s.scripts.OnClick(%s)' % (box, box))
 check(E('NS.IsAutoSituationOn("city")') == True, "ticking the box turns the city switch on")
 X('NS.SetAutoSituation("city", false)')
