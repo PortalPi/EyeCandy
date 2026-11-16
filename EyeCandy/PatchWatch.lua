@@ -1,12 +1,12 @@
 -- Eye Candy: a warning when settings change while the game is closed (a game patch, say: the one on
--- 14 November 2026 held render scale at 100%).
+-- 14 November 2026 held render scale at 100%, which RenderCap.lua now lifts).
 --
 -- At logout and /reload (PLAYER_LOGOUT, just before saved data is written: warcraft.wiki.gg) it keeps a
 -- copy of every setting on Eye Candy's list, as your own values: Compare's "now", not "before"; the
 -- settings from before Autotune, not its test values; your own values, not the city switch's lowered ones.
 -- At the next login it compares. A change made during play is already in the copy, so only a change made
 -- while the game was closed counts. If there is none, nothing shows. If there are some, one small window
--- lists them, with Put them back and Keep the game's. Put them back never runs in a fight and takes no
+-- lists them, with Put them back and Keep the changes. Put them back never runs in a fight and takes no
 -- backup. It reads each one back and says, in red, any the game kept.
 --
 -- No false alarms (each checked, see tests/test_patch_watch.py):
@@ -139,7 +139,7 @@ function PW.Name(cvar)
 	for _, ex in ipairs(ns.EXTRAS) do
 		if ex.cvar == cvar then return ex.name end
 	end
-	return cvar
+	return "a setting the game changed"
 end
 
 function PW.Format(cvar, value)
@@ -177,13 +177,13 @@ local function Build(n)
 	frame.refused:SetPoint("TOPLEFT", frame.result, "BOTTOMLEFT", 0, -4)
 	frame.refused:SetWidth(384) -- wraps: up to two lines, room kept by Height
 
-	frame.keep = ns.Button(frame, "Keep the game's", 130, function() PW.Keep() end)
+	frame.keep = ns.Button(frame, "Keep the changes", 130, function() PW.Keep() end)
 	frame.keep:SetPoint("BOTTOMRIGHT", -16, 14)
-	ns.Tooltip(frame.keep, "Keep the game's", "Changes nothing. The settings stay as the game set them.", "ANCHOR_LEFT")
+	ns.Tooltip(frame.keep, "Keep the changes", "Changes nothing. The settings stay as the game set them.", "ANCHOR_LEFT")
 	frame.back = ns.Button(frame, "Put them back", 130, function() PW.PutBack() end)
 	frame.back:SetPoint("RIGHT", frame.keep, "LEFT", -8, 0)
 	ns.Tooltip(frame.back, "Put them back",
-		"Sets each one back to what it was when you last logged out. Takes no backup.", "ANCHOR_LEFT")
+		"Sets each one back to what it was when you last logged out.", "ANCHOR_LEFT")
 	frame.close = ns.Button(frame, "Close", 100, function() frame:Hide() end)
 	frame.close:SetPoint("BOTTOMRIGHT", -16, 14)
 	frame.close:Hide()
@@ -214,6 +214,7 @@ function PW.Show(list)
 	local n = #list
 	local listed = math.min(n, PW.MAX_LINES + (n == PW.MAX_LINES + 1 and 1 or 0))
 	local rows = listed + (n > listed and 1 or 0)
+	PW.rows = rows
 	if not frame then Build(rows) else frame:SetSize(420, Height(rows)) end
 	frame.head:SetText(string.format("The game changed %d %s since you last played. %s",
 		n, Plural(n, "setting", "settings"), Plural(n, "Put it back?", "Put them back?")))
@@ -274,18 +275,25 @@ function PW.PutBack()
 	-- (ns.ApplyValues with its options). In a city, the switch lowers again what this raised.
 	local function Go() ns.ApplyValues(values, true) end
 	if ns.KeepSituationLowered then ns.KeepSituationLowered(Go) else Go() end
-	local back, kept = 0, {}
+	local back, kept, keptScale = 0, {}, false
 	for _, c in ipairs(list) do
 		local now = PW.Own(c.cvar, (ns.GetInfo(c.cvar)))
 		if now ~= nil and ns.Same(now, c.was) then
 			back = back + 1
 		else
-			kept[#kept + 1] = PW.Name(c.cvar) .. " at " .. (now ~= nil and PW.Format(c.cvar, now) or "nothing")
+			kept[#kept + 1] = PW.Name(c.cvar) .. (now ~= nil and (" at " .. PW.Format(c.cvar, now)) or " as it is")
+			if c.cvar == "RenderScale" then keptScale = true end
 		end
 	end
 	PW.list = nil
+	local refusedLine = PW.KeptLine(kept)
+	-- Render scale held at 100% this session: say a restart lifts it (RenderCap.lua, when it is there).
+	if refusedLine and keptScale and ns.RenderCap and ns.RenderCap.Held() then
+		refusedLine = refusedLine .. " " .. ns.RenderCap.TELL
+		frame:SetSize(420, Height(PW.rows or #list) + 2 * LINE_H)
+	end
 	Say("done", back > 0 and string.format("Put back %d %s.", back, Plural(back, "setting", "settings")) or nil,
-		PW.KeptLine(kept))
+		refusedLine)
 	frame.back:Hide()
 	frame.keep:Hide()
 	frame.close:Show()
