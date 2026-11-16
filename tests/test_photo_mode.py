@@ -29,7 +29,7 @@ E, X = lua.eval, lua.execute
 X(MAPS)
 X('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); CHAT = {}')
 X("PM = NS.PhotoMode")
-GOLD, GREY, RED = "|cffffd100", "|cff9d9d9d", "|cffff4040"
+GOLD, GREY, RED, WHITE = "|cffffd100", "|cff9d9d9d", "|cffff4040", "|cffffffff"
 
 
 def cv(name):
@@ -67,7 +67,7 @@ X(P + ".partButtons[3].scripts.OnClick()")
 PP = P + ".photo"
 check(E(P + ".parts.photo.shown") and E(PP + ".head.label.text") == "Photo mode" and E(PP + ".take.text") == "Take photo",
       "Photo mode shows its own page, with Take photo")
-check("Screenshot preset" in E(PP + ".why.text") and "Esc stops it" in E(PP + ".how.text"), "it says what it does, and what stops it")
+check("screenshot preset" in E(PP + ".why.text") and "Esc stops it" in E(PP + ".how.text"), "it says what it does, and what stops it")
 
 
 def frames(n, dt=1 / 60):
@@ -206,16 +206,35 @@ check(not E("PM.IsOn()") and E("UIParent.shown") and cv("cameraFov") == "70", "a
 X(PP + ".shotChoice.scripts.OnClick()")
 check(E("EyeCandyDB.photoChoice") == "screenshot", "the Screenshot preset choice is remembered too")
 
-# --- Change it: the photo settings go on, you adjust them, Save or Cancel ----------------------------------
-X("SetCVar('graphicsShadowQuality', 5); SetCVar('cameraFov', 70); EyeCandyDB.advanced = { Contrast = '55' }; SetCVar('Contrast', 55)")
-check(E(PP + ".change.shown") and not E(PP + ".save.shown"), "Change it shows, Save as my photo settings does not")
-X(PP + ".change.scripts.OnClick()")
+# --- Change: a screenshot preset goes on, you adjust it, then Save or Cancel -------------------------------
+R0, R1, R2 = PP + ".rows[0]", PP + ".rows[1]", PP + ".rows[2]"
+A = "EyeCandyAskFrame"
+CHANGE = R0 + ".change.scripts.OnClick()"
+
+
+def ask(text=None):
+    """Types text into the name box (or keeps what it offers) and presses its button."""
+    X(A + ".edit.GetText = function(self) return self.text end")
+    if text is not None:
+        X(A + ".edit.text = %r" % text)
+    X(A + ".accept.scripts.OnClick(" + A + ".accept)")
+
+
+X("SetCVar('graphicsShadowQuality', 5); SetCVar('cameraFov', 70); EyeCandyDB.advanced = { Contrast = '55' }; SetCVar('Contrast', 55); NS.RefreshUI()")
+check(E(PP + ".listHead.shown") and E(R0 + ".shown") and E(R0 + ".pick.text") == GOLD + "Default|r" and E(R0 + ".rename") is None
+      and E(R0 + ".delete") is None and E(R0 + ".change.shown") is not False, "the list has Default, picked in gold, with Change and no Rename or Delete")
+check('"Default"' in E(PP + ".choiceText.text") and not E(PP + ".save.shown"), "the page says the photo uses Default")
+X(CHANGE)
 check(E("PM.IsEditing()") and cv("cameraFov") == "90" and cv("graphicsDepthEffects") == "3" and E("EyeCandyDB.photo.before.cameraFov") == "70",
-      "Change it saves your settings, then puts the Screenshot preset on")
-check(E(PP + ".save.shown") and E(PP + ".cancel.shown") and not E(PP + ".take.shown") and not E(PP + ".change.shown"),
-      "the page shows Save as my photo settings and Cancel, and no Take photo")
-check("Standard and Hidden" in E(PP + ".editText.text") and "Cancel" in E(PP + ".editText.text"), "it says photo settings are on and how to finish")
-check("Photo settings are on" in E("NS.RunningNote()"), "the window title says photo settings are on")
+      "Change saves your settings, then puts Default on")
+check(E(PP + ".bigText.shown") and E(PP + ".bigText.text") == "Screenshot preset is on: Default",
+      "it says in big writing that the screenshot preset is on")
+et = E(PP + ".editText.text")
+check("Standard and Hidden" in et and "come back here" in et and "Save screenshot preset" in et and "Default stays" in et,
+      "and says where to adjust it, to come back here to save, and that Default itself stays")
+check(E(PP + ".save.shown") and E(PP + ".save.text") == "Save screenshot preset" and E(PP + ".cancel.shown") and not E(PP + ".saveNew.shown")
+      and not E(PP + ".take.shown") and not E(R0 + ".shown"), "the page shows Save screenshot preset and Cancel, and no list or Take photo")
+check("Screenshot preset on" in E("NS.RunningNote()"), "the window title says a screenshot preset is on")
 check(E("UIParent.shown") and E("EyeCandyMainFrame.shown"), "the UI stays: you adjust in the window")
 X("OK, ERR = NS.SetAdvanced('cameraFov', '80'); NS.SetAdvanced('Contrast', '60')")
 check(E("OK") and E("PM.IsEditing()") and cv("cameraFov") == "80", "a change on the Hidden tab doesn't end the edit")
@@ -229,62 +248,126 @@ check(E("NS.FPS.Still({})") is False, "the FPS reader measures no preset during 
 X("NS.PatchWatchLogout()")
 check(E("EyeCandyDB.patchWatch.snap.values.cameraFov") == "70", "the patch warning's copy at logout holds your settings, not the photo ones")
 check(E("NS.UpdateSituations()") is None and E("EyeCandyDB.photo ~= nil"), "the city switch waits during the edit")
+
+# Save on Default asks for a new name: Default itself never changes.
 X(PP + ".save.scripts.OnClick()")
+check(E(A + ".shown") and E(A + ".edit.text") == "Photo preset 1", "Save on Default asks for a name, offering Photo preset 1")
+ask("default")
+check(E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "Default is Eye Candy's own" in E(PP + ".status.text"),
+      "the name Default is refused in red, and the preset stays on")
+X(PP + ".save.scripts.OnClick()")
+ask("   ")
+check(E("PM.IsEditing()") and "Type a name" in E(PP + ".status.text"), "so is an empty name")
+X(PP + ".save.scripts.OnClick()")
+ask("Golden hour")
 check(not E("PM.IsEditing()") and E("EyeCandyDB.photo") is None and cv("cameraFov") == "70" and cv("Contrast") == "55",
-      "Save as my photo settings puts your own settings back")
+      "saving puts your own settings back")
 check(E("EyeCandyDB.advanced.Contrast") == "55" and E("EyeCandyDB.advanced.cameraFov") is None,
       "and your own choices (the Hidden tab's dials), not the ones you tried")
-check(E("EyeCandyDB.photoSettings.values.cameraFov") == "80" and E("EyeCandyDB.photoSettings.values.Contrast") == "60",
-      "what was on is kept as your photo settings")
-check("Saved as your photo settings" in E(PP + ".status.text") and "Your settings are back" in E(PP + ".status.text")
-      and "saved" in E(PP + ".choiceText.text") and E(PP + ".reset.shown"), "it says so, and the page names the saved settings")
+check(E("#EyeCandyDB.photoPresets") == 1 and E("EyeCandyDB.photoPresets[1].name") == "Golden hour"
+      and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "80" and E("EyeCandyDB.photoPresets[1].values.Contrast") == "60",
+      "what was on is kept as a new screenshot preset with that name")
+check('Saved as "Golden hour"' in E(PP + ".status.text") and "Your settings are back" in E(PP + ".status.text"), "it says so")
+check(E("PM.Pick()") == 1 and E(R1 + ".pick.text") == GOLD + "Golden hour|r" and E(R0 + ".pick.text") == WHITE + "Default|r"
+      and '"Golden hour"' in E(PP + ".choiceText.text"), "the new one is picked for photos, in gold, under Default")
 take()
-check(cv("cameraFov") == "80" and cv("Contrast") == "60", "a photo with the Screenshot choice now uses your photo settings")
+check(cv("cameraFov") == "80" and cv("Contrast") == "60", "a photo now uses it")
 frames(200)
 X('FIRE("SCREENSHOT_SUCCEEDED")')
 check(cv("cameraFov") == "70" and cv("Contrast") == "55" and E("EyeCandyDB.photo") is None, "and your settings come back after it")
 
-# Cancel keeps nothing. Change it starts from the saved photo settings.
-X(PP + ".change.scripts.OnClick()")
-check(cv("cameraFov") == "80", "Change it starts from your saved photo settings")
-X("NS.SetAdvanced('cameraFov', '65'); NS.SetStandard('graphicsShadowQuality', 2)")
+# Change on a saved one: Save keeps it in that one, Save as new makes another.
+X(R1 + ".change.scripts.OnClick()")
+check(cv("cameraFov") == "80" and E(PP + ".bigText.text") == "Screenshot preset is on: Golden hour" and E(PP + ".saveNew.shown")
+      and "Default stays" not in E(PP + ".editText.text"), "Change on a saved one starts from it, and offers Save as new too")
+X("NS.SetAdvanced('cameraFov', '85')")
+X(A + ".shown = false; " + PP + ".save.scripts.OnClick()")
+check(not E("PM.IsEditing()") and not E(A + ".shown") and E("#EyeCandyDB.photoPresets") == 1
+      and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "85", "Save keeps the change in that one, with no name to type")
+X(R1 + ".change.scripts.OnClick(); NS.SetAdvanced('cameraFov', '65')")
+X(PP + ".saveNew.scripts.OnClick()")
+ask()
+check(E("#EyeCandyDB.photoPresets") == 2 and E("EyeCandyDB.photoPresets[2].name") == "Photo preset 1"
+      and E("EyeCandyDB.photoPresets[2].values.cameraFov") == "65" and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "85"
+      and E("PM.Pick()") == 2, "Save as new makes another and picks it; the one you changed stays as it was")
+
+# Cancel keeps nothing.
+X(R1 + ".change.scripts.OnClick()")
+X("NS.SetAdvanced('cameraFov', '50'); NS.SetStandard('graphicsShadowQuality', 2)")
 X(PP + ".cancel.scripts.OnClick()")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and cv("graphicsShadowQuality") == "5" and E("EyeCandyDB.photo") is None
-      and E("EyeCandyDB.photoSettings.values.cameraFov") == "80" and E("EyeCandyDB.advanced.cameraFov") is None,
-      "Cancel puts your settings back and keeps the saved ones as they were")
+      and E("EyeCandyDB.photoPresets[1].values.cameraFov") == "85" and E("EyeCandyDB.advanced.cameraFov") is None,
+      "Cancel puts your settings back and keeps the saved one as it was")
 check("Nothing was saved" in E(PP + ".status.text"), "and says nothing was saved")
-X(PP + ".reset.scripts.OnClick()")
-check(E("EyeCandyDB.photoSettings") is None and not E(PP + ".reset.shown"), "Back to Screenshot preset forgets the saved photo settings")
+check(E("PM.Pick()") == 2, "and the pick goes back to the one from before the Change")
+
+# Review fixes: a name box from an edit that is over saves nothing; a full list says so before the box.
+X(CHANGE + "; " + PP + ".save.scripts.OnClick()")
+X('FIRE("PLAYER_REGEN_DISABLED")')
+ask("Too late")
+check(E("#EyeCandyDB.photoPresets") == 2 and "That change is over" in E(PP + ".status.text") and not E("PM.IsEditing()"),
+      "a name typed after a fight ended the edit saves nothing, and says so")
+X("for i = 3, 10 do EyeCandyDB.photoPresets[i] = { name = 'P' .. i, values = { cameraFov = '90' } } end")
+X(CHANGE + "; " + A + ".shown = false; " + PP + ".save.scripts.OnClick()")
+check(not E(A + ".shown") and "You have 10" in E(PP + ".status.text") and E("PM.IsEditing()"),
+      "with 10 saved, Save on Default says so before asking for a name")
+X(PP + ".cancel.scripts.OnClick(); for i = 10, 3, -1 do table.remove(EyeCandyDB.photoPresets, i) end; NS.RefreshUI()")
+X("RN_OK, RN_ERR = PM.RenamePreset(2, string.rep('\\195\\169', 30))")
+check(E("RN_OK") and E("RN_ERR") is None, "a name of 30 accented letters fits: it counts letters, not bytes")
+X("PM.RenamePreset(2, 'Photo preset 1')")
+
+# Pick, rename, delete.
+X(R0 + ".pick.scripts.OnClick()")
+check(E("PM.Pick()") == 0 and E(R0 + ".pick.text").startswith(GOLD), "clicking a name picks it for photos")
+X(R1 + ".rename.scripts.OnClick()")
+check(E(A + ".edit.text") == "Golden hour", "Rename offers the old name")
+ask("photo preset 1")
+check(E("EyeCandyDB.photoPresets[1].name") == "Golden hour" and "already have" in E(PP + ".status.text"),
+      "a name another one has is refused")
+X(R1 + ".rename.scripts.OnClick()")
+ask("Sunset")
+check(E("EyeCandyDB.photoPresets[1].name") == "Sunset" and E(R1 + ".pick.text") == WHITE + "Sunset|r", "a new name shows in the list")
+X(R2 + ".pick.scripts.OnClick(); " + R2 + ".delete.scripts.OnClick()")
+check("can't be undone" in E(A + ".textFS.text") and E("#EyeCandyDB.photoPresets") == 2, "Delete asks first")
+ask()
+check(E("#EyeCandyDB.photoPresets") == 1 and E("PM.Pick()") == 0 and "now uses Default" in E(PP + ".status.text")
+      and not E(R2 + ".shown"), "deleting the picked one goes back to Default, and its row goes")
+X(R1 + ".delete.scripts.OnClick()")
+ask()
+check(E("#EyeCandyDB.photoPresets") == 0 and not E(R1 + ".shown") and E(R0 + ".shown"), "Default stays when all yours are gone")
 take()
-check(cv("cameraFov") == "90", "and the photo uses the Screenshot preset again")
+check(cv("cameraFov") == "90", "and the photo uses Default again")
 frames(200)
 X('FIRE("SCREENSHOT_SUCCEEDED")')
+X(PP + ".mine.scripts.OnClick()")
+check(not E(PP + ".listHead.shown") and not E(R0 + ".shown"), "with My settings now the list hides")
+X(PP + ".shotChoice.scripts.OnClick()")
 
 # Backups and the rest see your settings: they end the edit first.
-X(PP + ".change.scripts.OnClick()")
+X(CHANGE)
 X("ENTRY = NS.CreateBackup('manual', 'during edit')")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("ENTRY.values.cameraFov") == "70" and E("EyeCandyDB.photo") is None,
       "a backup during the edit ends it first, so it holds your settings")
 check("another setting changed" in E(PP + ".status.text"), "and the page says why")
-X(PP + ".change.scripts.OnClick()")
+X(CHANGE)
 X("NS.GoBack()")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70", "Back ends the edit first")
 
 # --- An edit cut short -------------------------------------------------------------------------------------
-X(PP + ".change.scripts.OnClick()")
+X(CHANGE)
 X('FIRE("PLAYER_LEAVING_WORLD")')
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None and "loading screen" in E(PP + ".status.text"),
       "a loading screen cancels the edit, your settings back")
-X(PP + ".change.scripts.OnClick()")
+X(CHANGE)
 X('FIRE("PLAYER_LOGOUT")')
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "so does a logout or /reload")
-X(PP + ".change.scripts.OnClick()")
+X(CHANGE)
 X('FIRE("PLAYER_REGEN_DISABLED")')
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and "fight" in E(PP + ".status.text"), "a fight cancels it, your settings back")
-X("INCOMBAT = true; " + PP + ".change.scripts.OnClick()")
+X("INCOMBAT = true; " + CHANGE)
 check(not E("PM.IsEditing()") and E(PP + ".status.text").startswith(RED) and "fight" in E(PP + ".status.text") and cv("cameraFov") == "70",
       "Change it in a fight is refused, in red, and changes nothing")
-X("INCOMBAT = false; " + PP + ".change.scripts.OnClick(); INCOMBAT = true; PM.CancelEdit('a fight started')")
+X("INCOMBAT = false; " + CHANGE + "; INCOMBAT = true; PM.CancelEdit('a fight started')")
 check(cv("cameraFov") == "90" and E(PP + ".status.text").startswith(GREY) and "after the fight" in E("NS.RunningNote()"),
       "in a locked fight your settings wait, in grey, and the title says so")
 X("PM.T_OK, PM.T_ERR = PM.Change()")
@@ -306,7 +389,7 @@ check(lua3.eval("GetCVar('cameraFov')") == "75" and lua3.eval("EyeCandyDB.photo"
 X("EyeCandyDB.keepApplied = true; PM.Change(); EyeCandyDB.keepApplied = false; PM.CancelEdit()")
 check(E("EyeCandyDB.keepApplied") == True, "Keep my settings applied, changed during the edit, comes back with Cancel")
 X("PM.Change(); SP_OK, SP_ERR = NS.SaveCurrentAsPreset('Photo try')")
-check(E("SP_OK") is None and "photo settings are on" in E("SP_ERR"), "Save my settings as a preset is refused while the photo settings are on")
+check(E("SP_OK") is None and "screenshot preset is on" in E("SP_ERR"), "Save my settings as a preset is refused while the photo settings are on")
 X("PM.CancelEdit(); SP_OK = NS.SaveCurrentAsPreset('After the edit')")
 check(E("SP_OK") is not None, "and works again once they are gone")
 X("EyeCandyDB.autotune = { before = {} }; AT_OK, AT_ERR = PM.Change(); EyeCandyDB.autotune = nil")
@@ -315,6 +398,12 @@ check(E("AT_OK") is None and "Autotune has your settings" in E("AT_ERR") and not
 X(PP + ".take.scripts.OnClick(); SC = PM.SetChoice('screenshot')")
 check(E("SC") is None and "Wait a few seconds" in E("PM.message"), "picking during a photo says to wait, not nothing")
 X("PM.Stop('test'); SetCVar('cameraFov', 70)")
+
+# A single set of photo settings saved before the list existed becomes the first screenshot preset.
+lua4 = boot(PRE + "EyeCandyDB = { photoSettings = { values = { cameraFov = '77' }, saved = '15 Nov' } }")
+lua4.execute('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false)')
+check(lua4.eval("NS.PhotoMode.Name(NS.PhotoMode.Pick())") == "My photo settings" and lua4.eval("EyeCandyDB.photoSettings") is None
+      and lua4.eval("EyeCandyDB.photoPresets[1].values.cameraFov") == "77", "photo settings saved before the list become a picked screenshot preset")
 
 # --- Still saved at the next login: it puts them back ------------------------------------------------
 lua2 = boot(PRE + "EyeCandyDB = { photo = { before = { cameraFov = '75' } } }")
