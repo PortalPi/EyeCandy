@@ -1914,7 +1914,7 @@ function ns.RefreshUI()
 end
 
 -- Fade: after a second without the mouse over it, the main window fades to 35%, so the world
--- shows through (Dan, 16 Nov 2026: 70% was not see-through enough). It comes back at once when the
+-- shows through (70% was not see-through enough in game, 16 Nov 2026). It comes back at once when the
 -- mouse returns, and never fades while you type in it or drag it. /ec fade turns it off
 -- (EyeCandyDB.noFade).
 ns.FADE_ALPHA, ns.FADE_DELAY = 0.35, 1
