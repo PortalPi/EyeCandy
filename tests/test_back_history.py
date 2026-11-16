@@ -204,7 +204,7 @@ check(headers()[0] == "Your presets" and step_rows() == [], "with no steps today
 check(E(P + '.backButton') is None, "and the card has no Back button of its own")
 
 X('SetCVar("weatherDensity", "1"); NS.ApplyPresetById("look:raid"); NS.ApplyPresetById("look:laptop"); NS.RefreshUI()')
-check(headers()[0] == "Today" and headers()[1] == "Your presets", "after a preset, Today comes first")
+check(headers()[0] == "What you did today" and headers()[1] == "Your presets", "after a preset, What you did today comes first")
 r = step_rows()
 check(len(r) == 2 and E(r[0] + '.name.text') == "Laptop" and E(r[1] + '.name.text') == "Raid & PvP", "one row a step, newest first")
 check(E(r[0] + '.line.text') == "Preset applied at 10:40." and E(r[0] + '.back.text') == "Back", "each row says what and when, and has its own Back")
