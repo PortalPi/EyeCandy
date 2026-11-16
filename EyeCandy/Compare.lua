@@ -1,5 +1,6 @@
 -- Eye Candy: Compare. Flips the live settings between "before" (the settings from just before the
--- last preset, the same record Back to before uses) and "now", so you can see the difference in the same spot.
+-- last preset, that preset's step in today's list, ns.BeforeRecord) and "now", so you can see the
+-- difference in the same spot. A restore or your own changes since don't move "before".
 -- It takes no backup per flip and never changes Eye Candy's own choices (ns.db tiers, extras, dials).
 -- Ending always lands on "now": StopCompare, combat, logout and /reload. If the game closes while
 -- "before" is showing, EyeCandyDB.compare holds "now" and the next load puts it back.
@@ -33,7 +34,7 @@ local function CountDiff(a, b)
 	return n
 end
 
--- The "before" record (Backups.lua), if it differs from now, keeping only settings Eye Candy manages
+-- The newest preset step's "before" (Backups.lua), if it differs from now, keeping only settings Eye Candy manages
 -- today. Returns the record and its values, or nil and whether there was a record at all.
 local function FindBefore(now)
 	local b = ns.BeforeRecord and ns.BeforeRecord()
@@ -103,7 +104,7 @@ local function Finish()
 	return true
 end
 
--- A backup, a preset's "before" record or a restore while "before" is showing would record "before"
+-- A backup, a step's "before" or a restore while "before" is showing would record "before"
 -- as your settings. End compare on "now" first. Every caller looks these up on ns when it runs, so
 -- wrapping them here covers presets, imports, Back and restores without touching Backups.lua.
 -- when (optional) says from the call's own arguments whether to end first.
@@ -118,9 +119,9 @@ end
 EndFirst("CreateBackup")
 EndFirst("RestoreBackupById")
 EndFirst("NoteBeforePreset")
-EndFirst("RestoreBefore")
--- Back checks nothing changed since the preset, and "before" on screen is a change: end first.
-EndFirst("UndoLastPreset")
+EndFirst("RestoreStep")
+-- Back picks the newest step from what is on screen, and "before" on screen is not yours: end first.
+EndFirst("GoBack")
 -- Apply (not the hidden-only re-apply that keeps your settings applied) ends it too, as it did when
 -- Apply took a backup.
 EndFirst("ApplyAll", function(onlyHidden) return not onlyHidden end)

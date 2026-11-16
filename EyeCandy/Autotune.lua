@@ -1334,7 +1334,7 @@ function AT.Keep()
 			p.values[cvar] = tostring(v)
 		end
 	end
-	-- Back to before first, so the preset's own backup holds your old settings.
+	-- Back to before first, so the preset's step in today's list holds your old settings.
 	PutBefore(saved)
 	ns.db.autotune = nil
 	AT.result = nil

@@ -41,7 +41,7 @@ X(API + '; NS.RefreshUI()')
 # Restore and Delete still ask the same questions.
 X('NS.AskRestore(NS.ListBackups()[1])')
 t = E('EyeCandyAskFrame.textFS.text')
-check(t.startswith("Restore 12 settings from") and "This can't be undone." in t, "Restore still asks first and says how many change (%s)" % t)
+check(t.startswith("Restore 12 settings from") and "Back on the Presets tab can undo it today." in t, "Restore still asks first and says how many change (%s)" % t)
 X('local d = EyeCandyMainFrame.pages.backups.rows[2].delete; d.scripts.OnClick(d)')
 t = E('EyeCandyAskFrame.textFS.text')
 check(t.startswith('Delete the backup "Raid"?') and "can't be undone" in t, "Delete still asks first (%s)" % t)

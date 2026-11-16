@@ -79,7 +79,7 @@ check(W('EyeCandyAskFrame.shown') == True, "Create backup asks for a name")
 luaW.execute('EyeCandyAskFrame:Hide()')
 orig = names.index("Original settings") + 1
 luaW.execute('local r = EyeCandyMainFrame.pages.backups.rows[%d]; r.restore.scripts.OnClick(r.restore)' % orig)
-check(W('EyeCandyAskFrame.shown') == True and W('EyeCandyAskFrame.textFS.text').startswith("Restore ") and "This can't be undone. Create a backup first" in W('EyeCandyAskFrame.textFS.text'), "Restore asks first, with the count, and says it can't be undone")
+check(W('EyeCandyAskFrame.shown') == True and W('EyeCandyAskFrame.textFS.text').startswith("Restore ") and "Back on the Presets tab can undo it today." in W('EyeCandyAskFrame.textFS.text'), "Restore asks first, with the count, and says Back can undo it")
 chat(luaW)
 luaW.execute('EyeCandyAskFrame.accept.scripts.OnClick(EyeCandyAskFrame.accept)')
 check("Restored " in (W('EyeCandyMainFrame.pages.backups.result.text') or "") and W('EyeCandyAskFrame.shown') == False, "accepting restores the backup, and the tab says so")
