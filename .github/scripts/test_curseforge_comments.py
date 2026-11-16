@@ -27,7 +27,7 @@ check("a body with no marker reads as none", cc.marker_id("hello\n<!-- curseforg
 check("no body reads as none", cc.marker_id(None) is None)
 
 # The text sits in a code fence longer than any run of backticks in it, so it cannot break out.
-tricky = "look ```` here\n@dan #12 [x](http://e.vil) <b>hi</b>"
+tricky = "look ```` here\n@someone #12 [x](http://e.vil) <b>hi</b>"
 body = cc.issue_body(comment(7, tricky))
 check("fence is longer than the longest backtick run", "\n`````text\n" in body)
 check("text kept as written inside the fence", tricky in body)

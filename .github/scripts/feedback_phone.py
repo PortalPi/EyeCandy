@@ -1,21 +1,21 @@
-"""Dan's phone side of the feedback pipeline: the ask, and his Yes or No coming back.
+"""The maintainer's phone side of the feedback pipeline: the ask, and the Yes or No coming back.
 
 - ask (run by .github/workflows/feedback-ask.yml): the sort routine's comment on an issue starts
-  with <!-- eyecandy-sort: ask --> and has a line "Phone: ...". This sends that line to Dan's ntfy
-  topic as a phone notification. Tapping it opens the comment (the readable page). It has two
+  with <!-- eyecandy-sort: ask --> and has a line "Phone: ...". This sends that line to the
+  maintainer's ntfy topic as a phone notification. Tapping it opens the comment (the readable page). It has two
   buttons, "Yes, fix it" and "No", each posting "<yes|no> <issue> <code>" to the topic's reply
   topic, "<topic>-reply".
 - answer (run by .github/workflows/feedback-answer.yml every 10 minutes): reads the last 12 hours
   of the reply topic (all ntfy.sh keeps). Yes adds the label claude-fix, which starts the fix
   routine. No closes the issue as not planned. Each leaves a comment starting
-  <!-- eyecandy-answer: and sends Dan one line saying it was done. A tap no newer than that
+  <!-- eyecandy-answer: and sends the maintainer one line saying it was done. A tap no newer than that
   comment is skipped, so the same tap read again by a later run never acts twice, and an old No
   never closes an issue reopened since.
 - The code is an HMAC of the verb and the issue number with APPROVE_KEY (an Actions secret), so
   only a notification this sent can say yes, and only for its own issue. The topic name
   (NTFY_TOPIC, an Actions secret) is never printed.
 
-Server: ntfy.sh (Dan, 17 Nov 2026). It limits requests per sending address, and GitHub's runners
+Server: ntfy.sh (chosen 17 Nov 2026). It limits requests per sending address, and GitHub's runners
 share addresses, so a 429 is tried again. Standard library only.
 """
 
