@@ -180,7 +180,7 @@ check(E("NS.FPS.Still({})") is False, "the FPS reader measures no preset during 
 X("NS.PatchWatchLogout()")
 check(E("EyeCandyDB.patchWatch.snap.values.cameraFov") == "70", "the patch warning's copy at logout holds your settings, not the photo's")
 X("NS.ApplyAll()")
-check(not E("PM.IsOn()") and "stopped because another part of Eye Candy changed or saved your settings" in E(PP + ".status.text"),
+check(not E("PM.IsOn()") and "stopped because something else changed or saved your settings" in E(PP + ".status.text"),
       "another Eye Candy apply stops it first, and says so")
 
 # A fight already locked: the settings wait for its end, in grey.
@@ -388,7 +388,7 @@ X(CHANGE)
 X("ENTRY = NS.CreateBackup('manual', 'during edit')")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70" and E("ENTRY.values.cameraFov") == "70" and E("EyeCandyDB.photo") is None,
       "a backup during the edit ends it first, so it holds your settings")
-check("weren't saved because another part of Eye Candy changed or saved your settings" in E(PP + ".status.text"), "and the page says why")
+check("weren't saved because something else changed or saved your settings" in E(PP + ".status.text"), "and the page says why")
 X(CHANGE)
 X("NS.GoBack()")
 check(not E("PM.IsEditing()") and cv("cameraFov") == "70", "Back ends the edit first")
