@@ -12,8 +12,21 @@ function SetUIVisibility(v) if CANHIDE then UIParent.shown = v end end
 SHOTS = 0
 function Screenshot() SHOTS = SHOTS + 1 end
 """
+# A small world for the city switch (as tests/test_situations_auto.py): 84 Stormwind, 37 Elwynn.
+MAPS = """
+MAPS = { [13] = { mapType = 2, parentMapID = 947, flags = 0 }, [84] = { mapType = 3, parentMapID = 13, flags = 0 },
+  [37] = { mapType = 3, parentMapID = 13, flags = 0 } }
+MAP = 37
+C_Map = {
+  GetBestMapForUnit = function(unit) return MAP end,
+  GetMapInfo = function(id) local m = MAPS[id]; if m then return { mapID = id, name = "map", mapType = m.mapType, parentMapID = m.parentMapID, flags = m.flags } end end,
+}
+C_PvP = { GetZonePVPInfo = function() return nil end }
+function IsInInstance() return false, "none" end
+"""
 lua = boot(PRE)
 E, X = lua.eval, lua.execute
+X(MAPS)
 X('FIRE("PLAYER_LOGIN"); FIRE("PLAYER_ENTERING_WORLD", true, false); RUNTIMERS(); CHAT = {}')
 X("PM = NS.PhotoMode")
 GOLD, GREY, RED = "|cffffd100", "|cff9d9d9d", "|cffff4040"
@@ -40,6 +53,10 @@ X("PLAN[#PLAN + 1] = { 1000, 1/60 }; OK, T = WAIT(PLAN)")
 check(E("OK") and 3.4 < E("T") < 4.1, "frames still changing after 2 seconds: it waits until they settle (%.2f s)" % E("T"))
 X("PLAN = {}; for i = 1, 40 do PLAN[#PLAN + 1] = { 15, 1/30 }; PLAN[#PLAN + 1] = { 30, 1/60 } end; OK, T = WAIT(PLAN)")
 check(E("OK") and 6 <= E("T") < 6.1, "frames that never settle: it stops at 6 seconds (%.2f s)" % E("T"))
+X("OK, T = WAIT({ { 110, 1/60 }, { 1, 0.2 }, { 1000, 1/60 } })")
+check(E("OK") and 2.6 < E("T") < 3.2, "one long frame (the game still loading) at 2 seconds: it waits for two even windows after it (%.2f s)" % E("T"))
+X("PLAN = {}; for i = 1, 20 do PLAN[#PLAN + 1] = { 30, 1/60 }; PLAN[#PLAN + 1] = { 28, 1/56 } end; OK, T = WAIT(PLAN)")
+check(E("OK") and E("T") < 2.6, "ordinary jitter (60 then 56 FPS) doesn't hold it up to the 6 second cap (%.2f s)" % E("T"))
 
 # --- The tab ---------------------------------------------------------------------------------------
 X("NS.ShowTab('autotune'); EyeCandyMainFrame.shown = true; NS.RefreshUI()")
@@ -76,11 +93,13 @@ check("No photo was taken" in E(PP + ".status.text") and not E("PM.IsOn()") and 
       "when the game's UI won't hide, no photo, your settings stay and the window comes back")
 
 # --- A photo -----------------------------------------------------------------------------------------
+X("NS.TogglePeek(); NS.TogglePeek(); EyeCandyMainFrame.shown = true")  # Peek once first, so its Back bar exists
+check(E("EyeCandyPeekFrame ~= nil") and not E("EyeCandyPeekFrame.shown"), "Peek's Back bar exists, hidden")
 take()
 check(E("PM.IsOn()") and E("EyeCandyDB.photo.before.graphicsShadowQuality") == "5", "Take photo saves your settings first")
 check(cv("cameraFov") == "90" and cv("graphicsDepthEffects") == "3", "the Screenshot preset's values go on")
 check(E("UIParent.shown") is False and not E("EyeCandyMainFrame.shown"), "the game's UI and Eye Candy's window hide")
-check(not E("EyeCandyPeekFrame and EyeCandyPeekFrame.shown"), "with no Back bar in the picture")
+check(not E("EyeCandyPeekFrame.shown") and E("NS.IsPeeking()"), "with no Back bar in the picture")
 frames(60)
 check(E("SHOTS") == 0, "no photo before the new settings have had time to settle")
 frames(120)
@@ -120,6 +139,32 @@ take()
 X("UIParent.shown = true; UIParent.hooks.OnShow(UIParent)")
 frames(1)
 check(not E("PM.IsOn()") and cv("cameraFov") == "70" and E("SHOTS") == 0, "Esc brings the UI back: no photo, settings back")
+take()
+frames(200)
+X("UIParent.shown = true; UIParent.hooks.OnShow(UIParent)")
+frames(1)
+X('FIRE("SCREENSHOT_SUCCEEDED")')
+check("Photo saved" in E(PP + ".status.text") and "may be in it" in E(PP + ".status.text") and cv("cameraFov") == "70",
+      "Esc while the game takes the photo: it says the UI may be in it")
+X("RAWERR = NS.ApplyValues; NS.ApplyValues = function() error('broken') end")
+X(PP + ".take.scripts.OnClick(); NS.ApplyValues = RAWERR")
+check(E(PP + ".status.text").startswith(RED) and "couldn't go on" in E(PP + ".status.text") and not E("PM.IsOn()")
+      and cv("cameraFov") == "70" and E("EyeCandyDB.photo") is None, "an error putting the preset on is refused in red, no Lua error, settings back")
+
+# The city switch waits during a photo, and lowers your own settings once they are back.
+X("SetCVar('graphicsViewDistance', 9); NS.SetAutoSituation('city', true)")
+take()
+vd = cv("graphicsViewDistance")
+X('MAP = 84; FIRE("ZONE_CHANGED_NEW_AREA"); FIRE("ZONE_CHANGED"); RUNTIMERS()')
+check(cv("graphicsViewDistance") == vd and E("NS.ActiveSituationName()") is None, "walking into a city during a photo changes nothing in it")
+frames(200)
+X('FIRE("SCREENSHOT_SUCCEEDED")')
+check(E("NS.ActiveSituationName()") == "Capital city" and cv("graphicsViewDistance") == "7",
+      "once your settings are back, the city switch lowers yours")
+X('MAP = 37; FIRE("ZONE_CHANGED_NEW_AREA"); RUNTIMERS()')
+check(cv("graphicsViewDistance") == "9", "and puts yours back when you leave")
+X("NS.SetAutoSituation('city', false)")
+
 take()
 X("C_OK, C_ERR = NS.ToggleCompare(); A_OK, A_ERR = NS.Autotune.Start('balance'); E_OK, E_ERR = NS.EyeTest.Start()")
 check(E("C_OK") is None and E("A_OK") is False and E("E_OK") is None and "Photo mode" in E("C_ERR") and E("PM.IsOn()"),

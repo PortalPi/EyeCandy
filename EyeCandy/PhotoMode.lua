@@ -9,9 +9,11 @@
 -- (warcraft.wiki.gg, Screenshot and SCREENSHOT_SUCCEEDED).
 --
 -- How many frames until the new settings show: nothing in the game says. The frames after a big change are
--- slow while the game loads what it now needs, so photo mode waits as Autotune does after a render scale
--- change (Autotune.lua): until two half-second windows of frame rate agree within 3%, at least 2 seconds,
--- at most 6. It counts the frames it waited and says so on the tab.
+-- slow and uneven while the game loads what it now needs. So photo mode waits, as Autotune does after a
+-- render scale change (Autotune.lua, at least 2 seconds, at most 6), until two half-second windows agree:
+-- frame rate within 10%, and no frame in either more than 2.5 times the window's average (a long frame
+-- is the game still loading). Those two numbers are a rule of thumb, not measured. It counts the frames it
+-- waited and says so on the tab, so a photo that still looks half-loaded can be matched to the count.
 --
 -- Your settings from before are saved in EyeCandyDB.photo first. A fight, a loading screen, Esc or any other
 -- Eye Candy change stops it and puts them back. It never changes settings in a fight.
@@ -21,12 +23,13 @@ local PM = {}
 ns.PhotoMode = PM
 
 PM.PRESET = "look:screenshot"
-PM.MIN, PM.MAX, PM.WINDOW, PM.AGREE = 2, 6, 0.5, 0.03
+PM.MIN, PM.MAX, PM.WINDOW, PM.AGREE, PM.SPIKE = 2, 6, 0.5, 0.1, 2.5
 PM.SHOT_WAIT = 5 -- seconds to wait for the game to say the photo is saved
 PM.FOLDER = "World of Warcraft\\_forever_\\Screenshots"
 
 local shot -- nil, or { phase = "settle" | "shot", waited, frames, wn, wt, prevFps, left }
 local busy = false -- true while photo mode itself sets values, so its own guard lets them through
+local situationsWaiting = false -- a zone change came during the photo: the switch looks again after it
 
 local frame = CreateFrame("Frame")
 frame:Hide()
@@ -71,22 +74,31 @@ local function PutBack()
 	busy = false
 	SetValues(saved.before)
 	ns.db.photo = nil
+	-- The city or instance switch waited while the photo had your settings: it looks again now.
+	if situationsWaiting then
+		situationsWaiting = false
+		if ns.UpdateSituations then ns.UpdateSituations() end
+	end
 	if not ok then error(err, 0) end
 	return true
 end
 
 function PM.IsOn() return shot ~= nil end
 
--- One frame of the wait for the new settings. s: { waited, frames, wn, wt, prevFps }. Returns true once
--- two half-second windows agree within PM.AGREE after PM.MIN seconds, or PM.MAX seconds have gone.
+-- One frame of the wait for the new settings. s: { waited, frames, wn, wt, wlong, prevFps, prevEven }.
+-- Returns true once two half-second windows in a row are even (no frame over PM.SPIKE times the average)
+-- with frame rates within PM.AGREE, after PM.MIN seconds; or once PM.MAX seconds have gone.
 function PM.Settle(s, elapsed)
 	s.waited, s.frames = s.waited + elapsed, s.frames + 1
 	s.wn, s.wt = s.wn + 1, s.wt + elapsed
+	s.wlong = math.max(s.wlong or 0, elapsed)
 	if s.wt >= PM.WINDOW then
 		local fps = s.wn / s.wt
+		local even = s.wlong <= PM.SPIKE * s.wt / s.wn
 		local agree = s.prevFps and math.abs(fps - s.prevFps) / s.prevFps <= PM.AGREE
-		s.prevFps, s.wn, s.wt = fps, 0, 0
-		if agree and s.waited >= PM.MIN then return true end
+		local done = agree and even and s.prevEven and s.waited >= PM.MIN
+		s.prevFps, s.prevEven, s.wn, s.wt, s.wlong = fps, even, 0, 0, 0
+		if done then return true end
 	end
 	return s.waited >= PM.MAX
 end
@@ -95,22 +107,32 @@ local function Waited(s)
 	return string.format("It waited %d frames (%.1f seconds) for the new settings.", s.frames, s.waited)
 end
 
--- Ends the photo: the UI and your settings come back. result: "saved", "failed" or "unknown".
+-- Ends the peek and puts your settings back. Returns the closing words: what came back, or what waits.
+local function Restore()
+	local uiBack = true
+	if ns.IsPeeking and ns.IsPeeking() then uiBack = ns.TogglePeek() and true or false end
+	local back = PutBack()
+	if back and uiBack then return "Your settings and UI are back as they were.", true end
+	if back then return "Your settings are back. Press Esc or Alt+Z for the UI.", false end
+	return "Your settings come back when the fight ends.", false
+end
+
+-- Ends the photo. result: "saved", "failed" or "unknown".
 local function Finish(result)
 	local s = shot
 	shot = nil
 	frame:Hide()
-	if ns.IsPeeking and ns.IsPeeking() then ns.TogglePeek() end
-	PutBack()
+	local closing, all = Restore()
 	PM.last = { frames = s.frames, seconds = s.waited, result = result }
+	local ui = s.uiShown and " The UI came back before the photo, so it may be in it." or ""
 	if result == "saved" then
-		Say("done", "Photo saved at " .. date("%H:%M:%S") .. ", in " .. PM.FOLDER .. ". " .. Waited(s)
-			.. " Your settings and UI are back.")
+		Say(all and "done" or "waiting", "Photo saved at " .. date("%H:%M:%S") .. ", in " .. PM.FOLDER
+			.. " where the game is installed. " .. Waited(s) .. ui .. " " .. closing)
 	elseif result == "failed" then
-		Say("refused", "The game couldn't save the photo. Your settings and UI are back.")
+		Say("refused", "The game couldn't save the photo. " .. closing)
 	else
 		Say("waiting", "The game didn't say whether the photo was saved. Look in " .. PM.FOLDER
-			.. ". Your settings and UI are back.")
+			.. " where the game is installed." .. ui .. " " .. closing)
 	end
 	Tell(PM.message)
 	Refresh()
@@ -147,8 +169,8 @@ function PM.Take()
 	busy = false
 	if not ok then
 		shot = nil
-		PutBack()
-		error(err, 0)
+		pcall(PutBack) -- it sets each value back itself even when the apply fails again
+		return nil, "The Screenshot preset couldn't go on, so no photo was taken. Your settings are back. (" .. tostring(err) .. ")"
 	end
 	local hid, why = ns.PeekWithoutBar()
 	if not hid then
@@ -167,14 +189,9 @@ function PM.Stop(why)
 	local before = shot.phase == "settle"
 	shot = nil
 	frame:Hide()
-	if ns.IsPeeking and ns.IsPeeking() then ns.TogglePeek() end
-	local back = PutBack()
+	local closing, all = Restore()
 	local lead = "Photo mode stopped: " .. why .. ". " .. (before and "No photo was taken. " or "")
-	if back then
-		Say("done", lead .. "Your settings are back as they were.")
-	else
-		Say("waiting", lead .. "Your settings come back when the fight ends.")
-	end
+	Say(all and "done" or "waiting", lead .. closing)
 	Tell(PM.message)
 	Refresh()
 end
@@ -192,14 +209,18 @@ frame:SetScript("OnUpdate", function(self, elapsed)
 			if not pcall(Screenshot) then return Finish("failed") end
 		end
 	else
+		-- Esc or Alt+Z while the game takes it: the UI may be in the photo, and the result says so.
+		if not (ns.IsPeeking and ns.IsPeeking()) then shot.uiShown = true end
 		shot.left = shot.left - elapsed
 		if shot.left <= 0 then Finish("unknown") end
 	end
 end)
 
--- Any other Eye Candy change stops it first, so the way back stays right (as the eye test, EyeTest.lua).
+-- Any other Eye Candy change stops it first, so the way back stays right (as the eye test, EyeTest.lua):
+-- an apply, a backup, a preset's step (NoteBeforePreset), Back on a step (RestoreStep), /ec back (GoBack)
+-- and a restore.
 for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
-	"RestoreBefore", "RestoreBackupById", "UndoLastPreset" }) do
+	"RestoreStep", "GoBack", "RestoreBackupById" }) do
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
@@ -230,6 +251,19 @@ if ns.EyeTest then
 	ns.EyeTest.Start = function(...)
 		if shot then return nil, REFUSE end
 		return start(...)
+	end
+end
+
+-- The city and instance switch (Situations.lua) waits while the photo has your settings, and looks again
+-- once they are back: otherwise it would lower the photo's values and then lose track of yours.
+if ns.UpdateSituations then
+	local update = ns.UpdateSituations
+	ns.UpdateSituations = function(...)
+		if ns.db and ns.db.photo then
+			situationsWaiting = true
+			return
+		end
+		return update(...)
 	end
 end
 

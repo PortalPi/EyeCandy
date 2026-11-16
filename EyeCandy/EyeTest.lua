@@ -45,6 +45,7 @@ ET.random = math.random -- tests pass their own
 
 local test -- nil, or { rounds, i, showing, seen, picks, phase = "round" | "result", live }
 local busy = false -- true while the eye test itself sets values, so its own guard lets them through
+local situationsWaiting = false -- a zone change came during the test: the switch looks again after it
 
 local function Refresh()
 	if ns.RefreshUI then ns.RefreshUI() end
@@ -118,6 +119,11 @@ local function PutBack()
 	busy = false
 	SetValues(saved.before)
 	ns.db.eyeTest = nil
+	-- The city or instance switch waited while the test had your settings: it looks again now.
+	if situationsWaiting then
+		situationsWaiting = false
+		if ns.UpdateSituations then ns.UpdateSituations() end
+	end
 	if not ok then error(err, 0) end
 	return true
 end
@@ -298,7 +304,7 @@ function ET.Save(name)
 	end
 	for cvar, v in pairs(ET.Answers()) do p.values[cvar] = tostring(v) end
 	p.desc = "Made by the eye test. " .. table.concat(ET.PickLines(), ". ") .. "."
-	-- Your settings back first, so the preset's backup and its Back to before hold yours, not the test's.
+	-- Your settings back first, so the preset's step in today's list holds yours, not the test's.
 	test.live = false
 	PutBack()
 	test = nil
@@ -337,10 +343,10 @@ ns.RunningNote = function(...)
 end
 
 -- Any other Eye Candy change ends the test first, so the way back stays right. A backup too: it must hold
--- your settings, not the test's. So does a preset's record of what was before it (NoteBeforePreset, which a
--- preset calls before TakeBackup), and every restore.
+-- your settings, not the test's. So does a preset's step in today's list (NoteBeforePreset, which a preset
+-- calls before TakeBackup), Back on a step (RestoreStep), /ec back (GoBack) and a restore.
 for _, name in ipairs({ "ApplyAll", "ApplyValues", "CreateBackup", "TakeBackup", "NoteBeforePreset",
-	"RestoreBefore", "RestoreBackupById", "UndoLastPreset" }) do
+	"RestoreStep", "GoBack", "RestoreBackupById" }) do
 	local orig = ns[name]
 	if orig then
 		ns[name] = function(...)
@@ -363,6 +369,19 @@ if ns.Autotune then
 	ns.Autotune.Start = function(...)
 		if test and test.live then return false, "Autotune can't run during the eye test. Finish or stop the test first." end
 		return start(...)
+	end
+end
+
+-- The city and instance switch (Situations.lua) waits while the test has your settings, and looks again once
+-- they are back: otherwise it would lower the test's values and then lose track of yours.
+if ns.UpdateSituations then
+	local update = ns.UpdateSituations
+	ns.UpdateSituations = function(...)
+		if ns.db and ns.db.eyeTest then
+			situationsWaiting = true
+			return
+		end
+		return update(...)
 	end
 end
 
