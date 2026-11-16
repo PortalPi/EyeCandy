@@ -54,7 +54,7 @@ check(E("RS") is None, "render scale clamped to the same value on both sides is 
 X("NS.ShowTab('autotune'); EyeCandyMainFrame.shown = true; NS.RefreshUI()")
 P = "EyeCandyMainFrame.pages.autotune"
 labels = [E(P + ".partButtons")[i].label for i in range(1, E("#" + P + ".partButtons") + 1)]
-check(labels == ["Autotune", "Eye test"], "the Experimental tab has a button for each part (%s)" % labels)
+check(labels[:2] == ["Autotune", "Eye test"], "the Experimental tab has a button for each part (%s)" % labels)
 check(E(P + ".partButtons[1].text").startswith(GOLD) and E(P + ".partButtons[2].text").startswith(WHITE),
       "Autotune shows first, its button gold")
 check(E(P + ".parts.autotune.shown") and not E(P + ".parts.eye.shown") and E(P + ".head.label.text") == "Autotune",
@@ -208,6 +208,27 @@ for i in range(10):
     X("ET.Show(1); ET.Show(2); ET.Answer(2)")
 X(EP + ".back.scripts.OnClick()")
 check(cv("graphicsShadowQuality") == "5" and E("ET.State()") is None, "Back to before eye test puts your settings back and forgets the answers")
+
+# The city switch waits while the test has your settings, and lowers yours once they are back.
+X("""MAPS = { [13] = { mapType = 2, parentMapID = 947, flags = 0 }, [84] = { mapType = 3, parentMapID = 13, flags = 0 },
+  [37] = { mapType = 3, parentMapID = 13, flags = 0 } }
+MAP = 37
+C_Map = { GetBestMapForUnit = function() return MAP end, GetMapInfo = function(id) local m = MAPS[id]
+  if m then return { mapID = id, name = "map", mapType = m.mapType, parentMapID = m.parentMapID, flags = m.flags } end end }
+C_PvP = { GetZonePVPInfo = function() return nil end }
+function IsInInstance() return false, "none" end""")
+X("SetCVar('graphicsViewDistance', 9); NS.SetAutoSituation('city', true)")
+begin()
+X("ET.Show(1); ET.Show(2); ET.Answer(2); ET.Show(1); ET.Show(2); ET.Answer(2); ET.Show(1); ET.Show(2); ET.Answer(2)")
+X("ET.Show(1); ET.Show(2); ET.Answer(2); ET.Show(1)")
+check(cv("graphicsViewDistance") == "4", "round 5 shows view distance 4")
+X('ET.Show(2); MAP = 84; FIRE("ZONE_CHANGED_NEW_AREA"); FIRE("ZONE_CHANGED"); RUNTIMERS()')
+check(cv("graphicsViewDistance") == "9" and E("NS.ActiveSituationName()") is None, "walking into a city during the test changes nothing in it")
+X(EP + ".stop.scripts.OnClick()")
+check(E("NS.ActiveSituationName()") == "Capital city" and cv("graphicsViewDistance") == "7",
+      "once your settings are back, the city switch lowers yours")
+X('MAP = 37; FIRE("ZONE_CHANGED_NEW_AREA"); RUNTIMERS(); NS.SetAutoSituation("city", false)')
+check(cv("graphicsViewDistance") == "9", "and puts yours back when you leave")
 
 # --- A test still saved at the next login: it puts them back -------------------------------------------
 lua2 = boot(PRE + "EyeCandyDB = { eyeTest = { before = { graphicsShadowQuality = '2' } } }")

@@ -132,7 +132,9 @@ EndPeek = function(uiAlreadyBack)
 	return true
 end
 
-local function StartPeek()
+-- noBar: hide the screen with no Back bar (photo mode, so the bar isn't in the picture). Then the game's UI
+-- must be hidden, or nothing stays hidden and it returns nil and a reason.
+local function StartPeek(noBar)
 	if InCombatLockdown() then
 		return nil, "Can't hide the screen in combat. Try again after the fight."
 	end
@@ -156,6 +158,14 @@ local function StartPeek()
 			pcall(SetUIVisibility, true) -- it ran but the UI is still there: leave it as it was
 		end
 	end
+	if noBar then
+		HookUIParent() -- Esc and Alt+Z still end it, as they do with the bar
+		if hidUI or not (UIParent and UIParent:IsShown()) then return true end
+		peeking = false
+		for _, frame in ipairs(hidden) do frame:Show() end
+		wipe(hidden)
+		return nil, "Couldn't hide the game's UI."
+	end
 	if not hidUI and UIParent and UIParent:IsShown() then
 		ns.Print("couldn't hide the game's UI, so only Eye Candy's windows are hidden. Press Back or Esc to bring them back.")
 	end
@@ -178,6 +188,13 @@ end
 
 function ns.IsPeeking()
 	return peeking
+end
+
+-- Photo mode (PhotoMode.lua): hides the screen with no Back bar. It ends with ns.TogglePeek(), or Esc.
+-- Returns true, or nil and a plain reason.
+function ns.PeekWithoutBar()
+	if peeking then return nil, "Peek is already on." end
+	return StartPeek(true)
 end
 
 function ns.PeekSlash()
