@@ -434,7 +434,7 @@ end
 -- look (optional): a Look table from ns.LOOKS; its Extras and dials are layered on top of the preset.
 function ns.SetPreset(index, look)
 	if InCombatLockdown() then
-		ns.Print("can't change presets in combat. Try again after the fight.")
+		ns.Print("can't change presets in a fight. Try again after it.")
 		return false
 	end
 	-- One of today's steps, for Back to before and Compare (Backups.lua). No backup row. First, so a
