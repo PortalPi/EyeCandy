@@ -24,7 +24,7 @@ X("""function RUN(s, secs, fps, o)
   for i = 1, math.floor(secs * 2 + 0.5) do
     local f = type(fps) == "function" and fps(s) or fps
     local r = { now = f, raw = f, frames = f * 0.5, seconds = 0.5, long = o.long or 1 / f, goal = o.goal or 60,
-      free = o.free ~= false, top = o.top, vsync = o.vsync }
+      free = o.free ~= false, top = o.top, vsync = o.vsync, bk = o.bk }
     local to, why = SF.Step(s, r)
     if to then out[#out + 1] = { at = s.clock, to = to, why = why } end
   end
@@ -105,6 +105,48 @@ c = run(30, 60, "{ vsync = true }")
 check(len(c) == 1 and c[0][2] == "raise", "with Vertical Sync, FPS held at the goal counts as room to raise (%s)" % c)
 X("S = SF.New(1)")
 check(run(40, 50, "{ top = 50 }") == [], "an FPS limit of 50 under a goal of 60: 50 FPS is as good as it gets, so nothing is lowered")
+
+# A goal over the front FPS limit: the limit is the goal, so FPS held at it is room to raise, not low.
+X("S = SF.New(1); S.scale = 0.9")
+c = run(30, 120, "{ goal = 144, top = 120 }")
+check(len(c) == 1 and c[0][2] == "raise" and E("S.top") == 120, "a goal of 144 over a front limit of 120: 120 is the goal (%s)" % c)
+X("S = SF.New(1)")
+check(run(60, 118, "{ goal = 144, top = 120 }") == [], "and 118 FPS under that limit is not low")
+
+# The game in the back, held at its background limit (30) under a goal of 144.
+X("S = SF.New(1)")
+check(run(120, 30, "{ goal = 144, bk = 30 }") == [] and E("S.bk"), "held at the background limit: nothing changes, however long")
+X("S = SF.New(1)")
+check(run(60, 29.5, "{ goal = 144, bk = 30 }") == [], "just under the background limit counts as held too")
+X("S = SF.New(1)")
+c = run(30, 30, "{ goal = 144 }")
+check(c and c[0][2] == "lower", "(without a background limit that same FPS would lower, as before: %s)" % c)
+# A step is judged only while free: the judge is dropped when the game goes to the back.
+X("S = SF.New(1)")
+c = run(5, 100, "{ goal = 144 }") + run(1, 30, "{ goal = 144, bk = 30 }")
+c += run(30, 30, "{ goal = 144, bk = 30 }")
+check(len(c) == 1 and not E("S.stuck") and not E("S.judge"), "a step before going to the back isn't judged on the back's FPS (%s)" % c)
+# Back to the front: the smoothed FPS is still low for a moment, and must not lower anything.
+X("""S = SF.New(1); BACK = function(s) return s.clock < 20 and 30 or (s.clock < 21 and 80 or (s.clock < 22 and 120 or 150)) end""")
+c = run(20, 30, "{ goal = 144, bk = 30 }")
+c += run(40, "BACK", "{ goal = 144, bk = 30 }")
+check(c == [] and not E("S.bk"), "back in front: nothing is lowered from the stale low readings (%s)" % c)
+# A background limit that isn't under the goal's low line holds nothing.
+X("S = SF.New(1)")
+c = run(30, 60, "{ goal = 60, bk = 60 }")
+check(c == [] and not E("S.bk"), "a background limit at the goal's own level is no reason to wait")
+X("S = SF.New(1)")
+c = run(30, 50, "{ goal = 144, bk = 60 }")
+check(c and c[0][2] == "lower", "FPS far from the background limit isn't taken for the background (%s)" % c)
+
+# The goals.
+check(E("SF.GOALS[#SF.GOALS]") == 300 and E("#SF.GOALS") == 11 and 165 in [E("SF.GOALS[%d]" % i) for i in range(1, 12)],
+      "goals go up to 300")
+X("EyeCandyDB.steady = { goal = 144 }")
+check(E("SF.Goal()") == 144, "a saved goal still in the list is kept")
+X("EyeCandyDB.steady = { goal = 240 }")
+check(E("SF.Goal()") == 240, "and a new one works")
+X("EyeCandyDB.steady = nil")
 
 # Someone else changed it.
 X("S = SF.New(1); S.scale = 0.9; SF.Adopt(S, 0.8)")
