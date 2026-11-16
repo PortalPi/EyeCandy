@@ -23,4 +23,5 @@ Compare.lua
 Situations.lua
 Autotune.lua
 AutotuneTab.lua
+PatchWatch.lua
 Helper.lua
