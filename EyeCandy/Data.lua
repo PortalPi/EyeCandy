@@ -24,7 +24,7 @@ ns.CATEGORIES = {
 	{
 		key = "clarity",
 		name = "Resolution & Clarity",
-		desc = "Render scale (supersampling), texture filtering, variable rate shading and sharpening.\nUltra asks for 125% render scale and Cinematic for 150%, or the most the game allows.\nHigh and above turn VRS off so every pixel is shaded at full rate.\nNote: a new render scale may need a game restart to take effect.",
+		desc = "Render scale (supersampling), texture filtering, variable rate shading and sharpening.\nUltra asks for 125% render scale and Cinematic for 150%, or the most the game allows.\nHigh and above turn VRS off so every pixel is shaded at full rate.\nA new render scale may need a game restart.",
 		cvars = {
 			{ "RenderScale",           "Render scale",         { 0.9, 1, 1, 1.25, 1.5 }, scale = true },
 			{ "textureFilteringMode",  "Texture filtering",    { 3, 4, 5, 5, 5 } },
@@ -86,7 +86,7 @@ ns.CATEGORIES = {
 	{
 		key = "distant",
 		name = "Distant Detail (exp.)",
-		desc = "Hidden level-of-detail values: how far trees, props, terrain and buildings keep full detail before switching to low-detail versions or disappearing.\nCinematic values tested in Goldshire with no measurable FPS cost (3090 / 9800X3D). Not visually verified at long range.\nThe menu's View Distance and Environment Detail also set some of these; Eye Candy puts them back after you close Options.",
+		desc = "How far trees, props, terrain and buildings keep full detail before they swap to simpler models or vanish.\nThe menu's View Distance and Environment Detail also set some of these. Eye Candy sets them again after you close Options.",
 		cvars = {
 			{ "doodadLodScale",     "Tree/prop detail distance",          { nil, nil, nil, 200, 300 },  hidden = true },
 			{ "lodObjectFadeScale", "Small object fade distance",         { nil, nil, nil, 200, 300 },  hidden = true },
@@ -100,7 +100,7 @@ ns.CATEGORIES = {
 	{
 		key = "foliage",
 		name = "Grass & Foliage",
-		desc = "Ground clutter density and draw distance.\nThe menu tops out at density 48 / distance 320. Ultra and Cinematic go beyond that.\nCosts more FPS than you'd expect, so this is the first thing to drop if needed.",
+		desc = "How thick grass is and how far it reaches.\nUltra and Cinematic go past the menu's limits.\nCosts more FPS than you'd expect, so drop this first.",
 		cvars = {
 			{ "graphicsGroundClutter", "Ground clutter",  { 3, 6, 8, 9, 9 }, menu = true },
 			{ "groundEffectDensity",   "Grass density",   { nil, nil, 96, 128, 256 }, hidden = true },
@@ -128,26 +128,26 @@ ns.EXTRAS = {
 	{
 		key = "renderScale", cvar = "RenderScale", name = "Render scale override", scale = true, system = "clarity",
 		tipKey = "OPTION_TOOLTIP_RENDER_SCALE",
-		desc = "Overrides the Resolution & Clarity level's render scale.\nThe game won't go above its highest render scale. If it refuses a value, this row says what it kept.\nAbove 100% the cost climbs fast: 200% is roughly 1.8x the GPU work of 150%.\nA new render scale may need a game restart to take effect.",
+		desc = "Overrides the Resolution & Clarity level's render scale.\nAbove 100% the FPS cost climbs fast.\nA new render scale may need a game restart.",
 		options = { { nil, "Use level" }, { 1.25, "125%" }, { 1.5, "150%" }, { 1.75, "175%" }, { 2, "200%" } },
 		slider = { step = 0.01, percent = true },
 	},
 	{
 		key = "resample", cvar = "ResampleQuality", name = "Resample filter", system = "clarity",
 		tipKey = "OPTION_TOOLTIP_RESAMPLE_QUALITY",
-		desc = "How the picture is scaled to your screen when render scale is below 100%.\nAbove 100% the game uses Bicubic whatever this says (Blizzard's own tooltip), so it shows as ignored there.\nFSR 1.0 is built for upscaling. Compare both in the same spot.",
+		desc = "How the picture is scaled to your screen when render scale is below 100%.\nAbove 100% the game uses Bicubic, so this shows as ignored.\nFSR 1.0 is built for upscaling.",
 		options = { { nil, "Leave as is" }, { 3, "FSR 1.0" }, { 2, "Bicubic" } },
 	},
 	{
 		key = "sharpness", cvar = "ResampleSharpness", name = "Sharpness", system = "clarity",
-		desc = "How much the picture is sharpened. |cffffd100Lower = sharper.|r\n0 is the strongest, and each +1 halves it (AMD FSR's scale).\nThe bar runs like Blizzard's menu slider: right is sharper, and Off sits past the soft end.\nToo sharp makes grass and edges shimmer or look gritty, especially at high render scale.\nOnly applies while sharpening is active (Always sharpen on, or render scale not 100%).",
+		desc = "How much the picture is sharpened. |cffffd100Lower = sharper.|r\nOn the bar, right is sharper and Off is past the soft end.\nToo sharp makes grass and edges shimmer.\nOnly works while Always sharpen is on, or render scale isn't 100%.",
 		options = { { nil, "Leave as is" }, { -1, "Off" }, { 0, "0 (sharpest)" }, { 0.2, "0.2 (default)" }, { 0.5, "0.5" }, { 1, "1.0 (soft)" }, { 2, "2.0 (softest)" } },
 		-- The bar runs like the game's: soft on the left, Off past it, sharpest on the right.
 		slider = { min = 0, max = 2, step = 0.05, off = -1, invert = true },
 	},
 	{
 		key = "entityLod", cvar = "entityLodDist", name = "Character detail (exp.)", hidden = true, system = "distant",
-		desc = "How far away characters and creatures keep their detail. Unconfirmed: higher looks like more detail.\nA popular addon (Entity LoD) pins this at 100, which points to higher = more detail.\nHigher costs more in crowded places. Compare FPS in a capital city.",
+		desc = "How far away characters and creatures keep their detail. Unconfirmed: higher looks like more detail.\nHigher costs more in crowded places.",
 		options = { { nil, "Leave as is" }, { 5, "Lower (5)" }, { 10, "Default (10)" }, { 20, "Higher (20)" }, { 50, "50" }, { 100, "100" } },
 		slider = { min = 5, max = 100, step = 1 },
 	},
@@ -165,7 +165,7 @@ ns.SHOWCASE_EXTRAS = { renderScale = 2, resample = 2, entityLod = 20 }
 ns.LOOKS = {
 	{
 		key = "beautiful", name = "Beautiful", base = 6,
-		desc = "The happy medium. Showcase's distance and pop-in fixes, but at 150% render scale (or the most the game allows) with gentler sharpening, fuller-but-calmer grass with a soft edge, natural ambient occlusion, a little less bloom, soft edges on smoke and spells, and a slightly narrower, less fish-eyed view.",
+		desc = "The happy medium. Showcase's view distance at 150% render scale, or the most the game allows, with softer sharpening, calmer grass, a little less bloom and a narrower view.",
 		extras = { renderScale = 1.5, resample = 2, sharpness = 0.5, entityLod = 20 },
 		dials = {
 			groundEffectDensity = 160, groundEffectDist = 400, groundEffectFade = 300,
@@ -176,7 +176,7 @@ ns.LOOKS = {
 	},
 	{
 		key = "painterly", name = "Painterly", base = 5,
-		desc = "Leans into WoW's hand-painted art. Soft image (little sharpening), sparser grass so the ground textures show, light ambient occlusion, warmer glow and soft edges on smoke and spells.",
+		desc = "Leans into WoW's hand-painted art. Little sharpening, and sparser grass so the ground textures show.",
 		extras = { renderScale = 1.5, resample = 2, sharpness = 1, entityLod = 20 },
 		dials = {
 			groundEffectDensity = 128, groundEffectDist = 300, groundEffectFade = 250,
@@ -187,7 +187,7 @@ ns.LOOKS = {
 	},
 	{
 		key = "crisp", name = "Crisp", base = 6,
-		desc = "Maximum clarity. The highest render scale the game allows, with strong sharpening, depth effects off (hard edges on smoke and spells), low bloom, detailed ambient occlusion and the full 90 field of view.",
+		desc = "Maximum clarity. The highest render scale the game allows, strong sharpening, depth effects off and the full 90 field of view.",
 		extras = { renderScale = 2, resample = 2, sharpness = 0, entityLod = 20 },
 		dials = {
 			groundEffectDensity = 192, groundEffectDist = 450, groundEffectFade = 370,
@@ -198,7 +198,7 @@ ns.LOOKS = {
 	},
 	{
 		key = "moody", name = "Moody", base = 6,
-		desc = "Atmospheric and dramatic. Higher contrast, slightly darker, full bloom and weather, deeper ambient occlusion, soft edges on smoke and spells, and a tighter, more cinematic field of view.",
+		desc = "Dark and dramatic. Higher contrast, full bloom and weather, deeper shading and a narrower view.",
 		extras = { renderScale = 1.5, resample = 2, sharpness = 0.5, entityLod = 20 },
 		dials = {
 			groundEffectDensity = 192, groundEffectDist = 450, groundEffectFade = 300,
@@ -209,7 +209,7 @@ ns.LOOKS = {
 	},
 	{
 		key = "classic", name = "Classic", base = 5,
-		desc = "Closer to how WoW used to feel. Low bloom (guides suggest Low if the new glow feels too strong), sparse grass, light ambient occlusion, depth effects off (hard edges on smoke and spells), full field of view. Forever's new lighting and fog can't be switched off, so this is an approximation.",
+		desc = "Closer to how WoW used to feel. Low bloom, sparse grass, light shading, depth effects off and the full field of view. Forever's new lighting and fog can't be turned off, so it's only close.",
 		extras = { renderScale = 1.5, resample = 2, sharpness = 0.2, entityLod = 10 },
 		dials = {
 			groundEffectDensity = 64, groundEffectDist = 200, groundEffectFade = 150,
@@ -248,7 +248,7 @@ ns.EXPORT_EXTRA = {
 ns.SITUATIONS = {
 	{
 		key = "raid", situation = true, name = "Raid & PvP", base = 3,
-		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off (the soft edges on smoke and spells), less glow, the widest view and a further camera zoom so you see more of the fight.\nIf the game's own Raid and Battleground settings are switched on, the game uses those inside raids and battlegrounds instead.\nOr type /ec instance to have it done for you: in a dungeon, raid, battleground or arena your costly settings come down to these, and they go back when you leave.",
+		desc = "Clear and steady for big fights. High on every system, with particles as low as Performance, no rain or snow, depth effects off, less glow, the widest view and a further camera zoom.\nIf the game's own Raid and Battleground settings are on, the game uses those in raids and battlegrounds instead.",
 		dials = {
 			graphicsParticleDensity = 1, graphicsDepthEffects = 0, weatherDensity = 0,
 			bloomUserMult = 0.4, cameraFov = 90, cameraDistanceMaxZoomFactor = 2.6,
@@ -264,13 +264,13 @@ ns.SITUATIONS = {
 	},
 	{
 		key = "laptop", situation = true, name = "Laptop", base = 1,
-		desc = "Frames first, for a laptop or an older PC. Performance on every system, drawn at 75% and scaled up with AMD FSR 1.0 at the game's default sharpening, with ambient occlusion and depth effects off.\nA new render scale may need a game restart to take effect.",
+		desc = "Frames first, for a laptop or an older PC. Performance on every system, drawn at 75% render scale and scaled up with FSR 1.0, with ambient occlusion and depth effects off.",
 		extras = { renderScale = 0.75, resample = 3, sharpness = 0.2 },
 		dials = { graphicsSSAO = 0, graphicsDepthEffects = 0 },
 	},
 	{
 		key = "screenshot", situation = true, name = "Screenshot", base = 6, back = true,
-		desc = "Everything pushed for a screenshot. Showcase (the highest render scale the game allows, the most grass and draw distance), the widest view and depth effects on high. Expect a big FPS drop.\nWhen you're done, type /ec back to put your settings back as they were.",
+		desc = "Everything pushed for a screenshot. Showcase, the widest view and depth effects on high. Expect a big FPS drop.\nType /ec back when you're done.",
 		dials = { cameraFov = 90, graphicsDepthEffects = 3 },
 	},
 	{
@@ -279,7 +279,7 @@ ns.SITUATIONS = {
 		-- compute effects next. Shadows and SSAO are graphics card costs, so High keeps them.
 		-- Reports from players and guides, not measured here. Measure in Stormwind or Orgrimmar.
 		key = "city", situation = true, name = "Capital city", base = 3,
-		desc = "Steadier frames in a busy city. Players report that cities are slow because of the crowd, not the graphics card, and that view distance and environment detail help most. So this lowers those, fog and sun rays, and detail on far-away characters. High on everything else. Unconfirmed: not measured by Eye Candy.\nOr type /ec city to have it done for you: in a city only those four come down, on top of your own settings, and they go back when you leave.",
+		desc = "Steadier frames in a busy city. High, with lower view distance, environment detail, fog and far-away character detail. Players say these help most in cities. Unconfirmed: not measured by Eye Candy.",
 		extras = { entityLod = 10 },
 		dials = { graphicsViewDistance = 7, graphicsEnvironmentDetail = 7, graphicsComputeEffects = 2 },
 		-- The switch by itself (Situations.lua): only these, only where yours are higher.
