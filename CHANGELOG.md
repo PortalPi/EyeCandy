@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **A warning when the game changes your settings.** When you log out, Eye Candy notes your graphics settings. If the game changed any of them before you log in again (a game patch can), one small window lists them with what they were and what they are now. Put them back sets them again and says if the game kept any. Keep the game's changes nothing. If nothing changed, nothing shows. It never changes settings in a fight, and it takes no backup.
+- **Help me pick.** Not sure which preset to use? Press Help me pick on the Presets tab, by Quality levels. It asks one question: Prettier, Faster, or Let Eye Candy pick. Prettier and Faster suggest one preset, a step up or down from where you are, and show what it changes. Nothing changes until you press Apply, and Back to before undoes it. In a fight, Apply waits until the fight ends. Let Eye Candy pick opens Autotune on the Experimental tab with Best balance picked, ready for you to press Start. It only opens when you press the button.
 
 ## 1.0.1
 
