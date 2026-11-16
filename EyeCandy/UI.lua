@@ -973,6 +973,8 @@ local function PresetRow(content)
 		GameTooltip:AddLine(p.name, 1, 1, 1)
 		local body = p.look and ns.LookTooltip(p.look) or p.desc
 		if body and body ~= "" then GameTooltip:AddLine(body, nil, nil, nil, true) end
+		local last = ns.FPS and ns.FPS.PresetLine(p.id) -- "Last time: 63 FPS in Goldshire." (FPS.lua)
+		if last then GameTooltip:AddLine(last, 0.62, 0.62, 0.62, true) end
 		GameTooltip:Show()
 	end)
 	row:SetScript("OnLeave", function(self)
@@ -1170,6 +1172,8 @@ local function RefreshPresetList(page)
 	local entries = {}
 	local function AddGroup(title, note, items, opts)
 		entries[#entries + 1] = { header = title, note = note, opts = opts }
+		-- Help me pick (Helper.lua): its strip, while open, goes under the heading its button is on.
+		if opts and opts.help and ns.HelperOpen and ns.HelperOpen(page) then entries[#entries + 1] = { helper = true } end
 		if #items == 0 and opts and opts.empty then entries[#entries + 1] = { empty = opts.empty } end
 		for _, p in ipairs(items) do entries[#entries + 1] = { p = p } end
 		if opts and opts.strip then entries[#entries + 1] = { strip = true } end
@@ -1183,7 +1187,7 @@ local function RefreshPresetList(page)
 	end
 	AddGroup("Your presets", nil, list.user or {}, { save = true, strip = true,
 		empty = "No presets of your own yet. Save your settings as one, or import one from a friend below." })
-	AddGroup("Quality levels", "Every system at one level.", tiers)
+	AddGroup("Quality levels", "Every system at one level.", tiers, { help = true })
 	AddGroup("Looks", "Styles picked by eye.", looks)
 	if #situations > 0 then AddGroup("Situations", "Made for one job or place.", situations) end
 	if #other > 0 then AddGroup("More built-in presets", nil, other) end
@@ -1196,7 +1200,7 @@ local function RefreshPresetList(page)
 	page.rows = page.rows or {}
 	page.empties = page.empties or {}
 	local y, nh, nr, ne = 0, 0, 0, 0
-	local boxShown = {}
+	local boxShown, helperShown = {}, false
 	for _, e in ipairs(entries) do
 		if e.header then
 			nh = nh + 1
@@ -1218,7 +1222,16 @@ local function RefreshPresetList(page)
 				page.saveButton:SetPoint("TOPRIGHT", -4, -6)
 				page.saveButton:Show()
 			end
+			if e.opts and e.opts.help and ns.HelperButton then ns.HelperButton(page, h) end
 			y = y + h.h
+		elseif e.helper then
+			local s = ns.HelperStrip(page)
+			s:ClearAllPoints()
+			s:SetPoint("TOPLEFT", 0, -(y + 4))
+			s.top = y + 4
+			s:Show()
+			helperShown = true
+			y = y + 4 + s.h + 8
 		elseif e.empty then
 			ne = ne + 1
 			local f = page.empties[ne]
@@ -1294,6 +1307,7 @@ local function RefreshPresetList(page)
 		local box = page[spec.field]
 		if box and not boxShown[spec.field] then box:Hide(); box.note:Hide() end
 	end
+	if page.helperStrip and not helperShown then page.helperStrip:Hide() end
 	for i = nr + 1, #page.rows do page.rows[i]:Hide() end
 	for i = ne + 1, #page.empties do page.empties[i]:Hide() end
 	page.content:SetHeight(math.max(y, 1))
@@ -1760,6 +1774,14 @@ local function PlaceBarButtons()
 	end
 end
 
+-- Shrunk, the FPS number needs the left end of the title row clear of the title, which is centred.
+local FPS_W = 50
+local function FPSFits()
+	if not main.shrunk then return true end
+	local w = tonumber(main.titleText:GetStringWidth()) or 0
+	return (SHRUNK_W - w) / 2 >= 12 + FPS_W + 8
+end
+
 -- Apply only means something on the Hidden tab (every other tab applies at once), so it shows there and on
 -- the shrunk bar. Create backup is left off the Backups tab, which has its own. The rest close up.
 local function PlaceBottomBar()
@@ -1778,6 +1800,19 @@ local function PlaceBottomBar()
 	end
 	main.keep:ClearAllPoints()
 	if prev then main.keep:SetPoint("LEFT", prev, "RIGHT", 10, 0) else main.keep:SetPoint("BOTTOMLEFT", 12, 12) end
+	-- Live FPS: left of Peek and Compare on the full bar. The shrunk bar's row is full, so there it
+	-- sits at the left end of the title row, while the title leaves room (FPSFits).
+	if main.fps then
+		main.fps:ClearAllPoints()
+		if main.shrunk then
+			main.fps:SetPoint("TOPLEFT", 12, -7)
+			main.fps:SetJustifyH("LEFT")
+		else
+			main.fps:SetPoint("RIGHT", main.barButtons[#main.barButtons] or main.export, "LEFT", -8, 0)
+			main.fps:SetJustifyH("RIGHT")
+		end
+		main.fps:SetShown(FPSFits())
+	end
 end
 
 -- Say a bottom bar result in red above the bar (nil clears it). True when the window took it, so a
@@ -2074,6 +2109,14 @@ function ns.BuildMain()
 	end
 	PlaceBarButtons()
 
+	-- Live FPS (FPS.lua), grey, twice a second while the window is open (PlaceBottomBar places it).
+	if ns.FPS then
+		main.fps = Label(main, "", "GameFontHighlightSmall")
+		main.fps:SetSize(FPS_W, 14)
+		main.fps:SetTextColor(0.62, 0.62, 0.62)
+		main.fps:SetWordWrap(false)
+	end
+
 	main:SetScript("OnShow", function()
 		main:SetAlpha(1)
 		main.awayFor = 0
@@ -2090,6 +2133,8 @@ function ns.BuildMain()
 		end
 	end)
 	main:SetScript("OnUpdate", ns.MainTick)
+	-- After the SetScript calls above, so its OnShow and OnHide hooks sit on top of them.
+	if main.fps then ns.FPS.ShowOn(main.fps, main, FPSFits) end
 end
 
 -- Every frame while the window is open: the fade, then the Compare button. Compare can end on
