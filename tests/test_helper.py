@@ -138,6 +138,12 @@ check(E('(NS.OnPreset()).id') == "tier3" and E('NS.BackSteps()[1].name') == "Hig
 check(E(S + '.title.text') == "Now on High" and E(S + '.body.text') == "To undo it, press Back on the top row under What you did today.", "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
 check("About " in body and " of your settings change. Back to before undoes it." in body, "the pick text says About N settings change (%r)" % body)
 check(E(S + '.apply.shown') is not True, "no Apply once it is on")
+# A pick that changes nothing says so, with no count.
+X('REALCH = NS.Helper.Changes; NS.Helper.Changes = function() return 0, {}, {} end')
+click(S + '.faster')
+b0 = E(S + '.body.text') or ""
+check(b0.endswith("Nothing would change.") and "About " not in b0, "a pick that changes nothing says Nothing would change (%r)" % b0)
+X('NS.Helper.Changes = REALCH')
 
 # In a fight Apply waits, says so, and goes on when the fight ends.
 click(S + '.again')
