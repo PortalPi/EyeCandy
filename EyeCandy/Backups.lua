@@ -46,8 +46,10 @@ local function Copy(t)
 end
 
 -- What Eye Candy itself had chosen, so a restore also puts the tiers, Extras, dials and Look back.
+-- presetExtras: the Extras the last built-in set, so the next one can hand them back (Core.lua).
 local function CaptureState()
-	return { tiers = Copy(ns.db.tiers), extras = Copy(ns.db.extras), advanced = Copy(ns.db.advanced), look = ns.db.look }
+	return { tiers = Copy(ns.db.tiers), extras = Copy(ns.db.extras), advanced = Copy(ns.db.advanced), look = ns.db.look,
+		presetExtras = Copy(ns.db.presetExtras) }
 end
 
 -- The choices that were last applied. The tier buttons and Extras change ns.db before Apply is pressed,
@@ -91,7 +93,8 @@ end
 -- Dials apply the moment they move, so those come from now.
 function AppliedState()
 	local s = applied or CaptureState()
-	return { tiers = Copy(s.tiers), extras = Copy(s.extras), advanced = Copy(ns.db.advanced), look = s.look }
+	return { tiers = Copy(s.tiers), extras = Copy(s.extras), advanced = Copy(ns.db.advanced), look = s.look,
+		presetExtras = Copy(s.presetExtras) }
 end
 
 -- CVars that Eye Candy's choices in force set: a tier row, an Extra or a dial.
@@ -243,6 +246,9 @@ local function Restore(b, back)
 	for k, v in pairs(state.extras or {}) do ns.db.extras[k] = v end
 	for k, v in pairs(state.advanced or {}) do ns.db.advanced[k] = v end
 	ns.db.look = state.look
+	-- A state from before the record was kept: a Look's Extras are worked out from the Look.
+	local look = state.presetExtras == nil and state.look and ns.FindLook and ns.FindLook(state.look)
+	ns.db.presetExtras = look and ns.BuiltinExtras(look.base, look) or Copy(state.presetExtras)
 	ns.NoteApplied()
 	ns.SaveMirror()
 	if ns.RefreshUI then ns.RefreshUI() end
