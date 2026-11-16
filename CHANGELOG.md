@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## Unreleased
+
+- **A warning when the game changes your settings.** When you log out, Eye Candy notes your graphics settings. If the game changed any of them before you log in again (a game patch can), one small window lists them with what they were and what they are now. Put them back sets them again and says if the game kept any. Keep the game's changes nothing. If nothing changed, nothing shows. It never changes settings in a fight, and it takes no backup.
+
 ## 1.0.1
 
 - **A tidy-up.** Old code from before 1.0.0 is gone. Nothing you use changes.

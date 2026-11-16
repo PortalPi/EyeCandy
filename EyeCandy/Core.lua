@@ -687,6 +687,8 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
 			-- Delay: account settings from the server can land a moment after login.
 			C_Timer.After(4, function() ns.ApplyAll(true, true) end)
 		end
+		-- Settings changed while the game was closed (PatchWatch.lua).
+		if ns.PatchWatchLogin then ns.PatchWatchLogin(isLogin, isReload) end
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		if pendingAfterCombat then
 			pendingAfterCombat = false
@@ -694,6 +696,7 @@ events:SetScript("OnEvent", function(_, event, arg1, arg2)
 		end
 	elseif event == "PLAYER_LOGOUT" then
 		ns.SaveMirror()
+		if ns.PatchWatchLogout then ns.PatchWatchLogout() end
 	end
 end)
 
