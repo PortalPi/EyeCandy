@@ -1,6 +1,6 @@
 # Eye Candy changelog
 
-## Unreleased
+## 1.1.0
 
 - **Render scale goes up to 200% again.** Since the 14 November patch the game holds render scale at 100%. Restart the game and it can go to 200%. Until then, the window says it's held. Nothing to turn on.
 - **The window fades further.** With the mouse away it fades to about a third, so the world shows through. `/ec fade` turns this off.

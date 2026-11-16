@@ -2,7 +2,7 @@
 
 Graphics presets, Looks, hidden graphics settings and backups for World of Warcraft: Forever.
 
-Version 1.0.1. Open it with `/ec` or `/graphics`.
+Version 1.1.0. Open it with `/ec` or `/graphics`.
 
 Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting for its moderators to approve it.
 
