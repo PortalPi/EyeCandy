@@ -33,8 +33,8 @@
 -- a guess that costs a missed lowering, never a wrong one.
 --
 -- Target FPS (targetFPS, useTargetFPS: default 60 and on) is the game's own: "Dynamic actions will be taken
--- if you fall below the FPS target" (Ketho's CVars.lua). What those actions are isn't documented, and I
--- found nothing saying it sets RenderScale, so it is not held back, but that is a guess. What is
+-- if you fall below the FPS target" (Ketho's CVars.lua). What those actions are isn't documented, and
+-- nothing found (16 Nov 2026) says it sets RenderScale, so it is not held back, but that is a guess. What is
 -- documented is DynamicRenderScale ("Lowers render scale if GPU bound to hit Target FPS ... May cause
 -- hitching", same file): that one moves render scale too, so while it is on, this waits.
 --
