@@ -17,31 +17,52 @@ ns.RenderCap = RC
 RC.CVAR = "ClientSettings_HIGH_MEM_FEATURES_BY_API_MASK"
 RC.AFTER_LOAD = 10 -- seconds after a loading screen, once the servers have had time to send it
 
--- Clears the hold for the next start. Returns true when it was set and is now cleared.
-function RC.Clear()
+local function IsSet()
 	local v = GetCVar(RC.CVAR)
-	if v == nil or v == "" then return false end
-	if not pcall(SetCVar, RC.CVAR, "") then return false end
-	return (GetCVar(RC.CVAR) or "") == ""
+	return v ~= nil and v ~= ""
 end
 
--- True while the game holds render scale at 100% this session (until it restarts).
+-- Clears the hold for the next start. Returns true when it was set and is now cleared.
+function RC.Clear()
+	if not IsSet() then return false end
+	if not pcall(SetCVar, RC.CVAR, "") or IsSet() then return false end
+	RC.cleared = true
+	return true
+end
+
+-- True while the game holds render scale at 100% this session (until it restarts): the top is 100%
+-- and the hold was there (set now, or cleared by Eye Candy since this /reload). A 100% top with no
+-- hold has some other cause, so nothing says a restart lifts it. After a /reload in a held session
+-- this is false, and the lines say "the most the game allows now", which is still true.
 function RC.Held()
 	if type(GetMaxRenderScale) ~= "function" then return false end
 	local ok, hi = pcall(GetMaxRenderScale)
-	return ok and tonumber(hi) ~= nil and tonumber(hi) <= 1
+	if not (ok and tonumber(hi) ~= nil and tonumber(hi) <= 1) then return false end
+	return RC.cleared == true or IsSet()
 end
 
 -- What the player reads when render scale is held: why, and what to do.
 RC.HELD = "held at 100% until you restart the game"
 RC.TELL = "The game holds render scale at 100% until you restart it. Eye Candy lifts that hold, so after a restart it can go up to 200%."
 
+-- Never in a fight: a setting the game guards in combat would show a "blocked" warning that pcall
+-- can't stop. A clear due in a fight waits for it to end.
 local events = CreateFrame("Frame")
+local function ClearSoon()
+	if InCombatLockdown() then
+		pcall(events.RegisterEvent, events, "PLAYER_REGEN_ENABLED")
+	else
+		RC.Clear()
+	end
+end
 events:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_LOGOUT" then
 		RC.Clear()
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		C_Timer.After(RC.AFTER_LOAD, RC.Clear)
+		C_Timer.After(RC.AFTER_LOAD, ClearSoon)
+	elseif event == "PLAYER_REGEN_ENABLED" then
+		pcall(events.UnregisterEvent, events, "PLAYER_REGEN_ENABLED")
+		RC.Clear()
 	end
 end)
 for _, event in ipairs({ "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
