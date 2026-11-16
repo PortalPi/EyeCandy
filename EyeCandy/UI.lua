@@ -1145,6 +1145,8 @@ local function RefreshPresetList(page)
 	local entries = {}
 	local function AddGroup(title, note, items, opts)
 		entries[#entries + 1] = { header = title, note = note, opts = opts }
+		-- Help me pick (Helper.lua): its strip, while open, goes under the heading its button is on.
+		if opts and opts.help and ns.HelperOpen and ns.HelperOpen(page) then entries[#entries + 1] = { helper = true } end
 		if #items == 0 and opts and opts.empty then entries[#entries + 1] = { empty = opts.empty } end
 		for _, p in ipairs(items) do entries[#entries + 1] = { p = p } end
 		if opts and opts.strip then entries[#entries + 1] = { strip = true } end
@@ -1158,7 +1160,7 @@ local function RefreshPresetList(page)
 	end
 	AddGroup("Your presets", nil, list.user or {}, { save = true, strip = true,
 		empty = "No presets of your own yet. Save your settings as one, or import one from a friend below." })
-	AddGroup("Quality levels", "Every system at one level.", tiers)
+	AddGroup("Quality levels", "Every system at one level.", tiers, { help = true })
 	AddGroup("Looks", "Styles picked by eye.", looks)
 	if #situations > 0 then AddGroup("Situations", "Made for one job or place.", situations) end
 	if #other > 0 then AddGroup("More built-in presets", nil, other) end
@@ -1171,7 +1173,7 @@ local function RefreshPresetList(page)
 	page.rows = page.rows or {}
 	page.empties = page.empties or {}
 	local y, nh, nr, ne = 0, 0, 0, 0
-	local cityShown = false
+	local cityShown, helperShown = false, false
 	for _, e in ipairs(entries) do
 		if e.header then
 			nh = nh + 1
@@ -1193,7 +1195,16 @@ local function RefreshPresetList(page)
 				page.saveButton:SetPoint("TOPRIGHT", -4, -6)
 				page.saveButton:Show()
 			end
+			if e.opts and e.opts.help and ns.HelperButton then ns.HelperButton(page, h) end
 			y = y + h.h
+		elseif e.helper then
+			local s = ns.HelperStrip(page)
+			s:ClearAllPoints()
+			s:SetPoint("TOPLEFT", 0, -(y + 4))
+			s.top = y + 4
+			s:Show()
+			helperShown = true
+			y = y + 4 + s.h + 8
 		elseif e.empty then
 			ne = ne + 1
 			local f = page.empties[ne]
@@ -1266,6 +1277,7 @@ local function RefreshPresetList(page)
 		end
 	end
 	if page.cityBox and not cityShown then page.cityBox:Hide(); page.cityBox.note:Hide() end
+	if page.helperStrip and not helperShown then page.helperStrip:Hide() end
 	for i = nr + 1, #page.rows do page.rows[i]:Hide() end
 	for i = ne + 1, #page.empties do page.empties[i]:Hide() end
 	page.content:SetHeight(math.max(y, 1))
