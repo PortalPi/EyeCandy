@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **A warning when the game changes your settings.** When you log out, Eye Candy notes your graphics settings. If the game changed any of them before you log in again (a game patch can), one small window lists them with what they were and what they are now. Put them back sets them again and says if the game kept any. Keep the game's changes nothing. If nothing changed, nothing shows. It never changes settings in a fight, and it takes no backup.
 - **Live FPS on the window.** The bottom bar shows your FPS, updated twice a second, so you can watch it move while you drag a slider. On the shrunk bar it sits at the top left, and steps aside while Compare needs the room. It costs next to nothing.
 - **Each preset remembers its FPS.** A few seconds after you apply a preset, once you stand still out of a fight, Eye Candy notes the FPS it gives and where. The preset's tooltip then says "Last time: 63 FPS in Goldshire." Moving, turning or a fight makes it wait until you stand still again. If you change a setting first, or don't stand still for a minute, it isn't noted.
 
