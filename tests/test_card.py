@@ -15,7 +15,7 @@ P = 'EyeCandyMainFrame.pages.presets'
 text = E(P + '.card.detail.text')
 check(E('#NS.BackSteps()') == 0 and E(P + '.backButton') is None, "before any preset there is no step to go back to, and the card has no Back button")
 check("Back" not in text and "undo" not in text, "so the card does not mention Back or undo (%r)" % text)
-check(text == "Pick one below. A preset applies when you press Apply on it.", "it says only what a row does, so it stays true while the city switch or Autotune runs")
+check(text == "Pick one below and press Apply.", "it says only what a row does, so it stays true while the city switch or Autotune runs")
 
 # After a preset: Back shows, and the card says what is on.
 X('NS.ApplyPresetById("tier1"); NS.RefreshUI()')
