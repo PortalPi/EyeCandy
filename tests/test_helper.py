@@ -135,7 +135,8 @@ check(E(S + '.apply.shown') is True and E(S + '.apply.text') == "Apply High", "A
 check(E('(NS.OnPreset()).id') == "tier4", "nothing changes before Apply")
 click(S + '.apply')
 check(E('(NS.OnPreset()).id') == "tier3" and E('NS.BackSteps()[1].name') == "High", "Apply puts High on, as today's newest step")
-check(E(S + '.title.text') == "Now on High" and "Back on High under Today" in E(S + '.body.text'), "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
+check(E(S + '.title.text') == "Now on High" and E(S + '.body.text') == "To undo it, press Back on the top row under What you did today.", "the strip says it is on and how to undo it (%r)" % E(S + '.body.text'))
+check("About " in body and " of your settings change. Back to before undoes it." in body, "the pick text says About N settings change (%r)" % body)
 check(E(S + '.apply.shown') is not True, "no Apply once it is on")
 
 # In a fight Apply waits, says so, and goes on when the fight ends.
