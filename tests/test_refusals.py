@@ -73,20 +73,20 @@ check(any("Too many" in m for m in chat(lua)), "with the window closed a refusal
 X('NS.ShowTab("presets")')
 
 # --- Create backup: on the bar from any tab but Backups, on Backups' own line there.
-X('NS.CreateBackup = function() return nil, "Can\'t back up in combat." end')
+X('NS.CreateBackup = function() return nil, "Can\'t back up in a fight." end')
 X('CLICK(%s.createBackup); ACCEPT("")' % M)
-check(E(M + '.barMsg.text') == RED + "Can't back up in combat.|r" and not chat(lua), "the bar's Create backup says why in red above the bar, not in chat")
+check(E(M + '.barMsg.text') == RED + "Can't back up in a fight.|r" and not chat(lua), "the bar's Create backup says why in red above the bar, not in chat")
 X('NS.ShowTab("backups")')
 check(E(M + '.barMsg.text') == "", "changing tab clears the bar's line")
 X('NS.AskCreateBackup(); ACCEPT("")')
-check(E(B + '.result.text') == RED + "Can't back up in combat.|r" and E(M + '.barMsg.text') == "" and not chat(lua), "on the Backups tab the refusal goes on its own result line")
+check(E(B + '.result.text') == RED + "Can't back up in a fight.|r" and E(M + '.barMsg.text') == "" and not chat(lua), "on the Backups tab the refusal goes on its own result line")
 X('NS.ShowTab("hidden")')
 
 # --- Compare and Peek.
 X('CLICK(%s.compare)' % M)
 check("Nothing to compare yet" in E(M + '.barMsg.text') and RED in E(M + '.barMsg.text') and not chat(lua), "Compare with nothing to compare says why above the bar")
 X('INCOMBAT = true; %s.peek.scripts.OnClick(%s.peek)' % (M, M))
-check("Can't hide the screen in combat" in E(M + '.barMsg.text') and not chat(lua), "Peek in combat replaces the line with its own reason")
+check("Can't hide the screen in a fight" in E(M + '.barMsg.text') and not chat(lua), "Peek in combat replaces the line with its own reason")
 X('INCOMBAT = false')
 X('CHAT = {}')
 X('SlashCmdList.EYECANDY("compare")')

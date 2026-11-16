@@ -228,7 +228,7 @@ function ns.SetAdvanced(cvar, value)
 		-- The row says it when the window is open (rule 6, docs/ui-rules.md); chat only when it isn't.
 		local win = _G.EyeCandyMainFrame
 		local page = win and win.pages and win.pages.hidden
-		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in combat.") end
+		if not (win and win:IsShown() and page and page:IsShown()) then ns.Print("can't change settings in a fight. Try again after it.") end
 		return false, "not changed in a fight"
 	end
 	ns.TakeBackup(false) -- captures the current value before the first change
@@ -855,7 +855,7 @@ ns.TAB_BUILD.hidden = function(page)
 			resetAll:SetText("Reset hidden settings")
 			-- In combat the game won't take the values back, so nothing is reset (rule 9: refused is red).
 			if InCombatLockdown() then
-				page.resetResult:SetText("|cffff4040Can't reset in a fight.|r")
+				page.resetResult:SetText("|cffff4040Can't reset in a fight. Try again after it.|r")
 				page.resetRefused = true
 				return
 			end

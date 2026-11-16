@@ -129,7 +129,7 @@ EndFirst("ApplyAll", function(onlyHidden) return not onlyHidden end)
 -- Starts compare on "before", or flips between "before" and "now". Returns true, or nil and a plain reason.
 function ns.ToggleCompare()
 	if InCombatLockdown() then
-		return nil, "Can't compare in combat. Try again after the fight."
+		return nil, "Can't compare in a fight. Try again after it."
 	end
 	if pendingFinish then Finish() end
 	if state then
@@ -156,7 +156,7 @@ end
 -- Ends compare on "now". Returns true, or nil and a plain reason (combat: it ends after the fight).
 function ns.StopCompare()
 	if not Finish() then
-		return nil, "Can't change settings in combat. They go back to now after the fight."
+		return nil, "Can't change settings in a fight. They go back to now when it ends."
 	end
 	return true
 end
@@ -221,9 +221,9 @@ events:SetScript("OnEvent", function(_, event)
 		-- Lockdown starts just after this event, so settings can still change here.
 		if state then
 			if Finish() then
-				ns.Print("combat started, so compare ended. Showing: now.")
+				ns.Print("a fight started, so compare ended. Showing: now.")
 			else
-				ns.Print("combat started, so compare ends after the fight.")
+				ns.Print("a fight started, so compare ends after it.")
 			end
 		end
 	elseif event == "PLAYER_REGEN_ENABLED" then

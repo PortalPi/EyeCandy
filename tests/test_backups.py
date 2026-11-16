@@ -144,7 +144,7 @@ luaU.execute('SlashCmdList.EYECANDY("preset ultra"); SlashCmdList.EYECANDY("pres
 check(any("Restored " in x and raid['label'] in x for x in chat(luaU)), "/ec restore <number> says what it restored")
 luaU.execute('INCOMBAT = true; CHAT = {}; SlashCmdList.EYECANDY("restore %d"); INCOMBAT = false' % raid['id'])
 said = chat(luaU)
-check(len(said) == 1 and "Can't restore in combat" in said[0], "/ec restore in combat says why, once (%s)" % said)
+check(len(said) == 1 and "Can't restore in a fight" in said[0], "/ec restore in combat says why, once (%s)" % said)
 check(gU("farclip") == raid['values']['farclip'] and evU('EyeCandyDB.tiers.clarity') == raid['state']['tiers']['clarity'] and bl()[0]['kind'] == "manual", "/ec restore <number> restores that backup, even after others were added, and adds no row")
 luaU.execute('CHAT = {}; SlashCmdList.EYECANDY("restore 9999")')
 check(any("no backup number" in x for x in chat(luaU)), "/ec restore with a bad number says so")
