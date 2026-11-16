@@ -4,7 +4,7 @@ Graphics presets, Looks, hidden graphics settings and backups for World of Warcr
 
 Version 1.1.0. Open it with `/ec` or `/graphics`.
 
-Get it on [Wago](https://addons.wago.io/addons/nKWw5oKE). CurseForge: waiting for its moderators to approve it.
+Get it on [CurseForge](https://www.curseforge.com/wow/addons/eye-candy-graphics-presets-hidden-settings) or [Wago](https://addons.wago.io/addons/nKWw5oKE).
 
 | Before | After the Moody look |
 | --- | --- |
