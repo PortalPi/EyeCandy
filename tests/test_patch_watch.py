@@ -160,6 +160,32 @@ db10 = logout(lua10)
 lua11 = session(db10, 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1")', login=False)
 check(shown(lua11), "a /reload in the first seconds: the reload still warns")
 
+# A logout in the first seconds after changing something yourself: yours is kept, the game's still warns.
+lua10b = boot(db)
+lua10b.execute(SER + STUBS + 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1")')
+lua10b.execute('FIRE("PLAYER_ENTERING_WORLD", true, false); SetCVar("graphicsSSAO", "3")')
+db10b = logout(lua10b)
+check(ev(lua10b, 'EyeCandyDB.patchWatch.snap.values.graphicsSSAO') == "3", "a quick logout: the copy takes the setting you changed")
+check(ev(lua10b, 'EyeCandyDB.patchWatch.snap.values.graphicsShadowQuality') == "5", "and keeps the old copy of the one the game changed")
+lua11b = session(db10b, 'SetCVar("graphicsSSAO", "3"); SetCVar("graphicsShadowQuality", "1")')
+check(shown(lua11b) and frame(lua11b).head.text.startswith("The game changed 1 setting"), "next login warns about the game's change only")
+
+# A quick logout with a copy from another graphics card: nothing old is carried over.
+lua10c = boot(db)
+lua10c.execute(SER + STUBS + 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1");'
+               ' C_VideoOptions.GetGxAdapterInfo = function() return { { name = "AMD Radeon RX 7900" } } end')
+lua10c.execute('FIRE("PLAYER_ENTERING_WORLD", true, false)')
+logout(lua10c)
+check(ev(lua10c, 'EyeCandyDB.patchWatch.snap.values.graphicsShadowQuality') == "1", "a quick logout on another card: the copy is this PC's")
+
+# The red line names three at most.
+kl = lua.eval('function(...) return NS.PatchWatch.KeptLine({ ... }) end')
+check(kl() is None, "nothing kept: no red line")
+check(kl("A at 1") == "The game kept A at 1.", "one kept")
+check(kl("A at 1", "B at 2") == "The game kept A at 1 and B at 2.", "two kept")
+check(kl("A at 1", "B at 2", "C at 3") == "The game kept A at 1, B at 2 and C at 3.", "three kept")
+check(kl("A", "B", "C", "D", "E") == "The game kept A, B, C and 2 more.", "five kept: three named, then and 2 more")
+
 # Another PC (a copied settings folder): a different graphics card, so nothing shows.
 lua12 = session(db, 'SetCVar("graphicsSSAO", "2"); SetCVar("graphicsShadowQuality", "1");'
                 ' C_VideoOptions.GetGxAdapterInfo = function() return { { name = "AMD Radeon RX 7900" } } end')

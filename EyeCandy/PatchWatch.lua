@@ -16,12 +16,16 @@
 --   another WoW account         graphics settings are shared by the PC's accounts. The copy carries a token,
 --                               also kept in a registered CVar (it lasts across a relog, not a game close:
 --                               warcraft.wiki.gg C_CVar.RegisterCVar). Another token there: another account
---                               logged out last, so nothing shows
+--                               logged out last, so nothing shows. Not covered: the other account played
+--                               in an earlier game run (the CVar is empty then), so its changes can show once
 --   stored on the server        a setting that follows the account or character (C_CVar.GetCVarInfo's third
 --                               and fourth returns) can change on another PC: never counted
 --   rewritten at every start    the same change as last time (by the game or another addon at start):
 --                               shown once, then never again
---   a /reload before the check  the old copy is kept, and the reload checks instead
+--   out before the check        a logout or /reload in the first seconds: a setting still as the session
+--                               found it keeps its old copy, so the next login (or the reload) still warns
+--   a genuine repeat            the same change from a second patch straight after it was shown is not
+--                               shown again either (the price of the rule above)
 -- Unconfirmed: whether the game keeps a setting changed in a session that ended in a crash. Saved data is
 -- only written on logout or /reload, so the copy is older then, and such a change may show once.
 --
@@ -152,12 +156,18 @@ end
 
 local frame
 local LINE_H = 16
+local TOP = 32    -- under the title
+local HEAD_H = 40 -- the top line can wrap to two lines
+local KEPT_NAMES = 3 -- the red line names this many, then "and N more"
+
+-- The list's top, and the window's height for rows lines: the result line, two for the red one, the buttons.
+local function ListTop() return TOP + HEAD_H end
+local function Height(rows) return ListTop() + rows * LINE_H + 8 + 3 * LINE_H + 8 + 38 end
 
 local function Build(n)
-	local height = 32 + 24 + n * LINE_H + 8 + 2 * LINE_H + 8 + 38
-	frame = ns.MakeWindow("EyeCandyPatchFrame", 420, height, "Eye Candy")
+	frame = ns.MakeWindow("EyeCandyPatchFrame", 420, Height(n), "Eye Candy")
 	frame.head = ns.Label(frame, "", "GameFontHighlight")
-	frame.head:SetPoint("TOPLEFT", 18, -32)
+	frame.head:SetPoint("TOPLEFT", 18, -TOP)
 	frame.head:SetWidth(384)
 	frame.lines = {}
 	frame.result = ns.Label(frame, "")
@@ -165,8 +175,7 @@ local function Build(n)
 	frame.result:SetWordWrap(false)
 	frame.refused = ns.Label(frame, "")
 	frame.refused:SetPoint("TOPLEFT", frame.result, "BOTTOMLEFT", 0, -4)
-	frame.refused:SetWidth(384)
-	frame.refused:SetWordWrap(false)
+	frame.refused:SetWidth(384) -- wraps: up to two lines, room kept by Height
 
 	frame.keep = ns.Button(frame, "Keep the game's", 130, function() PW.Keep() end)
 	frame.keep:SetPoint("BOTTOMRIGHT", -16, 14)
@@ -186,7 +195,7 @@ local function Line(i)
 	local fs = frame.lines[i]
 	if not fs then
 		fs = ns.Label(frame, "")
-		fs:SetPoint("TOPLEFT", 26, -32 - 24 - (i - 1) * LINE_H)
+		fs:SetPoint("TOPLEFT", 26, -ListTop() - (i - 1) * LINE_H)
 		fs:SetWidth(376)
 		fs:SetWordWrap(false)
 		frame.lines[i] = fs
@@ -205,7 +214,7 @@ function PW.Show(list)
 	local n = #list
 	local listed = math.min(n, PW.MAX_LINES + (n == PW.MAX_LINES + 1 and 1 or 0))
 	local rows = listed + (n > listed and 1 or 0)
-	if not frame then Build(rows) else frame:SetSize(420, 32 + 24 + rows * LINE_H + 8 + 2 * LINE_H + 8 + 38) end
+	if not frame then Build(rows) else frame:SetSize(420, Height(rows)) end
 	frame.head:SetText(string.format("The game changed %d %s since you last played. %s",
 		n, Plural(n, "setting", "settings"), Plural(n, "Put it back?", "Put them back?")))
 	for _, fs in ipairs(frame.lines) do fs:Hide() end
@@ -221,7 +230,7 @@ function PW.Show(list)
 		fs:SetText(string.format("And %d more.", n - listed))
 		fs:Show()
 	end
-	frame.result:SetPoint("TOPLEFT", 18, -32 - 24 - rows * LINE_H - 8)
+	frame.result:SetPoint("TOPLEFT", 18, -ListTop() - rows * LINE_H - 8)
 	Say(nil, nil, nil)
 	frame.back:SetText(Plural(n, "Put it back", "Put them back"))
 	frame.back:Show()
@@ -229,6 +238,17 @@ function PW.Show(list)
 	frame.close:Hide()
 	frame:Show()
 	frame:Raise()
+end
+
+-- "The game kept A at x, B at y and C at z.", naming at most KEPT_NAMES, then "and N more". nil for none.
+function PW.KeptLine(kept)
+	local n = #kept
+	if n == 0 then return nil end
+	if n == 1 then return "The game kept " .. kept[1] .. "." end
+	local named = math.min(n, KEPT_NAMES)
+	local first = table.concat(kept, ", ", 1, named - (n > named and 0 or 1))
+	if n > named then return string.format("The game kept %s and %d more.", first, n - named) end
+	return "The game kept " .. first .. " and " .. kept[n] .. "."
 end
 
 function PW.Keep()
@@ -265,7 +285,7 @@ function PW.PutBack()
 	end
 	PW.list = nil
 	Say("done", back > 0 and string.format("Put back %d %s.", back, Plural(back, "setting", "settings")) or nil,
-		#kept > 0 and ("The game kept " .. table.concat(kept, ", ") .. ".") or nil)
+		PW.KeptLine(kept))
 	frame.back:Hide()
 	frame.keep:Hide()
 	frame.close:Show()
@@ -280,16 +300,23 @@ end
 
 local due = false -- the check waits for a fight to end
 
+-- Is this copy this PC's and this account's? Not with another graphics card (a copied settings folder),
+-- nor when another account's token is in the CVar (it logged out last in this game run).
+function PW.Usable(snap)
+	if type(snap) ~= "table" or type(snap.values) ~= "table" then return false end
+	if snap.machine and snap.machine ~= PW.Machine() then return false end
+	local token = GetCVar(TOKEN_CVAR)
+	if token and token ~= "" and snap.token and token ~= snap.token then return false end
+	return true
+end
+
 -- Compares the copy from the last logout with now. Returns the changes shown, or nil.
 function PW.Check()
 	local db = DB()
 	if not db then return nil end
 	db.pending = nil
 	local snap = db.snap
-	if type(snap) ~= "table" or type(snap.values) ~= "table" then return nil end
-	if snap.machine and snap.machine ~= PW.Machine() then return nil end
-	local token = GetCVar(TOKEN_CVAR)
-	if token and token ~= "" and snap.token and token ~= snap.token then return nil end
+	if not PW.Usable(snap) then return nil end
 	local show, all = PW.Diff(snap.values, PW.Values(), ns.AllManagedCVars(), db.seen, OnServer)
 	db.seen = all
 	if #show > 0 then PW.Show(show) end
@@ -306,20 +333,33 @@ local function CheckSoon(delay)
 	end)
 end
 
+local atLogin -- your settings as this session found them, while the check is still waiting
+
 function ns.PatchWatchLogin(isLogin, isReload)
 	local db = DB()
 	if not db then return end
 	if isLogin then db.pending = true end
-	if db.pending and (isLogin or isReload) then CheckSoon(PW.WAIT) end
+	if db.pending and (isLogin or isReload) then
+		atLogin = PW.Values()
+		CheckSoon(PW.WAIT)
+	end
 end
 
 function ns.PatchWatchLogout()
 	local db = DB()
 	if not db then return end
-	-- The login check hasn't run (a /reload in the first seconds): keep the copy it compares with.
-	if db.pending and db.snap then return end
+	local values = PW.Values()
+	-- The login check hasn't run (a logout or /reload in the first seconds): a setting still as this
+	-- session found it keeps its old copy, so the next login still sees what changed while the game was
+	-- closed. One changed since is yours, so the copy takes it.
+	local old = db.pending and PW.Usable(db.snap) and db.snap.values
+	if type(old) == "table" and atLogin then
+		for cvar, now in pairs(values) do
+			if old[cvar] ~= nil and atLogin[cvar] ~= nil and ns.Same(now, atLogin[cvar]) then values[cvar] = old[cvar] end
+		end
+	end
 	local token = tostring(time()) .. "-" .. tostring(math.random(100000, 999999))
-	db.snap = { values = PW.Values(), machine = PW.Machine(), token = token }
+	db.snap = { values = values, machine = PW.Machine(), token = token }
 	if C_CVar and C_CVar.SetCVar then pcall(C_CVar.SetCVar, TOKEN_CVAR, token) end
 end
 
