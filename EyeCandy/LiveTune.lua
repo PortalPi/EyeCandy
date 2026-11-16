@@ -479,9 +479,36 @@ end
 local function Pct(x) return math.floor(x * 100 + 0.5) .. "%" end
 
 SF.WHY = "When FPS stays under your goal, it lowers render scale a little. When FPS comes back, it raises it again, up to your own."
-SF.HOW = "It waits for 5 seconds under or well over the goal, changes 5% at a time, at most once every 30 seconds, "
-	.. "and never goes under 70%. Nothing changes in a fight. The game has its own one, Dynamic Render Scale, "
-	.. "but the game says it may cause hitching, so Eye Candy doesn't turn it on."
+-- Each number is the code's: SF.LOW (90%), SF.SUSTAIN (5 s), SF.STEP (5%), SF.GAP (30 s), SF.FLOOR (70%).
+-- "Well over" is SF.HIGH (125%), or just under an FPS limit or Vertical Sync.
+SF.HOW = "It waits until FPS has been under 90% of your goal, or well over it, for 5 seconds. "
+	.. "Then it changes render scale 5% at a time, at most once every 30 seconds, and never below 70%. "
+	.. "It changes nothing in a fight. It does not use the game's own Dynamic Render Scale, because the game warns it can cause stutter."
+
+-- One short line for the window's title and the Presets card while render scale is lowered from yours, or nil.
+-- Off but still lowered (it waits for a fight to end, or for Autotune and the others): the same, while the
+-- game still has its value.
+function SF.Note()
+	local own, now
+	if state then
+		own, now = state.own, state.scale
+	else
+		local db = ns.db and ns.db.steady
+		if type(db) == "table" and db.set and Is(Scale(), db.set) then own, now = tonumber(db.own), tonumber(db.set) end
+	end
+	if own and now and math.abs(now - own) > 0.001 then
+		return "Steady FPS has render scale at " .. Pct(now) .. ". Yours is " .. Pct(own) .. "."
+	end
+end
+
+-- Autotune, the city switch, photo mode and the eye test say theirs first: while one of them has your
+-- settings, Steady FPS waits.
+local runningNote = ns.RunningNote
+ns.RunningNote = function(...)
+	local note = runningNote and runningNote(...)
+	if note then return note end
+	return SF.Note()
+end
 
 -- The lines under the button.
 function SF.Status()
@@ -490,7 +517,7 @@ function SF.Status()
 	local lines = {}
 	local now = s.scale
 	if math.abs(now - s.own) < 0.001 then
-		lines[1] = "On. Render scale is yours, " .. Pct(s.own) .. ". Goal: " .. SF.Goal() .. " FPS."
+		lines[1] = "On. Render scale is " .. Pct(s.own) .. ", as you set it. Goal: " .. SF.Goal() .. " FPS."
 	else
 		lines[1] = "On. Render scale " .. Pct(now) .. " now. Yours is " .. Pct(s.own) .. ". Goal: " .. SF.Goal() .. " FPS."
 	end
@@ -502,7 +529,8 @@ function SF.Status()
 			or "Lowering didn't help here, so it stopped. It tries again after a loading screen."
 	end
 	if s.ceiling then
-		lines[#lines + 1] = "Raising past " .. Pct(s.ceiling) .. " dropped FPS too far here, so it won't go above that here."
+		-- SF.NewPlace clears the ceiling, so it holds until the next loading screen.
+		lines[#lines + 1] = "Raising past " .. Pct(s.ceiling) .. " dropped FPS too far, so it won't go above that until the next loading screen."
 	end
 	local held = SF.HeldBy()
 	if held then lines[#lines + 1] = GREY .. "Waiting: " .. held .. ".|r" end
@@ -524,10 +552,12 @@ function SF.Status()
 		lines[#lines + 1] = "Vertical Sync is on, so FPS stops at your screen's refresh rate. Pick a goal at or under it."
 	end
 	local hitch = session.biggest
-	local hitchText = hitch and string.format(" Biggest hitch from a change: %d ms", math.floor(hitch * 1000 + 0.5))
-		.. (session.normal and string.format(" (a normal frame then: %d ms).", math.floor(session.normal * 1000 + 0.5)) or ".")
+	-- session lives as long as the Lua state, so a /reload starts it over too. session.normal is a frame at
+	-- the FPS just before that change.
+	local hitchText = hitch and string.format(" Longest pause after a change: %d ms", math.floor(hitch * 1000 + 0.5))
+		.. (session.normal and string.format(", when a normal frame took %d ms.", math.floor(session.normal * 1000 + 0.5)) or ".")
 		or ""
-	lines[#lines + 1] = "Changes this session: " .. session.changes .. "." .. hitchText
+	lines[#lines + 1] = "Changes since you logged in or reloaded: " .. session.changes .. "." .. hitchText
 	return table.concat(lines, "\n")
 end
 
