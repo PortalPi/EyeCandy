@@ -73,14 +73,17 @@ def comment_text(c):
     """The whole comment as plain text. The API's "text" is only a preview (992 of a 19,240
     character comment, checked 17 Nov 2026), so this reads "body": HTML with one <p> per line,
     &nbsp; for a blank line, and the player's own < and > as entities. It undoes it the way
-    CurseForge's own page does (htmlToPlainText), so a player's "<f1>" stays as typed. Tags
-    left after that (bold, links, <br> in older comments) are formatting, not the player's text."""
+    CurseForge's own page does (htmlToPlainText), so a player's "<f1>" stays as typed, but keeps
+    an &nbsp; inside a line as a space and puts a reply's quote on lines of its own. Tags left
+    after that (bold, links, <br> in older comments) are formatting, not the player's text."""
     body = c.get("body")
     if not isinstance(body, str) or not body.strip():
-        return c.get("text") or ""
-    s = body.replace("&nbsp;", "")
+        text = c.get("text")
+        return text if isinstance(text, str) else str(text or "")
+    s = re.sub(r"<p>\s*&nbsp;\s*</p>", "<p></p>", body, flags=re.I)
+    s = s.replace("&nbsp;", " ")
     s = re.sub(r"<br\s*/?>", "\n", s, flags=re.I)
-    s = re.sub(r"</p>\s*<p(?:\s[^>]*)?>", "\n", s, flags=re.I)
+    s = re.sub(r"</p>\s*<p(?:\s[^>]*)?>|</blockquote>|</div>", "\n", s, flags=re.I)
     s = re.sub(r"<[^>]*>", "", s)
     for code, char in (("&lt;", "<"), ("&gt;", ">"), ("&amp;", "&"), ("&quot;", '"'), ("&#39;", "'")):
         s = s.replace(code, char)

@@ -80,6 +80,10 @@ check("a stranger's <tag> text stays as typed", "<f1>" in cc.comment_text(full))
 check("an encoded tag in the text is not turned into a line break",
       cc.comment_text({"body": "<p>a &lt;/p&gt;&lt;p&gt; b</p>"}) == "a </p><p> b")
 check("formatting tags and <br> in older comments", cc.comment_text({"body": "<p>hi <strong>there</strong><br>you</p>"}) == "hi there\nyou")
+check("a reply's quote sits on its own line",
+      cc.comment_text({"body": "<blockquote><div>Quote from: x</div><div><p>quoted</p></div></blockquote><p>reply</p>"}) == "Quote from: x\nquoted\n\nreply")
+check("&nbsp; inside a line is a space", cc.comment_text({"body": "<p>a&nbsp;b</p><p>&nbsp;</p><p>c</p>"}) == "a b\n\nc")
+check("a text that is not a string does not stop the run", cc.issue_body({"id": 5, "text": 12}).count("12") >= 1)
 check("no body falls back to text", cc.comment_text({"text": "plain one"}) == "plain one")
 check("nothing at all is empty", cc.comment_text({}) == "")
 body = cc.issue_body(full)
