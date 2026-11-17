@@ -2239,7 +2239,7 @@ end
 -- Export box: text pre-highlighted, Ctrl+C to copy.
 ----------------------------------------------------------------------
 
-local EXPORT_HINT = "Everything is selected. Press Ctrl+C, then paste it into a bug report on GitHub."
+local EXPORT_HINT = "Everything is selected. Press Ctrl+C, then paste it on GitHub or CurseForge."
 
 local function BuildExport()
 	exportFrame = MakeWindow("EyeCandyExportFrame", 640, 460, "Copy my settings  |cff9d9d9dCtrl+C to copy, Esc to close|r")

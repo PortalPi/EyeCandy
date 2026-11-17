@@ -81,7 +81,7 @@ Copy the `EyeCandy` folder into `World of Warcraft\_forever_\Interface\AddOns\` 
 ## Report a bug
 
 1. In game, type `/ec report`. A box opens with your Eye Candy version, game build, settings and any recent Lua errors from Eye Candy. Press Ctrl+C to copy it.
-2. Open [a new bug report](https://github.com/PortalPi/EyeCandy/issues/new/choose) and paste the text into the form.
+2. Open [a new bug report](https://github.com/PortalPi/EyeCandy/issues/new/choose) and paste the text into the form. No GitHub account? Paste it in a comment on [Eye Candy's CurseForge page](https://www.curseforge.com/wow/addons/eye-candy-graphics-presets-hidden-settings/comments) instead.
 
 ## Build and test
 

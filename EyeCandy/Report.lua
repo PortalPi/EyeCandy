@@ -1,5 +1,5 @@
 -- Eye Candy: /ec report
--- Builds one text block a player can paste into the GitHub bug form: addon version,
+-- Builds one text block a player can paste into the GitHub bug form or a CurseForge comment: addon version,
 -- game build, current settings (the same text as /ec export) and the recent
 -- Lua errors that mention Eye Candy.
 --
@@ -138,7 +138,7 @@ end
 
 function ns.ShowReport()
 	ns.ShowText(ns.BuildReport())
-	ns.Print("Bug report ready. Copy it with Ctrl+C, then paste it into the bug form on GitHub.")
+	ns.Print("Bug report ready. Copy it with Ctrl+C, then paste it into the bug form on GitHub, or a comment on CurseForge.")
 end
 
 ns.InstallErrorCapture()
