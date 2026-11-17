@@ -10,8 +10,10 @@ never posts. It pushes a branch, and .github/workflows/routine-say.yml runs this
 - claude/fix-issue-<issue>: opens the pull request, its title and body from the branch's first
   commit, unless one is open already.
 
-Text with a link, an @mention or an email, or words about how it was written, is refused: the job
-fails and nothing is posted. Standard library only; the HTTP helper is feedback_phone.py's.
+Text with a link, an @mention or an email, HTML, or words about how it was written, is refused: the
+job fails and nothing is posted. The workflow runs main's copy of this file; the pushed commit is
+only read as text, so a branch can't change what runs with the secrets. Standard library only; the
+HTTP helper is feedback_phone.py's.
 """
 
 import os
@@ -32,9 +34,12 @@ MARKERS = {
 PREFIX = {"sort": "<!-- eyecandy-sort:", "fix": "<!-- eyecandy-fix:"}
 MAX_TEXT = 4000
 REFUSED = [
-    (re.compile(r"https?://|www\.", re.I), "a link"),
+    (re.compile(r"https?:|mailto:|www\.|//[\w-]|\]\(|\b[\w-]+\.(com|net|org|io|gg|dev|ai|app|co|me|tv|xyz)\b", re.I),
+     "a link"),
     (re.compile(r"@[A-Za-z0-9]"), "an @mention or an email"),
-    (re.compile(r"claude|anthropic|openai|chatgpt|co-authored|generated (with|by)|\bai\b|\bllm\b|\bbots?\b|\broutines?\b", re.I),
+    (re.compile(r"[\w.-]+/[\w.-]+#[0-9]"), "a link to another repository"),
+    (re.compile(r"<"), "HTML"),
+    (re.compile(r"claude|anthropic|openai|chatgpt|co-authored|generated (with|by)|\bai\b|\bllm\b|\U0001F916", re.I),
      "words about how it was written"),
 ]
 
@@ -66,10 +71,12 @@ def refusal(text):
 
 def check_comment(kind, body):
     """Why this comment must not be posted, or None."""
-    first = (body or "").split("\n", 1)[0].strip()
-    if first not in MARKERS[kind]:
+    first, _, rest = (body or "").partition("\n")
+    if first.strip() not in MARKERS[kind]:
         return "the first line is not a marker"
-    return refusal(body)
+    if len(body) > MAX_TEXT:
+        return "it is too long"
+    return refusal(rest)
 
 
 def posted_before(kind, comments, owner):
@@ -90,8 +97,18 @@ def split_message(message):
 # ---- network parts ----
 
 
-def git(*args):
-    return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
+def git(*args, check=True):
+    return subprocess.run(["git", *args], check=check, capture_output=True, text=True).stdout
+
+
+def all_comments(api, token):
+    comments, page = [], 1
+    while True:
+        got = fp.http(f"{api}/comments?per_page=100&page={page}", token=token) or []
+        comments += got
+        if len(got) < 100:
+            return comments
+        page += 1
 
 
 def say(repo, token, branch, issue, kind):
@@ -102,7 +119,7 @@ def say(repo, token, branch, issue, kind):
     api = f"{API}{repo}/issues/{issue}"
     if "pull_request" in fp.http(api, token=token):
         sys.exit(f"Not posted: #{issue} is a pull request.")
-    old = posted_before(kind, fp.http(api + "/comments?per_page=100", token=token), repo.split("/")[0])
+    old = posted_before(kind, all_comments(api, token), repo.split("/")[0])
     url = None
     if old and (old.get("body") or "").strip() != body:
         print(f"#{issue} has a {kind} comment already; nothing posted.")
@@ -116,7 +133,7 @@ def say(repo, token, branch, issue, kind):
         fp.http(fp.SERVER + "/", fp.ask_message(os.environ["NTFY_TOPIC"], issue, fp.phone_line(body), url,
                                                 os.environ["APPROVE_KEY"]))
         print(f"Asked about #{issue}.")
-    git("push", "origin", "--delete", branch)
+    git("push", "origin", "--delete", branch, check=False)  # already gone on a rerun
 
 
 def open_pr(repo, token, branch):
@@ -124,7 +141,7 @@ def open_pr(repo, token, branch):
     if fp.http(f"{API}{repo}/pulls?state=open&head={owner}:{branch}", token=token):
         print("A pull request is open already.")
         return
-    first = git("log", "--reverse", "--format=%H", "origin/main..HEAD").split()
+    first = git("log", "--reverse", "--format=%H", "origin/main.." + os.environ["GITHUB_SHA"]).split()
     if not first:
         sys.exit("No commits ahead of main; no pull request opened.")
     title, body = split_message(git("log", "-1", "--format=%B", first[0]))
