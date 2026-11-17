@@ -2239,7 +2239,9 @@ end
 -- Export box: text pre-highlighted, Ctrl+C to copy.
 ----------------------------------------------------------------------
 
-local EXPORT_HINT = "Everything is selected. Press Ctrl+C, then paste it on GitHub or CurseForge."
+local EXPORT_HINT = "Everything is selected. Press Ctrl+C to copy."
+-- For a bug report and a settings export: where to paste them.
+ns.REPORT_HINT = "Everything is selected. Press Ctrl+C, then paste it on GitHub or CurseForge."
 
 local function BuildExport()
 	exportFrame = MakeWindow("EyeCandyExportFrame", 640, 460, "Copy my settings  |cff9d9d9dCtrl+C to copy, Esc to close|r")
@@ -2280,7 +2282,7 @@ local function BuildExport()
 end
 
 function ns.ShowExport(includeAll)
-	ns.ShowText(ns.BuildExport(includeAll))
+	ns.ShowText(ns.BuildExport(includeAll), ns.REPORT_HINT)
 end
 
 function ns.ShowText(text, hint)

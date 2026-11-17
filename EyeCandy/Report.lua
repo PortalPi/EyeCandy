@@ -137,8 +137,8 @@ function ns.BuildReport()
 end
 
 function ns.ShowReport()
-	ns.ShowText(ns.BuildReport())
-	ns.Print("Bug report ready. Copy it with Ctrl+C, then paste it into the bug form on GitHub, or a comment on CurseForge.")
+	ns.ShowText(ns.BuildReport(), ns.REPORT_HINT)
+	ns.Print("Bug report ready. Copy it with Ctrl+C, then paste it into the bug form on GitHub or a comment on CurseForge.")
 end
 
 ns.InstallErrorCapture()
