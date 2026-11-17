@@ -1,0 +1,52 @@
+name: routine-say
+
+# The sort and fix routines run in the cloud, and anything they post through the GitHub API gets a
+# footer added on the way (checked 17 Nov 2026). A branch they push arrives as written. So they
+# push a branch, and this posts it as github-actions[bot]:
+#
+# - claude/say-<issue>-sort or -fix: one empty commit whose message is the comment. Posted on the
+#   issue, a phone notification sent when it is an ask, then the branch is deleted.
+# - claude/fix-issue-<issue>: the pull request is opened from the branch's first commit.
+#
+# How: .github/scripts/routine_say.py. Secrets: NTFY_TOPIC and APPROVE_KEY (as feedback-answer).
+# Opening a pull request needs Settings > Actions > General > "Allow GitHub Actions to create and
+# approve pull requests".
+
+on:
+  push:
+    branches:
+      - "claude/say-*"
+      - "claude/fix-issue-*"
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: routine-say-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  post:
+    # Only the maintainer's own pushes (the routines push as the maintainer).
+    if: github.actor == github.repository_owner && !github.event.deleted
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # main's code runs; the pushed commit is fetched only to be read. A branch can't change the
+      # script that runs here with the secrets.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Fetch the pushed commit
+        run: git fetch --no-tags origin "+refs/heads/${GITHUB_REF_NAME}:refs/remotes/origin/${GITHUB_REF_NAME}"
+
+      - name: Post it
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APPROVE_KEY: ${{ secrets.APPROVE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/routine_say.py

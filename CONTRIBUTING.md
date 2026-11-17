@@ -31,8 +31,11 @@ media/      logo/EyeCandy.png and EyeCandy.psd. Not shipped.
 .github/    workflows/tests.yml (manual), workflows/release.yml (tag push), ISSUE_TEMPLATE/bug.yml
             workflows/curseforge-comments.yml (hourly): each new CurseForge comment becomes an issue,
             by scripts/curseforge_comments.py (checks: python .github/scripts/test_curseforge_comments.py)
-            workflows/feedback-ask.yml and feedback-answer.yml: the maintainer's phone Yes or No on a
-            sorted issue, by scripts/feedback_phone.py (checks: python .github/scripts/test_feedback_phone.py)
+            workflows/routine-say.yml (push to claude/say-* or claude/fix-issue-*): posts what the
+            sort and fix routines wrote, as github-actions[bot], and opens a fix's pull request, by
+            scripts/routine_say.py (checks: python .github/scripts/test_routine_say.py)
+            workflows/feedback-answer.yml: the maintainer's phone Yes or No on a sorted issue, by
+            scripts/feedback_phone.py (checks: python .github/scripts/test_feedback_phone.py)
             workflows/auto-tag.yml (push to main): tags a new release version and starts release.yml;
             deletes merged claude/fix-issue-* branches
 .pkgmeta, CHANGELOG.md   what the BigWigs packager ships. CHANGELOG.md is the players' notes.

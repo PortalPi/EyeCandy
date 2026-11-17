@@ -1,6 +1,6 @@
 name: feedback-answer
 
-# Every 10 minutes, reads the maintainer's taps on the feedback-ask phone notifications.
+# Every 10 minutes, reads the maintainer's taps on the phone notifications routine-say.yml sends.
 # Yes adds the label claude-fix to the issue, which starts the fix routine. No closes the issue as
 # not planned. A tap with a wrong code is ignored. How: .github/scripts/feedback_phone.py.
 #
