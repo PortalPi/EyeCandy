@@ -25,6 +25,11 @@ check("=== Eye Candy bug report ===" in rep and "Addon: Eye Candy 1.0.0-test" in
 check("Client: 1.60.1 (70790)" in rep and "=== Eye Candy graphics export ===" in rep and "--- Eye Candy tiers ---" in rep, "report holds game build and the current settings")
 check("(none caught)" in rep, "report says when no errors were caught")
 check(any("Bug report ready" in x for x in chat(lua)), "report tells the player to copy it")
+check("CurseForge" in lua.eval('EyeCandyExportFrame.hint.text'), "the report's box says it can go on GitHub or CurseForge")
+lua.execute('SlashCmdList.EYECANDY("find shadow")')
+check("GitHub" not in lua.eval('EyeCandyExportFrame.hint.text'), "a find result's box only says how to copy")
+lua.execute('SlashCmdList.EYECANDY("export")')
+check("CurseForge" in lua.eval('EyeCandyExportFrame.hint.text'), "the settings export's box says where it can go")
 
 fire(lua, ADDON + ':123: attempt to index a nil value')
 fire(lua, ADDON + ':123: attempt to index a nil value')

@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## 1.1.1
+
+- **Bug reports can go on CurseForge too.** `/ec report` says you can paste the report in a comment on Eye Candy's CurseForge page, as well as on GitHub. Either way the maintainer sees all of it.
+
 ## 1.1.0
 
 - **Render scale goes up to 200% again.** Since the 14 November patch the game holds render scale at 100%. Restart the game and it can go to 200%. Until then, the window says it's held. Nothing to turn on.
