@@ -4,7 +4,9 @@ Run hourly by .github/workflows/curseforge-comments.yml. Standard library only.
 
 - CurseForge: https://www.curseforge.com/api/v1/mods/<id>/comments?pageIndex=N&pageSize=20 gives
   the comments as JSON, newest first, pinned ones possibly out of order. It needs no login. It is
-  not documented, so it may change. Checked 17 Nov 2026 from a GitHub runner: HTTP 200.
+  not documented, so it may change. Checked 17 Nov 2026 from a GitHub runner: HTTP 200. Its
+  "text" is a preview of about 1000 characters; "body" holds the whole comment (comment_text).
+  The site took a 19,240 character comment whole (a test post, 17 Nov 2026).
 - What was already filed: each issue this files starts with the line
   <!-- curseforge-comment-id: N -->. The highest N on issues opened by github-actions[bot] is the
   last comment seen, so no file or variable has to be written back. Only the first line is read,
@@ -26,7 +28,7 @@ import urllib.request
 PAGE_SIZE = 20
 MAX_PAGES = 5
 MAX_NEW = 10
-MAX_TEXT = 6000
+MAX_TEXT = 40000  # an /ec report with every error is about 19,000; GitHub takes 65,536 a body
 TITLE_TEXT = 60
 TRIES = 3
 AGENT = "EyeCandy-comments (+https://github.com/PortalPi/EyeCandy)"
@@ -67,6 +69,27 @@ def pick_new(comments, floor):
     return sorted(out, key=lambda c: c["id"])[:MAX_NEW]
 
 
+def comment_text(c):
+    """The whole comment as plain text. The API's "text" is only a preview (992 of a 19,240
+    character comment, checked 17 Nov 2026), so this reads "body": HTML with one <p> per line,
+    &nbsp; for a blank line, and the player's own < and > as entities. It undoes it the way
+    CurseForge's own page does (htmlToPlainText), so a player's "<f1>" stays as typed, but keeps
+    an &nbsp; inside a line as a space and puts a reply's quote on lines of its own. Tags left
+    after that (bold, links, <br> in older comments) are formatting, not the player's text."""
+    body = c.get("body")
+    if not isinstance(body, str) or not body.strip():
+        text = c.get("text")
+        return text if isinstance(text, str) else str(text or "")
+    s = re.sub(r"<p>\s*&nbsp;\s*</p>", "<p></p>", body, flags=re.I)
+    s = s.replace("&nbsp;", " ")
+    s = re.sub(r"<br\s*/?>", "\n", s, flags=re.I)
+    s = re.sub(r"</p>\s*<p(?:\s[^>]*)?>|</blockquote>|</div>", "\n", s, flags=re.I)
+    s = re.sub(r"<[^>]*>", "", s)
+    for code, char in (("&lt;", "<"), ("&gt;", ">"), ("&amp;", "&"), ("&quot;", '"'), ("&#39;", "'")):
+        s = s.replace(code, char)
+    return s
+
+
 def issue_title(text):
     words = " ".join((text or "").split())
     if not words:
@@ -78,7 +101,7 @@ def issue_title(text):
 
 
 def issue_body(c):
-    text = c.get("text") or ""
+    text = comment_text(c)
     more = len(text) - MAX_TEXT
     if more > 0:
         text = text[:MAX_TEXT]
@@ -167,7 +190,7 @@ def main():
     url = f"https://api.github.com/repos/{repo}/issues"
     for c in new:
         try:
-            issue = http(url, {"title": issue_title(c.get("text")), "body": issue_body(c)}, token)
+            issue = http(url, {"title": issue_title(comment_text(c)), "body": issue_body(c)}, token)
         except urllib.error.HTTPError as e:
             if not 400 <= e.code < 500 or e.code in (403, 429):
                 raise  # GitHub is busy or down: the next run tries again

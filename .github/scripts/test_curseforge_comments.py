@@ -65,6 +65,31 @@ check("a bad date reads unknown", "When: unknown" in cc.issue_body({"id": 5, "da
 check("a missing date reads unknown", "When: unknown" in cc.issue_body({"id": 5}))
 check("a stand-in keeps the marker", cc.marker_id(cc.stand_in_body(77, 422)) == 77)
 
+# The API's "text" is a preview of about 1000 characters; "body" is the whole comment as HTML,
+# one <p> per line, &nbsp; for a blank line, < and > as entities (checked 17 Nov 2026).
+def html_of(plain):
+    """What CurseForge's comment box sends for plain text (its plainTextToHtml)."""
+    lines = plain.replace("<", "&lt;").replace(">", "&gt;").split("\n")
+    return "".join("<p>" + (x if x else "&nbsp;") + "</p>" for x in lines)
+
+
+report = "=== Eye Candy bug report ===\n\n  [1x] Core.lua:9: oops <f1> & \"q\" 'a'\n" + "  row\n" * 900 + "end"
+full = {"id": 60, "text": report[:992], "body": html_of(report), "bodyType": 1}
+check("the whole comment is read from its HTML body", cc.comment_text(full) == report)
+check("a stranger's <tag> text stays as typed", "<f1>" in cc.comment_text(full))
+check("an encoded tag in the text is not turned into a line break",
+      cc.comment_text({"body": "<p>a &lt;/p&gt;&lt;p&gt; b</p>"}) == "a </p><p> b")
+check("formatting tags and <br> in older comments", cc.comment_text({"body": "<p>hi <strong>there</strong><br>you</p>"}) == "hi there\nyou")
+check("a reply's quote sits on its own line",
+      cc.comment_text({"body": "<blockquote><div>Quote from: x</div><div><p>quoted</p></div></blockquote><p>reply</p>"}) == "Quote from: x\nquoted\n\nreply")
+check("&nbsp; inside a line is a space", cc.comment_text({"body": "<p>a&nbsp;b</p><p>&nbsp;</p><p>c</p>"}) == "a b\n\nc")
+check("a text that is not a string does not stop the run", cc.issue_body({"id": 5, "text": 12}).count("12") >= 1)
+check("no body falls back to text", cc.comment_text({"text": "plain one"}) == "plain one")
+check("nothing at all is empty", cc.comment_text({}) == "")
+body = cc.issue_body(full)
+check("a full bug report fits in one issue", report in body and "(Cut:" not in body)
+check("the title comes from the whole text", cc.issue_title(cc.comment_text({"body": "<p>Shadows&nbsp;</p><p>flicker</p>"})) == "From CurseForge: Shadows flicker")
+
 check("highest filed id from issue bodies", cc.highest_filed([cc.issue_body(comment(4)), "no marker", None, cc.issue_body(comment(9))]) == 9)
 check("no issues means zero", cc.highest_filed([]) == 0)
 
