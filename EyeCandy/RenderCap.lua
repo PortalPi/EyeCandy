@@ -22,6 +22,9 @@ local function IsSet()
 	return v ~= nil and v ~= ""
 end
 
+-- For /ec report: was the hold there when Eye Candy loaded (soon after the game read it)?
+RC.atLoad = GetCVar(RC.CVAR) or ""
+
 -- Clears the hold for the next start. Returns true when it was set and is now cleared.
 function RC.Clear()
 	if not IsSet() then return false end
@@ -41,6 +44,17 @@ function RC.Held()
 	return RC.cleared == true or IsSet()
 end
 
+-- One line for /ec report, so a report shows if the hold came back after a restart.
+local function Shown(v)
+	if v == nil or v == "" then return "not set" end
+	return "set (" .. tostring(v):sub(1, 40) .. ")"
+end
+function RC.ReportLine()
+	local last = type(EyeCandyDB) == "table" and EyeCandyDB.renderHoldLogout or nil
+	return string.format("Render scale hold (%s): when Eye Candy loaded %s, now %s, cleared since /reload %s, at the last logout %s",
+		RC.CVAR, Shown(RC.atLoad), Shown(GetCVar(RC.CVAR)), RC.cleared and "yes" or "no", tostring(last or "not recorded"))
+end
+
 -- What the player reads when render scale is held: why, and what to do.
 RC.HELD = "held at 100% until you restart the game"
 RC.TELL = "The game holds render scale at 100% until you restart it. After a restart it can go up to 200%."
@@ -57,7 +71,12 @@ local function ClearSoon()
 end
 events:SetScript("OnEvent", function(_, event)
 	if event == "PLAYER_LOGOUT" then
-		RC.Clear()
+		local was = IsSet()
+		local cleared = RC.Clear()
+		-- Kept for the next session's /ec report: did the clear at this logout stick?
+		if type(EyeCandyDB) == "table" then
+			EyeCandyDB.renderHoldLogout = (cleared and "cleared") or (was and "could not clear") or "was not set"
+		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		C_Timer.After(RC.AFTER_LOAD, ClearSoon)
 	elseif event == "PLAYER_REGEN_ENABLED" then
