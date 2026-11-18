@@ -5,8 +5,10 @@ new or edited) gets a footer added on the way. A branch they push arrives as wri
 never posts. It pushes a branch, and .github/workflows/routine-say.yml runs this:
 
 - claude/say-<issue>-sort or claude/say-<issue>-fix: one empty commit whose message is the
-  comment. Its first line must be one of the markers in MARKERS. This posts it on the issue, sends
-  the maintainer's phone notification when it is an ask, then deletes the branch.
+  comment. Its first line must be one of the markers in MARKERS. This posts it on the issue, then
+  deletes the branch. When it is an ask, this also says yes (the maintainer taps nothing since
+  18 Nov 2026): an answer comment, the label claude-fix, and a phone notification. The label
+  hold on the issue stops that.
 - claude/fix-issue-<issue>: opens the pull request, its title and body from the branch's first
   commit, unless one is open already.
 
@@ -130,10 +132,26 @@ def say(repo, token, branch, issue, kind):
         url = fp.http(api + "/comments", {"body": body}, token)["html_url"]
         print(f"Posted on #{issue}.")
     if url and fp.is_ask(body):
-        fp.http(fp.SERVER + "/", fp.ask_message(os.environ["NTFY_TOPIC"], issue, fp.phone_line(body), url,
-                                                os.environ["APPROVE_KEY"]))
-        print(f"Asked about #{issue}.")
+        say_yes(repo, token, issue, url, fp.phone_line(body))
     git("push", "origin", "--delete", branch, check=False)  # already gone on a rerun
+
+
+def say_yes(repo, token, issue, url, line):
+    """The maintainer taps nothing (18 Nov 2026): an ask is a yes. Post the answer comment the fix
+    routine looks for, then the label that starts it, then tell the phone. A held, closed or already
+    answered issue is left alone, so a rerun never starts a second fix."""
+    api = f"{API}{repo}/issues/{issue}"
+    topic = os.environ["NTFY_TOPIC"]
+    comments = all_comments(api, token)
+    plan = fp.yes_plan(fp.http(api, token=token), comments)
+    if plan == "go":
+        if not fp.answered(comments):
+            fp.http(api + "/comments", {"body": fp.DONE + " yes -->\nThe sort said this fits. A fix is on its way."}, token)
+        fp.http(api + "/labels", {"labels": [fp.LABEL]}, token)
+        fp.notify(topic, "Eye Candy: fixing", line, url)
+    elif plan == "hold":
+        fp.notify(topic, "Eye Candy: held", f"{line} It has the hold label, so no fix was started.", url)
+    print(f"#{issue}: {plan}.")
 
 
 def open_pr(repo, token, branch):

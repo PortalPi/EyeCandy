@@ -24,9 +24,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Keep CF_API_TOKEN and WAGO_API_TOKEN as secrets of this GitHub Environment, with the
-    # maintainer as a required reviewer (Settings > Environments > release). Then a tag
-    # cannot reach the tokens until the maintainer approves the run.
+    # CF_API_TOKEN and WAGO_API_TOKEN are secrets of this GitHub Environment, which only a v* tag
+    # can use. It has no required reviewer since 18 Nov 2026 (the maintainer chose a release with no
+    # tap). To put the tap back: Settings > Environments > release > Required reviewers.
     environment: release
     steps:
       - uses: actions/checkout@v5
