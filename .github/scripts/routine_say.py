@@ -92,12 +92,12 @@ def posted_before(kind, comments, owner):
 
 
 def same_comment(comments, owner, body):
-    """A comment by the maintainer or this workflow with exactly this text (a rerun), or None. A fix
-    can leave several notes over its rounds, so only the same note counts as already posted."""
-    for c in comments or []:
-        who = (c.get("user") or {}).get("login")
-        if who in (fp.BOT, owner) and (c.get("body") or "").strip() == (body or "").strip():
-            return c
+    """The newest comment by the maintainer or this workflow, when it has exactly this text (a
+    rerun), else None. A fix can leave several notes over its rounds, so only the newest one can
+    be the note already posted; an older note with the same words does not block a new round."""
+    mine = [c for c in comments or [] if (c.get("user") or {}).get("login") in (fp.BOT, owner)]
+    if mine and (mine[-1].get("body") or "").strip() == (body or "").strip():
+        return mine[-1]
     return None
 
 
@@ -134,18 +134,18 @@ def say(repo, token, branch, issue, kind):
         sys.exit(f"Not posted: #{issue} is a pull request.")
     comments, owner = all_comments(api, token), repo.split("/")[0]
     old = posted_before(kind, comments, owner) if kind == "sort" else same_comment(comments, owner, body)
-    url = None
+    url, fresh = None, False
     if old and (old.get("body") or "").strip() != body:
         print(f"#{issue} has a {kind} comment already; nothing posted.")
     elif old:
         url = old["html_url"]
         print(f"#{issue}: this comment is there already (a rerun).")
     else:
-        url = fp.http(api + "/comments", {"body": body}, token)["html_url"]
+        url, fresh = fp.http(api + "/comments", {"body": body}, token)["html_url"], True
         print(f"Posted on #{issue}.")
     if url and fp.is_ask(body):
-        say_yes(repo, token, issue, url, fp.phone_line(body))
-    elif url and body.startswith(TEST):
+        say_yes(repo, token, issue, url, fp.phone_line(body))  # its own check stops a second yes
+    elif fresh and body.startswith(TEST):  # a rerun does not phone twice
         fp.notify(os.environ["NTFY_TOPIC"], "Eye Candy: a test for you", fp.phone_line(body), url)
         print(f"#{issue}: asked the maintainer for a game test.")
     git("push", "origin", "--delete", branch, check=False)  # already gone on a rerun

@@ -61,6 +61,8 @@ check("no comments, nothing found", rs.posted_before("sort", [], owner) is None)
 stopped_note = {"user": {"login": rs.fp.BOT}, "body": "<!-- eyecandy-fix: stopped -->\nx", "html_url": "u"}
 check("the same note is found again", rs.same_comment([stopped_note], owner, "<!-- eyecandy-fix: stopped -->\nx") is stopped_note)
 check("a different earlier note does not block a new one", rs.same_comment([stopped_note], owner, test) is None)
+later = {"user": {"login": rs.fp.BOT}, "body": "<!-- eyecandy-fix: test -->\ny", "html_url": "u2"}
+check("an older note with the same words does not block a new round", rs.same_comment([stopped_note, later], owner, stopped_note["body"]) is None)
 check("a stranger's identical text does not count", rs.same_comment([{**stopped_note, "user": {"login": "someone"}}], owner, stopped_note["body"]) is None)
 
 check("subject and body split", rs.split_message("fix(ui): a thing\n\nWhy it was.\nRefs #3\n") == ("fix(ui): a thing", "Why it was.\nRefs #3"))
