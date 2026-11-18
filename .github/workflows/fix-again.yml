@@ -1,0 +1,53 @@
+name: fix-again
+
+# The fix routine can end a round with a note that asks the maintainer for a game test (a comment
+# starting <!-- eyecandy-fix: test -->, or the older stopped). The maintainer's first plain comment
+# after such a note is the answer, usually a pasted /ec report. This takes the label claude-fix off
+# the issue and puts it on again, which starts the fix routine for its next round (3 rounds at most;
+# the routine counts them). Only the repository owner's comments count, and only the first one after
+# the note, so a second comment starts nothing. A label put on by this workflow starts the routine,
+# as the one routine_say.py puts on does (checked 17 Nov 2026).
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: fix-again-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  again:
+    if: github.event.issue.pull_request == null && github.actor == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Start the next round
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          comments=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE/comments?per_page=100" --paginate | jq -s 'add')
+          # Position of the newest fix note by the bot that asks for something (test or stopped).
+          note=$(jq -r '[to_entries[] | select(.value.user.login == "github-actions[bot]"
+                  and (.value.body | startswith("<!-- eyecandy-fix: "))) | .key] | last // -1' <<<"$comments")
+          if [ "$note" -lt 0 ]; then echo "No fix note on #$ISSUE; nothing to do."; exit 0; fi
+          kind=$(jq -r --argjson n "$note" '.[$n].body | split("\n")[0]' <<<"$comments")
+          case "$kind" in
+            "<!-- eyecandy-fix: test -->"|"<!-- eyecandy-fix: stopped -->") ;;
+            *) echo "The newest fix note is '$kind'; nothing to do."; exit 0 ;;
+          esac
+          # The maintainer's plain comments after the note must be exactly this one.
+          after=$(jq -r --argjson n "$note" --arg owner "${GITHUB_REPOSITORY%%/*}" \
+                  '[.[($n+1):][] | select(.user.login == $owner and (.body | startswith("<!--") | not))] | map(.id)' <<<"$comments")
+          if [ "$(jq -r 'length' <<<"$after")" != "1" ] || [ "$(jq -r '.[0]' <<<"$after")" != "$COMMENT_ID" ]; then
+            echo "Not the first plain comment after the note; nothing to do."; exit 0
+          fi
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/$ISSUE/labels/claude-fix" >/dev/null || true
+          gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$ISSUE/labels" -f "labels[]=claude-fix" >/dev/null
+          echo "Started the next round for #$ISSUE."

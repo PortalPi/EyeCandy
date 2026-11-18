@@ -18,6 +18,8 @@ def check(name, ok):
 check("a sort branch reads", rs.read_ref("claude/say-37-sort") == ("say", 37, "sort"))
 check("a fix note branch reads", rs.read_ref("claude/say-5-fix") == ("say", 5, "fix"))
 check("a fix branch reads", rs.read_ref("claude/fix-issue-12") == ("pr", 12, None))
+check("a later round's fix branch reads", rs.read_ref("claude/fix-issue-12-r2") == ("pr", 12, None))
+check("a round without a number is refused", rs.read_ref("claude/fix-issue-12-r") is None)
 check("other kinds are refused", rs.read_ref("claude/say-37-other") is None)
 check("a branch with more after it is refused", rs.read_ref("claude/say-37-sort-x") is None)
 check("a branch without a number is refused", rs.read_ref("claude/fix-issue-") is None)
@@ -30,6 +32,10 @@ done = "<!-- eyecandy-fix: done -->\nThe FPS number is bigger now. It ships in v
 check("an ask is fine", rs.check_comment("sort", ask) is None)
 check("a no is fine", rs.check_comment("sort", no) is None)
 check("a fix note is fine", rs.check_comment("fix", done) is None)
+test = "<!-- eyecandy-fix: test -->\nPhone: Check render scale after a full restart.\n\n**Test:**\n1. Log out and restart.\n2. Type /ec report."
+check("a test note is fine", rs.check_comment("fix", test) is None)
+check("a test note on a sort branch is refused", rs.check_comment("sort", test) is not None)
+check("a test note starts the phone notice", test.startswith(rs.TEST) and rs.fp.phone_line(test) == "Check render scale after a full restart.")
 check("a fix marker on a sort branch is refused", rs.check_comment("sort", done) is not None)
 check("text before the marker is refused", rs.check_comment("sort", "hi\n" + ask) is not None)
 check("no text is refused", rs.check_comment("sort", "") is not None)
@@ -51,6 +57,13 @@ check("an earlier one by the maintainer is found", rs.posted_before("sort", [{**
 check("a stranger's marker does not block", rs.posted_before("sort", [{**mine, "user": {"login": "someone"}}], owner) is None)
 check("a sort comment does not block a fix note", rs.posted_before("fix", [mine], owner) is None)
 check("no comments, nothing found", rs.posted_before("sort", [], owner) is None)
+
+stopped_note = {"user": {"login": rs.fp.BOT}, "body": "<!-- eyecandy-fix: stopped -->\nx", "html_url": "u"}
+check("the same note is found again", rs.same_comment([stopped_note], owner, "<!-- eyecandy-fix: stopped -->\nx") is stopped_note)
+check("a different earlier note does not block a new one", rs.same_comment([stopped_note], owner, test) is None)
+later = {"user": {"login": rs.fp.BOT}, "body": "<!-- eyecandy-fix: test -->\ny", "html_url": "u2"}
+check("an older note with the same words does not block a new round", rs.same_comment([stopped_note, later], owner, stopped_note["body"]) is None)
+check("a stranger's identical text does not count", rs.same_comment([{**stopped_note, "user": {"login": "someone"}}], owner, stopped_note["body"]) is None)
 
 check("subject and body split", rs.split_message("fix(ui): a thing\n\nWhy it was.\nRefs #3\n") == ("fix(ui): a thing", "Why it was.\nRefs #3"))
 check("subject only", rs.split_message("fix(ui): a thing") == ("fix(ui): a thing", ""))

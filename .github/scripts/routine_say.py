@@ -28,10 +28,11 @@ import feedback_phone as fp  # noqa: E402
 
 API = "https://api.github.com/repos/"
 SAY = re.compile(r"\Aclaude/say-([0-9]{1,9})-(sort|fix)\Z")
-FIX = re.compile(r"\Aclaude/fix-issue-([0-9]{1,9})\Z")
+FIX = re.compile(r"\Aclaude/fix-issue-([0-9]{1,9})(-r[0-9]{1,2})?\Z")  # -r2, -r3: a later round
+TEST = "<!-- eyecandy-fix: test -->"  # the fix routine could not find the cause and asks for a game test
 MARKERS = {
     "sort": ("<!-- eyecandy-sort: ask -->", "<!-- eyecandy-sort: no -->"),
-    "fix": ("<!-- eyecandy-fix: done -->", "<!-- eyecandy-fix: stopped -->"),
+    "fix": ("<!-- eyecandy-fix: done -->", "<!-- eyecandy-fix: stopped -->", TEST),
 }
 PREFIX = {"sort": "<!-- eyecandy-sort:", "fix": "<!-- eyecandy-fix:"}
 MAX_TEXT = 4000
@@ -90,6 +91,16 @@ def posted_before(kind, comments, owner):
     return None
 
 
+def same_comment(comments, owner, body):
+    """The newest comment by the maintainer or this workflow, when it has exactly this text (a
+    rerun), else None. A fix can leave several notes over its rounds, so only the newest one can
+    be the note already posted; an older note with the same words does not block a new round."""
+    mine = [c for c in comments or [] if (c.get("user") or {}).get("login") in (fp.BOT, owner)]
+    if mine and (mine[-1].get("body") or "").strip() == (body or "").strip():
+        return mine[-1]
+    return None
+
+
 def split_message(message):
     """(subject, body) of a commit message."""
     subject, _, body = (message or "").strip().partition("\n")
@@ -121,18 +132,22 @@ def say(repo, token, branch, issue, kind):
     api = f"{API}{repo}/issues/{issue}"
     if "pull_request" in fp.http(api, token=token):
         sys.exit(f"Not posted: #{issue} is a pull request.")
-    old = posted_before(kind, all_comments(api, token), repo.split("/")[0])
-    url = None
+    comments, owner = all_comments(api, token), repo.split("/")[0]
+    old = posted_before(kind, comments, owner) if kind == "sort" else same_comment(comments, owner, body)
+    url, fresh = None, False
     if old and (old.get("body") or "").strip() != body:
         print(f"#{issue} has a {kind} comment already; nothing posted.")
     elif old:
         url = old["html_url"]
         print(f"#{issue}: this comment is there already (a rerun).")
     else:
-        url = fp.http(api + "/comments", {"body": body}, token)["html_url"]
+        url, fresh = fp.http(api + "/comments", {"body": body}, token)["html_url"], True
         print(f"Posted on #{issue}.")
     if url and fp.is_ask(body):
-        say_yes(repo, token, issue, url, fp.phone_line(body))
+        say_yes(repo, token, issue, url, fp.phone_line(body))  # its own check stops a second yes
+    elif fresh and body.startswith(TEST):  # a rerun does not phone twice
+        fp.notify(os.environ["NTFY_TOPIC"], "Eye Candy: a test for you", fp.phone_line(body), url)
+        print(f"#{issue}: asked the maintainer for a game test.")
     git("push", "origin", "--delete", branch, check=False)  # already gone on a rerun
 
 
