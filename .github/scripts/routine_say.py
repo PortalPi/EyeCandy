@@ -28,10 +28,11 @@ import feedback_phone as fp  # noqa: E402
 
 API = "https://api.github.com/repos/"
 SAY = re.compile(r"\Aclaude/say-([0-9]{1,9})-(sort|fix)\Z")
-FIX = re.compile(r"\Aclaude/fix-issue-([0-9]{1,9})\Z")
+FIX = re.compile(r"\Aclaude/fix-issue-([0-9]{1,9})(-r[0-9]{1,2})?\Z")  # -r2, -r3: a later round
+TEST = "<!-- eyecandy-fix: test -->"  # the fix routine could not find the cause and asks for a game test
 MARKERS = {
     "sort": ("<!-- eyecandy-sort: ask -->", "<!-- eyecandy-sort: no -->"),
-    "fix": ("<!-- eyecandy-fix: done -->", "<!-- eyecandy-fix: stopped -->"),
+    "fix": ("<!-- eyecandy-fix: done -->", "<!-- eyecandy-fix: stopped -->", TEST),
 }
 PREFIX = {"sort": "<!-- eyecandy-sort:", "fix": "<!-- eyecandy-fix:"}
 MAX_TEXT = 4000
@@ -90,6 +91,16 @@ def posted_before(kind, comments, owner):
     return None
 
 
+def same_comment(comments, owner, body):
+    """A comment by the maintainer or this workflow with exactly this text (a rerun), or None. A fix
+    can leave several notes over its rounds, so only the same note counts as already posted."""
+    for c in comments or []:
+        who = (c.get("user") or {}).get("login")
+        if who in (fp.BOT, owner) and (c.get("body") or "").strip() == (body or "").strip():
+            return c
+    return None
+
+
 def split_message(message):
     """(subject, body) of a commit message."""
     subject, _, body = (message or "").strip().partition("\n")
@@ -121,7 +132,8 @@ def say(repo, token, branch, issue, kind):
     api = f"{API}{repo}/issues/{issue}"
     if "pull_request" in fp.http(api, token=token):
         sys.exit(f"Not posted: #{issue} is a pull request.")
-    old = posted_before(kind, all_comments(api, token), repo.split("/")[0])
+    comments, owner = all_comments(api, token), repo.split("/")[0]
+    old = posted_before(kind, comments, owner) if kind == "sort" else same_comment(comments, owner, body)
     url = None
     if old and (old.get("body") or "").strip() != body:
         print(f"#{issue} has a {kind} comment already; nothing posted.")
@@ -133,6 +145,9 @@ def say(repo, token, branch, issue, kind):
         print(f"Posted on #{issue}.")
     if url and fp.is_ask(body):
         say_yes(repo, token, issue, url, fp.phone_line(body))
+    elif url and body.startswith(TEST):
+        fp.notify(os.environ["NTFY_TOPIC"], "Eye Candy: a test for you", fp.phone_line(body), url)
+        print(f"#{issue}: asked the maintainer for a game test.")
     git("push", "origin", "--delete", branch, check=False)  # already gone on a rerun
 
 
