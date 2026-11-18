@@ -79,7 +79,6 @@ function ns.RecordError(message)
 end
 
 function ns.InstallErrorCapture()
-ns.WatchSettingChanges()
 	if installed then return true end
 	if type(geterrorhandler) ~= "function" or type(seterrorhandler) ~= "function" then return false end
 	local ok = pcall(function()
@@ -137,15 +136,24 @@ local function Now()
 end
 
 local function Watched(cvar)
+	-- CVar names ignore case in the game, so the lists are kept in lower case.
 	if not watched then
+		if not ns.CATEGORIES then return false end -- Data.lua not loaded yet: build the list later
 		watched = {}
-		for _, cat in ipairs(ns.CATEGORIES or {}) do
-			for _, row in ipairs(cat.cvars or {}) do watched[row[1]] = true end
+		for _, cat in ipairs(ns.CATEGORIES) do
+			for _, row in ipairs(cat.cvars or {}) do watched[row[1]:lower()] = true end
 		end
-		for _, ex in ipairs(ns.EXTRAS or {}) do if ex.cvar then watched[ex.cvar] = true end end
-		for _, cvar in ipairs(ns.EXPORT_EXTRA or {}) do watched[cvar] = true end
+		for _, ex in ipairs(ns.EXTRAS or {}) do if ex.cvar then watched[ex.cvar:lower()] = true end end
+		for _, cvar in ipairs(ns.EXPORT_EXTRA or {}) do watched[cvar:lower()] = true end
 	end
-	return watched[cvar] or (ns.db and type(ns.db.advanced) == "table" and ns.db.advanced[cvar] ~= nil)
+	local lower = cvar:lower()
+	if watched[lower] then return true end
+	if ns.db and type(ns.db.advanced) == "table" then
+		for name in pairs(ns.db.advanced) do
+			if type(name) == "string" and name:lower() == lower then return true end
+		end
+	end
+	return false
 end
 
 -- true when Eye Candy (not this file) is on the stack of the change.

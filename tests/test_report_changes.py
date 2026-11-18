@@ -53,6 +53,10 @@ lua.execute('C_CVar.SetCVar("Gamma", 0.8)')
 sec = section(report(lua))
 check(sec.count("Gamma") == 1, "a change through C_CVar.SetCVar is listed once")
 
+# CVar names ignore case in the game.
+lua.execute('SetCVar("brightness", 51)')
+check("brightness" in section(report(lua)), "a change written in other letter case is still listed")
+
 # Only the newest 15 are kept.
 lua.execute('for i = 1, 20 do CLOCK = CLOCK + 5; SetCVar("Contrast", 40 + i) end')
 sec = section(report(lua))
