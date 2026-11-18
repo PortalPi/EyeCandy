@@ -176,7 +176,9 @@ def open_pr(repo, token, branch):
         return
     first = git("log", "--reverse", "--format=%H", "origin/main.." + os.environ["GITHUB_SHA"]).split()
     if not first:
-        sys.exit("No commits ahead of main; no pull request opened.")
+        # The fix routine pushes its review fix after merging, so the branch is already in main.
+        print("No commits ahead of main (already merged); no pull request opened.")
+        return
     title, body = split_message(git("log", "-1", "--format=%B", first[0]))
     why = refusal(title + "\n" + body) or (None if title else "no subject")
     if why:
