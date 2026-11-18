@@ -5,10 +5,12 @@ name: routine-say
 # push a branch, and this posts it as github-actions[bot]:
 #
 # - claude/say-<issue>-sort or -fix: one empty commit whose message is the comment. Posted on the
-#   issue, a phone notification sent when it is an ask, then the branch is deleted.
+#   issue, then the branch is deleted. An ask also gets its yes from here (no tap since 18 Nov 2026):
+#   an answer comment, the label claude-fix and a phone notification, unless the issue has the
+#   label hold.
 # - claude/fix-issue-<issue>: the pull request is opened from the branch's first commit.
 #
-# How: .github/scripts/routine_say.py. Secrets: NTFY_TOPIC and APPROVE_KEY (as feedback-answer).
+# How: .github/scripts/routine_say.py. Secret: NTFY_TOPIC.
 # Opening a pull request needs Settings > Actions > General > "Allow GitHub Actions to create and
 # approve pull requests".
 
@@ -47,6 +49,5 @@ jobs:
       - name: Post it
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          APPROVE_KEY: ${{ secrets.APPROVE_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: python3 .github/scripts/routine_say.py

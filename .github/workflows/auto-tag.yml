@@ -3,7 +3,7 @@ name: auto-tag
 # On each push to main:
 # - If EyeCandy.toc's version is a release number (1.2.0, not 1.2.0-dev) with no tag yet, this
 #   makes the tag v1.2.0 on that commit and starts release.yml on it. The release still waits for
-#   the maintainer's approval (the "release" environment), as before.
+#   no approval since 18 Nov 2026 (the "release" environment holds the tokens and the v* rule only).
 # - It deletes claude/fix-issue-* branches whose pull request is merged.
 #
 # Why: the cloud fix routine can merge to main, but its GitHub proxy refuses tags and branch
@@ -66,7 +66,7 @@ jobs:
             fi
           fi
           gh workflow run release.yml --ref "$tag"
-          echo "Started the release for $tag. It waits for the maintainer's approval."
+          echo "Started the release for $tag. It uploads without a tap."
 
       - name: Delete merged fix branches
         if: success() || failure() # tidy even when tagging failed
