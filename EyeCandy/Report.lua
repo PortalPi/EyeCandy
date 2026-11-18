@@ -132,6 +132,13 @@ function ns.BuildReport()
 	if installed then buf[#buf + 1] = CaptureCheck() end
 	buf[#buf + 1] = "  Not seen: errors from before Eye Candy loaded, or hidden by another error addon."
 	buf[#buf + 1] = ""
+	if ns.RenderCap and ns.RenderCap.ReportLine then
+		local ok, line = pcall(ns.RenderCap.ReportLine)
+		if ok and line then
+			buf[#buf + 1] = line
+			buf[#buf + 1] = ""
+		end
+	end
 	buf[#buf + 1] = ns.BuildExport(false)
 	return table.concat(buf, "\n")
 end

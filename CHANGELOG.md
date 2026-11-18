@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## 1.1.2
+
+- **The bug report shows the render scale hold.** `/ec report` says if the game's hold on render scale was there when Eye Candy loaded, if it is there now, and if the last logout cleared it. This helps find out why render scale can stay at 100% after a restart.
+
 ## 1.1.1
 
 - **Bug reports can go on CurseForge too.** `/ec report` says you can paste the report in a comment on Eye Candy's CurseForge page, as well as on GitHub. Either way the maintainer sees all of it.
