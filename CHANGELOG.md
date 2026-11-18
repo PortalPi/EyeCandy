@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## 1.1.3
+
+- **The bug report lists recent setting changes.** `/ec report` shows the last 15 graphics settings that changed since you logged in, who changed them and where the loading screens fell. It also says which of Eye Candy's own switches are on. This helps find out why the picture can change after a flight or a loading screen.
+
 ## 1.1.2
 
 - **The bug report shows the render scale hold.** `/ec report` says if the game's hold on render scale was there when Eye Candy loaded, if it is there now, and if the last logout cleared it. This helps find out why render scale can stay at 100% after a restart.

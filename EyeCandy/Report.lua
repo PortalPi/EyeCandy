@@ -113,6 +113,118 @@ local function AddonVersion()
 	return (ok and version) or "unknown"
 end
 
+----------------------------------------------------------------------
+-- Settings that changed since login, and who changed them
+----------------------------------------------------------------------
+-- A picture that goes wrong after a loading screen could be the game, or Eye Candy changing a setting
+-- by itself on the way. hooksecurefunc on SetCVar and C_CVar.SetCVar sees every change made from Lua
+-- (Eye Candy's, the game menu's, other addons') without tainting the callers. The game engine's own
+-- changes don't go through Lua, so they are not seen; the report says so.
+
+local MAX_CHANGES = 15
+local changes = {}         -- newest last: { at = seconds, cvar = name, value = text, ours = bool } or { at, loading = true }
+local hooked = false
+local started = nil
+local watched = nil        -- set of CVar names the report lists, built on first use (Data.lua loads later)
+
+local function Now()
+	if type(GetTime) ~= "function" then return 0 end
+	local ok, t = pcall(GetTime)
+	if not ok or type(t) ~= "number" then return 0 end
+	started = started or t
+	return t - started
+end
+
+local function Watched(cvar)
+	-- CVar names ignore case in the game, so the lists are kept in lower case.
+	if not watched then
+		if not ns.CATEGORIES then return false end -- Data.lua not loaded yet: build the list later
+		watched = {}
+		for _, cat in ipairs(ns.CATEGORIES) do
+			for _, row in ipairs(cat.cvars or {}) do watched[row[1]:lower()] = true end
+		end
+		for _, ex in ipairs(ns.EXTRAS or {}) do if ex.cvar then watched[ex.cvar:lower()] = true end end
+		for _, cvar in ipairs(ns.EXPORT_EXTRA or {}) do watched[cvar:lower()] = true end
+	end
+	local lower = cvar:lower()
+	if watched[lower] then return true end
+	if ns.db and type(ns.db.advanced) == "table" then
+		for name in pairs(ns.db.advanced) do
+			if type(name) == "string" and name:lower() == lower then return true end
+		end
+	end
+	return false
+end
+
+-- true when Eye Candy (not this file) is on the stack of the change.
+local function OursOnStack()
+	if type(debugstack) ~= "function" then return false end
+	local ok, stack = pcall(debugstack, 2, 30, 0)
+	if not ok or type(stack) ~= "string" or not Readable(stack) then return false end
+	for line in stack:gmatch("[^\n]+") do
+		local lower = line:lower()
+		if lower:find("eyecandy[\\/]") and not lower:find("eyecandy[\\/]report%.lua") then return true end
+	end
+	return false
+end
+
+local function Add(entry)
+	changes[#changes + 1] = entry
+	if #changes > MAX_CHANGES then table.remove(changes, 1) end
+end
+
+local function OnSet(cvar, value)
+	pcall(function()
+		if type(cvar) ~= "string" or not Readable(cvar) or not Readable(value) or not Watched(cvar) then return end
+		local text = tostring(value)
+		local at = Now()
+		-- SetCVar may call C_CVar.SetCVar, so one change can be seen twice.
+		local last = changes[#changes]
+		if last and last.cvar == cvar and last.value == text and at - last.at < 1 then return end
+		Add({ at = at, cvar = cvar, value = text, ours = OursOnStack() })
+	end)
+end
+
+function ns.WatchSettingChanges()
+	if hooked or type(hooksecurefunc) ~= "function" then return hooked end
+	Now()
+	local okA = type(SetCVar) == "function" and pcall(hooksecurefunc, "SetCVar", OnSet)
+	local okB = type(C_CVar) == "table" and type(C_CVar.SetCVar) == "function" and pcall(hooksecurefunc, C_CVar, "SetCVar", OnSet)
+	hooked = (okA or okB) and true or false
+	return hooked
+end
+
+local loadingFrame = CreateFrame("Frame")
+pcall(loadingFrame.RegisterEvent, loadingFrame, "PLAYER_LEAVING_WORLD")
+loadingFrame:SetScript("OnEvent", function(_, event)
+	if hooked and event == "PLAYER_LEAVING_WORLD" then pcall(Add, { at = Now(), loading = true }) end
+end)
+
+local function OnOff(v) return v and "on" or "off" end
+
+local function ChangesSection(buf)
+	buf[#buf + 1] = "--- Settings changed since login (newest last) ---"
+	local db = ns.db or {}
+	local steady = ns.SteadyFPS and ns.SteadyFPS.IsOn and ns.SteadyFPS.IsOn()
+	buf[#buf + 1] = string.format("  Eye Candy by itself: keep applied %s, city switch %s, instance switch %s, Steady FPS %s. Lowered now: %s.",
+		OnOff(db.keepApplied), OnOff(ns.IsAutoSituationOn and ns.IsAutoSituationOn("city")),
+		OnOff(ns.IsAutoSituationOn and ns.IsAutoSituationOn("raid")), OnOff(steady),
+		(ns.ActiveSituationName and ns.ActiveSituationName()) or "none")
+	if not hooked then
+		buf[#buf + 1] = "  (not watched: this client has no hooksecurefunc)"
+		return
+	end
+	if #changes == 0 then buf[#buf + 1] = "  (none seen)" end
+	for _, c in ipairs(changes) do
+		if c.loading then
+			buf[#buf + 1] = string.format("  %6ds  loading screen", math.floor(c.at))
+		else
+			buf[#buf + 1] = string.format("  %6ds  %-30s %-10s by %s", math.floor(c.at), c.cvar, c.value, c.ours and "Eye Candy" or "the game or another addon")
+		end
+	end
+	buf[#buf + 1] = "  Not seen: changes the game engine makes without Lua. Only the last " .. MAX_CHANGES .. " are kept."
+end
+
 function ns.BuildReport()
 	local buf = {}
 	buf[#buf + 1] = "=== Eye Candy bug report ==="
@@ -139,6 +251,8 @@ function ns.BuildReport()
 			buf[#buf + 1] = ""
 		end
 	end
+	pcall(ChangesSection, buf)
+	buf[#buf + 1] = ""
 	buf[#buf + 1] = ns.BuildExport(false)
 	return table.concat(buf, "\n")
 end
@@ -149,3 +263,4 @@ function ns.ShowReport()
 end
 
 ns.InstallErrorCapture()
+ns.WatchSettingChanges()
