@@ -2,7 +2,7 @@
 ## Title: Eye Candy |cff9d9d9dGraphics Presets & Hidden Settings|r
 ## Notes: Graphics presets, Looks and hidden graphics settings, with backups. Type /ec to open it.
 ## Author: PortalPi
-## Version: 1.1.2
+## Version: 1.1.3
 ## SavedVariables: EyeCandyDB
 ## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
 ## AddonCompartmentFunc: EyeCandy_OnAddonCompartmentClick
