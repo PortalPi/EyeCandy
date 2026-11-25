@@ -251,6 +251,13 @@ function ns.BuildReport()
 			buf[#buf + 1] = ""
 		end
 	end
+	if ns.MinimapReportLine then
+		local ok, line = pcall(ns.MinimapReportLine)
+		if ok and line then
+			buf[#buf + 1] = line
+			buf[#buf + 1] = ""
+		end
+	end
 	pcall(ChangesSection, buf)
 	buf[#buf + 1] = ""
 	buf[#buf + 1] = ns.BuildExport(false)

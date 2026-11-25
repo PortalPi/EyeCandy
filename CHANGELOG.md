@@ -1,5 +1,9 @@
 # Eye Candy changelog
 
+## 1.1.4
+
+- **The bug report covers the minimap button.** `/ec report` says if the button is set to hidden, if it shows now and what it sits on. It also says if your saved settings loaded when you logged in.
+
 ## 1.1.3
 
 - **The bug report lists recent setting changes.** `/ec report` shows the last 15 graphics settings that changed since you logged in, who changed them and where the loading screens fell. It also says which of Eye Candy's own switches are on. This helps find out why the picture can change after a flight or a loading screen.
