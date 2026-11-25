@@ -182,6 +182,7 @@ end
 ns.FixDistantBackup = FixDistantBackup
 
 function ns.LoadDB()
+	ns.dbStartedEmpty = type(EyeCandyDB) ~= "table" -- for /ec report: saved settings did not load
 	if type(EyeCandyDB) ~= "table" then
 		EyeCandyDB = DefaultDB()
 	end

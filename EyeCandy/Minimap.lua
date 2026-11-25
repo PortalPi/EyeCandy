@@ -101,6 +101,21 @@ function EyeCandy_OnAddonCompartmentClick(_, mouse)
 	end
 end
 
+-- One line for /ec report: what the button's setting says and what the button is doing now.
+function ns.MinimapReportLine()
+	local db = ns.db and ns.db.minimap or {}
+	local made, shown, parent = "no", "no", "none"
+	if button then
+		made = "yes"
+		shown = button:IsShown() and "yes" or "no"
+		local p = button:GetParent()
+		parent = (p and p.GetName and p:GetName()) or (p and "unnamed frame") or "none"
+	end
+	return string.format("Minimap button: set to %s, made %s, shown %s, on %s. Saved settings at login: %s.",
+		db.hide and "hidden" or "shown", made, shown, parent,
+		ns.dbStartedEmpty and "missing, so it started fresh" or "loaded")
+end
+
 function ns.ToggleMinimapButton()
 	local show = MinimapDB().hide == true
 	ns.SetMinimapButtonShown(show)
